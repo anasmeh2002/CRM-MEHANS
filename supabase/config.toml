@@ -1,0 +1,5 @@
+[functions.openrouter-ai]
+verify_jwt = false
+
+[functions.whatsapp-proxy]
+verify_jwt = false
