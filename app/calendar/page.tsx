@@ -3,14 +3,16 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus, Phone, Video, MapPin, Users, Clock, CalendarX, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Phone, Video, MapPin, Users, Clock, CalendarX, AlertCircle, RefreshCw } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, Card, Badge, Skeleton, EmptyState } from '@/components/shared';
 import { useGlobalModal } from '@/components/modal-provider';
 import { fetchMeetings } from '@/lib/data';
+import { dispatchAutomationEvent } from '@/lib/automations';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { Meeting } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -51,6 +53,7 @@ function toDisplayMeeting(m: Meeting) {
 export default function CalendarPage() {
   const { openModal } = useGlobalModal();
   const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1));
+  const [syncing, setSyncing] = useState(false);
 
   const { data, loading, error, refetch } = useSupabaseQuery(fetchMeetings);
 
@@ -104,9 +107,29 @@ export default function CalendarPage() {
   return (
     <AppShell>
       <PageHeader title="Calendar" description="Schedule and manage your meetings">
-        <button onClick={() => openModal('meeting')} className="btn btn-gold btn-md">
-          <Plus className="h-4 w-4" strokeWidth={1.5} /> New Meeting
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              setSyncing(true);
+              try {
+                await dispatchAutomationEvent('calendar.sync_requested', { timestamp: new Date().toISOString() });
+                toast.success('Google Calendar sync requested. n8n will handle the rest.');
+              } catch {
+                toast.error('Failed to request sync. Check your n8n integration.');
+              } finally {
+                setSyncing(false);
+              }
+            }}
+            disabled={syncing}
+            className="btn btn-outline btn-md"
+          >
+            <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} strokeWidth={1.5} />
+            {syncing ? 'Syncing...' : 'Sync with Google Calendar'}
+          </button>
+          <button onClick={() => openModal('meeting')} className="btn btn-gold btn-md">
+            <Plus className="h-4 w-4" strokeWidth={1.5} /> New Meeting
+          </button>
+        </div>
       </PageHeader>
 
       <div className="grid gap-4 lg:grid-cols-3">

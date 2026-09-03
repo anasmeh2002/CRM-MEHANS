@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { User, Mail, Phone, DollarSign, Home, Globe, Tag } from 'lucide-react';
 import { Field, TextInput, TextArea, Select, LoadingButton, TagInput } from '@/components/forms';
 import { Modal } from '@/components/forms';
 import { createLead, fetchTeamMembers } from '@/lib/data';
@@ -27,6 +28,15 @@ const statuses: { value: LeadStatus; label: string }[] = [
 ];
 
 const languages = ['English', 'Spanish', 'French', 'Arabic', 'Mandarin', 'Hindi', 'Portuguese'];
+
+function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; children: string }) {
+  return (
+    <div className="col-span-full flex items-center gap-2 border-b border-border pb-2 mb-1">
+      <Icon className="h-4 w-4 text-gold" strokeWidth={1.5} />
+      <span className="text-[13px] font-medium text-text-primary">{children}</span>
+    </div>
+  );
+}
 
 export function LeadModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { triggerRefresh } = useRefresh();
@@ -96,49 +106,54 @@ export function LeadModal({ open, onClose }: { open: boolean; onClose: () => voi
         </>
       }
     >
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
+        <SectionTitle icon={User}>Contact Info</SectionTitle>
         <Field label="First Name" required>
-          <TextInput value={form.firstName} onChange={(v) => set('firstName', v)} placeholder="James" />
+          <TextInput value={form.firstName} onChange={(v) => set('firstName', v)} placeholder="James" icon={<User className="h-4 w-4" strokeWidth={1.5} />} />
         </Field>
         <Field label="Last Name">
-          <TextInput value={form.lastName} onChange={(v) => set('lastName', v)} placeholder="Wilson" />
+          <TextInput value={form.lastName} onChange={(v) => set('lastName', v)} placeholder="Wilson" icon={<User className="h-4 w-4" strokeWidth={1.5} />} />
         </Field>
         <Field label="Phone">
-          <TextInput value={form.phone} onChange={(v) => set('phone', v)} placeholder="+1 415 555 0192" type="tel" />
+          <TextInput value={form.phone} onChange={(v) => set('phone', v)} placeholder="+1 415 555 0192" type="tel" icon={<Phone className="h-4 w-4" strokeWidth={1.5} />} />
         </Field>
         <Field label="WhatsApp">
-          <TextInput value={form.whatsapp} onChange={(v) => set('whatsapp', v)} placeholder="+1 415 555 0192" type="tel" />
+          <TextInput value={form.whatsapp} onChange={(v) => set('whatsapp', v)} placeholder="+1 415 555 0192" type="tel" icon={<Phone className="h-4 w-4" strokeWidth={1.5} />} />
         </Field>
         <Field label="Email">
-          <TextInput value={form.email} onChange={(v) => set('email', v)} placeholder="james@email.com" type="email" />
-        </Field>
-        <Field label="Lead Source">
-          <Select value={form.source} onChange={(v) => set('source', v as LeadSource)} options={sources} />
-        </Field>
-        <Field label="Property Interest">
-          <TextInput value={form.propertyInterest} onChange={(v) => set('propertyInterest', v)} placeholder="3BHK Penthouse" />
-        </Field>
-        <Field label="Budget">
-          <TextInput value={form.budget} onChange={(v) => set('budget', v)} placeholder="2,500,000" type="number" />
+          <TextInput value={form.email} onChange={(v) => set('email', v)} placeholder="james@email.com" type="email" icon={<Mail className="h-4 w-4" strokeWidth={1.5} />} />
         </Field>
         <Field label="Language">
           <Select value={form.language} onChange={(v) => set('language', v)} options={languages.map((l) => ({ value: l, label: l }))} />
         </Field>
-        <Field label="Assigned Agent">
-          <Select value={form.agentId} onChange={(v) => set('agentId', v)} options={agents.map((a) => ({ value: a.id, label: a.name }))} placeholder="Select agent..." />
+
+        <SectionTitle icon={DollarSign}>Deal Info</SectionTitle>
+        <Field label="Lead Source">
+          <Select value={form.source} onChange={(v) => set('source', v as LeadSource)} options={sources} />
         </Field>
         <Field label="Status">
           <Select value={form.status} onChange={(v) => set('status', v as LeadStatus)} options={statuses} />
         </Field>
+        <Field label="Property Interest">
+          <TextInput value={form.propertyInterest} onChange={(v) => set('propertyInterest', v)} placeholder="3BHK Penthouse" icon={<Home className="h-4 w-4" strokeWidth={1.5} />} />
+        </Field>
+        <Field label="Budget">
+          <TextInput value={form.budget} onChange={(v) => set('budget', v)} placeholder="2,500,000" type="number" icon={<DollarSign className="h-4 w-4" strokeWidth={1.5} />} />
+        </Field>
+        <Field label="Assigned Agent">
+          <Select value={form.agentId} onChange={(v) => set('agentId', v)} options={agents.map((a) => ({ value: a.id, label: a.name }))} placeholder="Select agent..." />
+        </Field>
         <Field label="Lead Score" hint="0–100, based on qualification">
           <TextInput value={form.score} onChange={(v) => set('score', v)} placeholder="72" type="number" />
         </Field>
-        <div className="sm:col-span-2">
+
+        <SectionTitle icon={Tag}>Additional</SectionTitle>
+        <div className="col-span-full">
           <Field label="Tags">
             <TagInput value={form.tags} onChange={(v) => set('tags', v)} placeholder="Add tags..." suggestions={['VIP', 'Cash Buyer', 'Hot Lead', 'Investor', 'First-Time Buyer']} />
           </Field>
         </div>
-        <div className="sm:col-span-2">
+        <div className="col-span-full">
           <Field label="Notes">
             <TextArea value={form.notes} onChange={(v) => set('notes', v)} placeholder="Looking for a 3BHK penthouse in downtown. Cash buyer, ready to move quickly." rows={3} />
           </Field>

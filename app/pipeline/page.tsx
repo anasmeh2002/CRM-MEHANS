@@ -80,9 +80,9 @@ export default function PipelinePage() {
           </div>
         </Card>
       ) : loading ? (
-        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin">
+        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin snap-x snap-mandatory md:snap-none">
           {columns.map((col) => (
-            <div key={col.stage} className="w-80 shrink-0 rounded-2xl border border-border bg-bg-secondary/50">
+            <div key={col.stage} className="w-[85vw] shrink-0 snap-center md:w-80 rounded-2xl border border-border bg-bg-secondary/50">
               <div className="flex items-center justify-between border-b border-border p-4">
                 <div className="flex items-center gap-2.5">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: col.color }} />
@@ -90,7 +90,7 @@ export default function PipelinePage() {
                 </div>
                 <Skeleton className="h-3 w-10" />
               </div>
-              <div className="space-y-2 p-2.5">
+              <div className="flex flex-col gap-2 p-2.5">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="rounded-xl border border-border bg-bg-secondary p-3.5">
                     <Skeleton className="h-3 w-3/4" />
@@ -114,7 +114,7 @@ export default function PipelinePage() {
           </div>
         </Card>
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin">
+        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin snap-x snap-mandatory md:snap-none">
           {columns.map((col) => {
             const colDeals = deals.filter((d) => d.stage === col.stage);
             const colValue = colDeals.reduce((sum, d) => sum + d.value, 0);
@@ -125,7 +125,7 @@ export default function PipelinePage() {
                 onDragLeave={() => setDragOver(null)}
                 onDrop={() => handleDrop(col.stage)}
                 className={cn(
-                  'w-80 shrink-0 rounded-2xl border bg-bg-secondary/50 transition-colors duration-200',
+                  'flex w-[85vw] shrink-0 snap-center flex-col md:w-80 rounded-2xl border bg-bg-secondary/50 transition-colors duration-200',
                   dragOver === col.stage ? 'border-gold-border bg-gold-bg' : 'border-border'
                 )}
               >
@@ -137,7 +137,7 @@ export default function PipelinePage() {
                   </div>
                   <span className="text-xs font-medium text-gold">${(colValue / 1000000).toFixed(1)}M</span>
                 </div>
-                <div className="scrollbar-thin max-h-[calc(100vh-240px)] space-y-2 overflow-y-auto p-2.5">
+                <div className="scrollbar-thin flex max-h-[calc(100vh-240px)] flex-col gap-2 overflow-y-auto p-2.5">
                   {colDeals.map((deal) => (
                     <motion.div
                       key={deal.id}
