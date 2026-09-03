@@ -169,8 +169,21 @@ export default function WhatsAppPage() {
       syncLockRef.current = true;
       setSyncing(true);
       fetchWhatsAppConversations(userId)
-        .then(() => { if (!active) return; return fetchCachedConversations(); })
-        .then((data) => { if (active && data && data.length > 0) setConversations(data); })
+        .then((syncedConvs) => {
+          if (!active) return;
+          // MERGE: combine synced conversations with existing ones, don't replace
+          setConversations((prev) => {
+            const existingMap = new Map(prev.map(c => [c.remote_jid, c]));
+            for (const conv of syncedConvs) {
+              existingMap.set(conv.remote_jid, { ...existingMap.get(conv.remote_jid), ...conv });
+            }
+            return Array.from(existingMap.values()).sort((a, b) => {
+              const aTime = a.last_message_timestamp ? new Date(a.last_message_timestamp).getTime() : 0;
+              const bTime = b.last_message_timestamp ? new Date(b.last_message_timestamp).getTime() : 0;
+              return bTime - aTime;
+            });
+          });
+        })
         .catch(() => {})
         .finally(() => { if (active) { setSyncing(false); syncLockRef.current = false; } });
     }
@@ -209,6 +222,7 @@ export default function WhatsAppPage() {
       }
 
       // 3. Background sync from Evolution API (non-blocking)
+      // Always sync to fetch NEW messages — the cache may be stale
       try {
         await fetchWhatsAppMessages(userId, selectedJid);
         if (!active) return;
@@ -219,7 +233,7 @@ export default function WhatsAppPage() {
           cacheRef.current.set(selectedJid, { messages: synced, hasMore: more });
         }
       } catch (error) {
-        if (active && !cached) {
+        if (active && !cached && messages.length === 0) {
           setMessagesError(error instanceof Error ? error.message : 'Unable to load messages');
         }
       }

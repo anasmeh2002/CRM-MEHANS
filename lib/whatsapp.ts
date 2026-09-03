@@ -234,75 +234,83 @@ let conversationSyncLock: Promise<void> | null = null;
 
 export async function fetchEvolutionConversations(userId: string): Promise<WhatsAppConversation[]> {
   // Prevent duplicate concurrent syncs across mounts/tabs
-  if (conversationSyncLock) await conversationSyncLock;
+  if (conversationSyncLock) {
+    await conversationSyncLock;
+    return fetchCachedConversations();
+  }
 
   const instanceName = getInstanceName(userId);
+  let syncedConversations: WhatsAppConversation[] = [];
   conversationSyncLock = (async () => {
-  try {
-    const [chatData, contactData] = await Promise.all([
-      edgeFetch({ action: 'find-chats', instanceName }),
-      edgeFetch({ action: 'find-contacts', instanceName }).catch(() => ({ contacts: [] })),
-    ]);
-    const rawChats = Array.isArray(chatData.conversations) ? chatData.conversations : [];
-    const rawContacts = Array.isArray(contactData.contacts) ? contactData.contacts : [];
-    const contacts = new Map<string, Record<string, unknown>>();
-    rawContacts.forEach((value: unknown) => {
-      const contact = asRecord(value);
-      const identifier = contact ? getContactIdentifier(contact) : null;
-      if (contact && identifier) {
-        contacts.set(identifier, contact);
-        contacts.set(identifier.split('@')[0], contact);
-      }
-    });
+    try {
+      const [chatData, contactData] = await Promise.all([
+        edgeFetch({ action: 'find-chats', instanceName }),
+        edgeFetch({ action: 'find-contacts', instanceName }).catch(() => ({ contacts: [] })),
+      ]);
+      const rawChats = Array.isArray(chatData.conversations) ? chatData.conversations : [];
+      const rawContacts = Array.isArray(contactData.contacts) ? contactData.contacts : [];
+      const contacts = new Map<string, Record<string, unknown>>();
+      rawContacts.forEach((value: unknown) => {
+        const contact = asRecord(value);
+        const identifier = contact ? getContactIdentifier(contact) : null;
+        if (contact && identifier) {
+          contacts.set(identifier, contact);
+          contacts.set(identifier.split('@')[0], contact);
+        }
+      });
 
-    const conversations = rawChats
-      .filter((chat: unknown): chat is Record<string, unknown> => chat !== null && typeof chat === 'object')
-      .map((chat: Record<string, unknown>): WhatsAppConversation => {
-        const remoteJid = safeString(chat.remoteJid) ?? safeString(chat.id) ?? '';
-        const contact = contacts.get(remoteJid) ?? contacts.get(remoteJid.split('@')[0]) ?? null;
-        const lastMessage = asRecord(chat.lastMessage);
-        const pushName = safeString(chat.pushName) ?? safeString(chat.name) ?? getContactName(contact);
-        return {
-          id: remoteJid,
-          remote_jid: remoteJid,
-          push_name: pushName,
-          display_name: displayNameFor(remoteJid, contact, pushName),
-          phone_number: getPhoneNumber(remoteJid, contact),
-          profile_pic: safeString(chat.profilePicUrl) ?? safeString(contact?.profilePictureUrl) ?? null,
-          unread_count: safeNumber(chat.unreadCount) ?? 0,
-          last_message: extractLastMessageText(lastMessage),
-          last_message_type: safeString(lastMessage?.messageType) ?? 'text',
-          last_message_timestamp: safeTimestamp(lastMessage?.messageTimestamp),
-          archived: false,
-          pinned: false,
-          lead_id: null,
-        };
-      })
-      .filter((conversation: WhatsAppConversation) => conversation.remote_jid.length > 0);
+      const conversations = rawChats
+        .filter((chat: unknown): chat is Record<string, unknown> => chat !== null && typeof chat === 'object')
+        .map((chat: Record<string, unknown>): WhatsAppConversation => {
+          const remoteJid = safeString(chat.remoteJid) ?? safeString(chat.id) ?? '';
+          const contact = contacts.get(remoteJid) ?? contacts.get(remoteJid.split('@')[0]) ?? null;
+          const lastMessage = asRecord(chat.lastMessage);
+          const pushName = safeString(chat.pushName) ?? safeString(chat.name) ?? getContactName(contact);
+          return {
+            id: remoteJid,
+            remote_jid: remoteJid,
+            push_name: pushName,
+            display_name: displayNameFor(remoteJid, contact, pushName),
+            phone_number: getPhoneNumber(remoteJid, contact),
+            profile_pic: safeString(chat.profilePicUrl) ?? safeString(contact?.profilePictureUrl) ?? null,
+            unread_count: safeNumber(chat.unreadCount) ?? 0,
+            last_message: extractLastMessageText(lastMessage),
+            last_message_type: safeString(lastMessage?.messageType) ?? 'text',
+            last_message_timestamp: safeTimestamp(lastMessage?.messageTimestamp),
+            archived: false,
+            pinned: false,
+            lead_id: null,
+          };
+        })
+        .filter((conversation: WhatsAppConversation) => conversation.remote_jid.length > 0);
 
-    const convRows = conversations.map((c: WhatsAppConversation) => ({
-      remote_jid: c.remote_jid,
-      push_name: c.push_name,
-      phone_number: c.phone_number,
-      profile_pic: c.profile_pic,
-      unread_count: c.unread_count,
-      last_message: c.last_message,
-      last_message_type: c.last_message_type,
-      last_message_timestamp: c.last_message_timestamp,
-      archived: false,
-      pinned: false,
-      lead_id: null,
-    }));
-    try { await batchUpsertConversations(convRows); } catch {}
+      const convRows = conversations.map((c: WhatsAppConversation) => ({
+        remote_jid: c.remote_jid,
+        push_name: c.push_name,
+        phone_number: c.phone_number,
+        profile_pic: c.profile_pic,
+        unread_count: c.unread_count,
+        last_message: c.last_message,
+        last_message_type: c.last_message_type,
+        last_message_timestamp: c.last_message_timestamp,
+        archived: false,
+        pinned: false,
+        lead_id: null,
+      }));
+      try { await batchUpsertConversations(convRows); } catch {}
 
-    return conversations;
-  } catch {
-    return [];
-  } finally {
-    conversationSyncLock = null;
-  }
+      syncedConversations = conversations;
+    } catch {
+      // Sync failed — return cached conversations instead
+    } finally {
+      conversationSyncLock = null;
+    }
   })();
-  return conversationSyncLock.then(() => fetchCachedConversations());
+
+  await conversationSyncLock;
+  // Return Evolution conversations if sync succeeded, otherwise fall back to cache
+  if (syncedConversations.length > 0) return syncedConversations;
+  return fetchCachedConversations();
 }
 
 async function upsertMessage(convId: string, msg: Omit<WhatsAppMessage, 'id' | 'conversation_id'>, messageId: string): Promise<WhatsAppMessage> {
@@ -374,23 +382,7 @@ export async function fetchEvolutionMessages(userId: string, remoteJid: string):
       last_message_timestamp: null,
     });
 
-    // Check if we already have messages in Supabase — skip Evolution API if so
-    const { data: existingMsgs } = await supabase
-      .from('whatsapp_messages')
-      .select('id')
-      .eq('conversation_id', convId)
-      .limit(1);
-
-    if (existingMsgs && existingMsgs.length > 0) {
-      const { data: dbMessages, error } = await supabase
-        .from('whatsapp_messages')
-        .select('*')
-        .eq('conversation_id', convId)
-        .order('timestamp', { ascending: true })
-        .limit(50);
-      if (!error && dbMessages) return dbMessages.map(mapDbMessage);
-    }
-
+    // Always fetch from Evolution API to get new messages — batch upsert handles dedup
     const data = await edgeFetch({ action: 'find-messages', instanceName, remoteJid });
     const messageContainer = asRecord(data.messages);
     const rawMessages = Array.isArray(data.messages)
