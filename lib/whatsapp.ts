@@ -230,8 +230,14 @@ async function upsertConversation(conv: Omit<WhatsAppConversation, 'id' | 'lead_
   return data.id;
 }
 
+let conversationSyncLock: Promise<void> | null = null;
+
 export async function fetchEvolutionConversations(userId: string): Promise<WhatsAppConversation[]> {
+  // Prevent duplicate concurrent syncs across mounts/tabs
+  if (conversationSyncLock) await conversationSyncLock;
+
   const instanceName = getInstanceName(userId);
+  conversationSyncLock = (async () => {
   try {
     const [chatData, contactData] = await Promise.all([
       edgeFetch({ action: 'find-chats', instanceName }),
@@ -292,7 +298,11 @@ export async function fetchEvolutionConversations(userId: string): Promise<Whats
     return conversations;
   } catch {
     return [];
+  } finally {
+    conversationSyncLock = null;
   }
+  })();
+  return conversationSyncLock.then(() => fetchCachedConversations());
 }
 
 async function upsertMessage(convId: string, msg: Omit<WhatsAppMessage, 'id' | 'conversation_id'>, messageId: string): Promise<WhatsAppMessage> {
@@ -363,6 +373,23 @@ export async function fetchEvolutionMessages(userId: string, remoteJid: string):
       last_message_type: 'text',
       last_message_timestamp: null,
     });
+
+    // Check if we already have messages in Supabase — skip Evolution API if so
+    const { data: existingMsgs } = await supabase
+      .from('whatsapp_messages')
+      .select('id')
+      .eq('conversation_id', convId)
+      .limit(1);
+
+    if (existingMsgs && existingMsgs.length > 0) {
+      const { data: dbMessages, error } = await supabase
+        .from('whatsapp_messages')
+        .select('*')
+        .eq('conversation_id', convId)
+        .order('timestamp', { ascending: true })
+        .limit(50);
+      if (!error && dbMessages) return dbMessages.map(mapDbMessage);
+    }
 
     const data = await edgeFetch({ action: 'find-messages', instanceName, remoteJid });
     const messageContainer = asRecord(data.messages);
@@ -571,32 +598,43 @@ async function batchUpsertConversations(conversations: Array<Record<string, unkn
   if (conversations.length === 0) return;
   const { data: existing } = await supabase
     .from('whatsapp_conversations')
-    .select('id, remote_jid')
+    .select('id, remote_jid, push_name, last_message, last_message_type, last_message_timestamp, unread_count, profile_pic')
     .in('remote_jid', conversations.map((c: Record<string, unknown>) => c.remote_jid));
 
-  const existingMap = new Map<string, string>();
+  const existingMap = new Map<string, Record<string, unknown>>();
   (existing ?? []).forEach((row: Record<string, unknown>) => {
-    existingMap.set((row.remote_jid as string) ?? '', (row.id as string) ?? '');
+    existingMap.set((row.remote_jid as string) ?? '', row);
   });
 
   const toInsert: Array<Record<string, unknown>> = [];
   const toUpdate: Array<{ id: string; data: Record<string, unknown> }> = [];
 
   for (const conv of conversations) {
-    const existingId = existingMap.get(conv.remote_jid as string);
-    if (existingId) {
-      toUpdate.push({
-        id: existingId,
-        data: {
-          push_name: conv.push_name,
-          last_message: conv.last_message,
-          last_message_type: conv.last_message_type,
-          last_message_timestamp: conv.last_message_timestamp,
-          unread_count: conv.unread_count,
-          profile_pic: conv.profile_pic,
-          updated_at: new Date().toISOString(),
-        },
-      });
+    const existingRow = existingMap.get(conv.remote_jid as string);
+    if (existingRow) {
+      // Skip update if nothing changed
+      const existingId = (existingRow.id as string) ?? '';
+      const changed =
+        (existingRow.push_name as string) !== (conv.push_name as string) ||
+        (existingRow.last_message as string) !== (conv.last_message as string) ||
+        (existingRow.last_message_type as string) !== (conv.last_message_type as string) ||
+        (existingRow.last_message_timestamp as string) !== (conv.last_message_timestamp as string) ||
+        (existingRow.unread_count as number) !== (conv.unread_count as number) ||
+        (existingRow.profile_pic as string) !== (conv.profile_pic as string);
+      if (changed) {
+        toUpdate.push({
+          id: existingId,
+          data: {
+            push_name: conv.push_name,
+            last_message: conv.last_message,
+            last_message_type: conv.last_message_type,
+            last_message_timestamp: conv.last_message_timestamp,
+            unread_count: conv.unread_count,
+            profile_pic: conv.profile_pic,
+            updated_at: new Date().toISOString(),
+          },
+        });
+      }
     } else {
       toInsert.push(conv);
     }
@@ -606,8 +644,6 @@ async function batchUpsertConversations(conversations: Array<Record<string, unkn
     await supabase.from('whatsapp_conversations').insert(toInsert);
   }
 
-  // Batch updates — Supabase doesn't support bulk update with different values,
-  // so we fire them in parallel (not sequential)
   if (toUpdate.length > 0) {
     await Promise.all(toUpdate.map(u =>
       supabase.from('whatsapp_conversations').update(u.data).eq('id', u.id)

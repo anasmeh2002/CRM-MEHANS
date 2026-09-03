@@ -84,6 +84,7 @@ export default function WhatsAppPage() {
   const connectionQuery = useSupabaseQuery(fetchWhatsAppConnection);
   const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
   const [conversationsLoading, setConversationsLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [selectedJid, setSelectedJid] = useState<string | null>(null);
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [message, setMessage] = useState('');
@@ -150,6 +151,7 @@ export default function WhatsAppPage() {
   }, [connectionQuery.data]);
 
   // Load conversations: Supabase first (instant), then background sync from Evolution API
+  const syncLockRef = useRef(false);
   useEffect(() => {
     if (!userId || !connection.connected) return;
     let active = true;
@@ -162,10 +164,16 @@ export default function WhatsAppPage() {
       .finally(() => { if (active) setConversationsLoading(false); });
 
     // 2. Background sync from Evolution API (non-blocking, updates Supabase)
-    fetchWhatsAppConversations(userId)
-      .then(() => { if (!active) return; return fetchCachedConversations(); })
-      .then((data) => { if (active && data && data.length > 0) setConversations(data); })
-      .catch(() => {});
+    // Guard against duplicate syncs from multiple mounts/refreshes
+    if (!syncLockRef.current) {
+      syncLockRef.current = true;
+      setSyncing(true);
+      fetchWhatsAppConversations(userId)
+        .then(() => { if (!active) return; return fetchCachedConversations(); })
+        .then((data) => { if (active && data && data.length > 0) setConversations(data); })
+        .catch(() => {})
+        .finally(() => { if (active) { setSyncing(false); syncLockRef.current = false; } });
+    }
 
     return () => { active = false; };
   }, [userId, connection.connected]);
@@ -540,6 +548,11 @@ export default function WhatsAppPage() {
             <p className="text-sm font-medium text-text-primary">{connection.connected ? 'Connected' : 'Not connected'}</p>
             <p className="hidden text-xs text-text-muted sm:block">{connection.connected ? `${connection.provider} · ${connection.instanceName}` : 'Connect a business number to manage WhatsApp conversations'}</p>
           </div>
+          {syncing && (
+            <span className="ml-2 flex items-center gap-1.5 rounded-full bg-gold-bg px-2.5 py-1 text-[10px] font-medium text-gold">
+              <Loader2 className="h-3 w-3 animate-spin" /> Syncing…
+            </span>
+          )}
         </div>
         {!connection.connected && <button onClick={() => setConnectOpen(true)} className="text-xs font-medium text-gold hover:text-gold-soft">Set up <Link2 className="ml-1 inline h-3.5 w-3.5" /></button>}
       </div>
