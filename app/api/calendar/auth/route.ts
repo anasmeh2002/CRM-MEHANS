@@ -3,9 +3,10 @@ import { NextResponse } from 'next/server';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
 function getBaseUrl(): string {
-  const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL;
-  if (vercelUrl) return `https://${vercelUrl}`;
-  return `http://localhost:3000`;
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://crm.mehans.space';
+  }
+  return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 }
 
 export async function GET() {
