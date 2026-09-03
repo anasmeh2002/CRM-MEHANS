@@ -11,6 +11,7 @@ import {
   fetchWhatsAppConnection,
   fetchWhatsAppConversations,
   fetchWhatsAppMessages,
+  fetchCachedConversations,
   fetchCachedMessages,
   subscribeToMessages,
   sendWhatsAppMessage,
@@ -138,7 +139,7 @@ export default function WhatsAppPage() {
     let active = true;
     syncConnectionFromEvolution().then(() => {
       if (!active) return;
-      statusPollRef.current = setInterval(() => { syncConnectionFromEvolution(); }, 10000);
+      statusPollRef.current = setInterval(() => { syncConnectionFromEvolution(); }, 30000);
     });
     return () => { active = false; stopStatusPolling(); };
   }, [userId]);
@@ -148,20 +149,25 @@ export default function WhatsAppPage() {
     setConnection(connectionQuery.data);
   }, [connectionQuery.data]);
 
+  // Load conversations: Supabase first (instant), then background sync from Evolution API
   useEffect(() => {
     if (!userId || !connection.connected) return;
     let active = true;
+
+    // 1. Immediately load cached conversations from Supabase
     setConversationsLoading(true);
-    fetchWhatsAppConversations(userId)
+    fetchCachedConversations()
       .then((data) => { if (active) setConversations(data); })
-      .catch(() => { if (active) toast.error('Unable to load conversations'); })
+      .catch(() => {})
       .finally(() => { if (active) setConversationsLoading(false); });
-    const refreshRef = setInterval(() => {
-      fetchWhatsAppConversations(userId)
-        .then((data) => { if (active) setConversations(data); })
-        .catch(() => {});
-    }, 10000);
-    return () => { active = false; clearInterval(refreshRef); };
+
+    // 2. Background sync from Evolution API (non-blocking, updates Supabase)
+    fetchWhatsAppConversations(userId)
+      .then(() => { if (!active) return; return fetchCachedConversations(); })
+      .then((data) => { if (active && data && data.length > 0) setConversations(data); })
+      .catch(() => {});
+
+    return () => { active = false; };
   }, [userId, connection.connected]);
 
   // Load messages: cached first, then background fetch + realtime

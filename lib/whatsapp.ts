@@ -274,21 +274,20 @@ export async function fetchEvolutionConversations(userId: string): Promise<Whats
       })
       .filter((conversation: WhatsAppConversation) => conversation.remote_jid.length > 0);
 
-    for (const conv of conversations) {
-      try {
-        await upsertConversation({
-          remote_jid: conv.remote_jid,
-          push_name: conv.push_name,
-          display_name: conv.display_name,
-          phone_number: conv.phone_number,
-          profile_pic: conv.profile_pic,
-          unread_count: conv.unread_count,
-          last_message: conv.last_message,
-          last_message_type: conv.last_message_type,
-          last_message_timestamp: conv.last_message_timestamp,
-        });
-      } catch {}
-    }
+    const convRows = conversations.map((c: WhatsAppConversation) => ({
+      remote_jid: c.remote_jid,
+      push_name: c.push_name,
+      phone_number: c.phone_number,
+      profile_pic: c.profile_pic,
+      unread_count: c.unread_count,
+      last_message: c.last_message,
+      last_message_type: c.last_message_type,
+      last_message_timestamp: c.last_message_timestamp,
+      archived: false,
+      pinned: false,
+      lead_id: null,
+    }));
+    try { await batchUpsertConversations(convRows); } catch {}
 
     return conversations;
   } catch {
@@ -377,13 +376,18 @@ export async function fetchEvolutionMessages(userId: string, remoteJid: string):
             ? data
             : [];
 
+    const messageRows: Array<{ conversation_id: string; message_id: string; remote_jid: string | null; from_me: boolean; sender_name: string | null; message_type: string; text: string | null; media_url: string | null; timestamp: string | null; status: string }> = [];
+    const messageIds: string[] = [];
     for (const raw of rawMessages) {
       const msg = asRecord(raw);
       if (!msg) continue;
       const key = msg.key as Record<string, unknown> | undefined;
       const message = msg.message as Record<string, unknown> | undefined;
       const messageId = String(key?.id ?? msg.id ?? Date.now());
-      const mapped: Omit<WhatsAppMessage, 'id' | 'conversation_id'> = {
+      messageIds.push(messageId);
+      messageRows.push({
+        conversation_id: convId,
+        message_id: messageId,
         remote_jid: safeString(key?.remoteJid) ?? remoteJid,
         from_me: Boolean(key?.fromMe ?? false),
         sender_name: key?.fromMe ? 'You' : (safeString(msg.pushName) ?? 'Contact'),
@@ -392,10 +396,20 @@ export async function fetchEvolutionMessages(userId: string, remoteJid: string):
         media_url: null,
         timestamp: safeTimestamp(msg.messageTimestamp) ?? new Date().toISOString(),
         status: safeString(msg.status) ?? 'sent',
-      };
-      try {
-        await upsertMessage(convId, mapped, messageId);
-      } catch {}
+      });
+    }
+
+    // Batch check existing messages, then batch insert new ones
+    if (messageIds.length > 0) {
+      const { data: existingMsgs } = await supabase
+        .from('whatsapp_messages')
+        .select('id, message_id')
+        .in('message_id', messageIds);
+      const existingIds = new Set((existingMsgs ?? []).map((r: Record<string, unknown>) => r.message_id as string));
+      const newMsgs = messageRows.filter(r => !existingIds.has(r.message_id));
+      if (newMsgs.length > 0) {
+        await supabase.from('whatsapp_messages').insert(newMsgs);
+      }
     }
 
     const { data: dbMessages, error } = await supabase
@@ -403,7 +417,7 @@ export async function fetchEvolutionMessages(userId: string, remoteJid: string):
       .select('*')
       .eq('conversation_id', convId)
       .order('timestamp', { ascending: true })
-      .limit(200);
+      .limit(50);
 
     if (error) throw error;
     return (dbMessages ?? []).map(mapDbMessage);
@@ -518,6 +532,87 @@ export async function updateWhatsAppConnection(connection: WhatsAppConnection): 
 
 export async function fetchWhatsAppConversations(userId: string): Promise<WhatsAppConversation[]> {
   return fetchEvolutionConversations(userId);
+}
+
+export async function fetchCachedConversations(): Promise<WhatsAppConversation[]> {
+  const { data, error } = await supabase
+    .from('whatsapp_conversations')
+    .select('id, remote_jid, push_name, phone_number, profile_pic, unread_count, last_message, last_message_type, last_message_timestamp, archived, pinned, lead_id')
+    .eq('archived', false)
+    .order('last_message_timestamp', { ascending: false, nullsFirst: false })
+    .limit(100);
+
+  if (error || !data) return [];
+
+  return data.map((row): WhatsAppConversation => {
+    const r = row as Record<string, unknown>;
+    const jid = (r.remote_jid as string) ?? '';
+    const pushName = (r.push_name as string) ?? null;
+    const phone = (r.phone_number as string) ?? null;
+    return {
+      id: (r.id as string) ?? jid,
+      remote_jid: jid,
+      push_name: pushName,
+      display_name: pushName ?? phone ?? jid.split('@')[0] ?? 'WhatsApp Contact',
+      phone_number: phone,
+      profile_pic: (r.profile_pic as string) ?? null,
+      unread_count: (r.unread_count as number) ?? 0,
+      last_message: (r.last_message as string) ?? null,
+      last_message_type: (r.last_message_type as string) ?? 'text',
+      last_message_timestamp: (r.last_message_timestamp as string) ?? null,
+      archived: (r.archived as boolean) ?? false,
+      pinned: (r.pinned as boolean) ?? false,
+      lead_id: (r.lead_id as string) ?? null,
+    };
+  });
+}
+
+async function batchUpsertConversations(conversations: Array<Record<string, unknown>>): Promise<void> {
+  if (conversations.length === 0) return;
+  const { data: existing } = await supabase
+    .from('whatsapp_conversations')
+    .select('id, remote_jid')
+    .in('remote_jid', conversations.map((c: Record<string, unknown>) => c.remote_jid));
+
+  const existingMap = new Map<string, string>();
+  (existing ?? []).forEach((row: Record<string, unknown>) => {
+    existingMap.set((row.remote_jid as string) ?? '', (row.id as string) ?? '');
+  });
+
+  const toInsert: Array<Record<string, unknown>> = [];
+  const toUpdate: Array<{ id: string; data: Record<string, unknown> }> = [];
+
+  for (const conv of conversations) {
+    const existingId = existingMap.get(conv.remote_jid as string);
+    if (existingId) {
+      toUpdate.push({
+        id: existingId,
+        data: {
+          push_name: conv.push_name,
+          last_message: conv.last_message,
+          last_message_type: conv.last_message_type,
+          last_message_timestamp: conv.last_message_timestamp,
+          unread_count: conv.unread_count,
+          profile_pic: conv.profile_pic,
+          updated_at: new Date().toISOString(),
+        },
+      });
+    } else {
+      toInsert.push(conv);
+    }
+  }
+
+  if (toInsert.length > 0) {
+    await supabase.from('whatsapp_conversations').insert(toInsert);
+  }
+
+  // Batch updates — Supabase doesn't support bulk update with different values,
+  // so we fire them in parallel (not sequential)
+  if (toUpdate.length > 0) {
+    await Promise.all(toUpdate.map(u =>
+      supabase.from('whatsapp_conversations').update(u.data).eq('id', u.id)
+    ));
+  }
 }
 
 export async function fetchWhatsAppMessages(userId: string, remoteJid: string): Promise<WhatsAppMessage[]> {
