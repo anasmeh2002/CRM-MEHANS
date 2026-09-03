@@ -3,14 +3,16 @@
 
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Phone, Video, MapPin, Users, Clock } from 'lucide-react';
+import { Plus, Phone, Video, MapPin, Users, Clock, CheckCircle2, XCircle, Bell, MessageCircle } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, Card, Badge } from '@/components/shared';
 import { useGlobalModal } from '@/components/modal-provider';
-import { fetchMeetings } from '@/lib/data';
+import { fetchMeetings, updateMeeting } from '@/lib/data';
+import { dispatchAutomationEvent } from '@/lib/automations';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { Meeting } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const meetingTypeIcons: Record<string, React.ElementType> = {
   call: Phone,
@@ -70,6 +72,56 @@ export default function MeetingsPage() {
   const upcoming = meetings.filter((m) => m.status === 'upcoming').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const completed = meetings.filter((m) => m.status === 'completed');
 
+  const handleComplete = async (id: string, title: string) => {
+    const updated = await updateMeeting(id, { status: 'completed' });
+    if (updated) {
+      toast.success(`Meeting "${title}" marked as completed`);
+      refetch();
+    } else {
+      toast.error('Failed to update meeting status.');
+    }
+  };
+
+  const handleCancel = async (id: string, title: string) => {
+    const updated = await updateMeeting(id, { status: 'cancelled' });
+    if (updated) {
+      toast.success(`Meeting "${title}" cancelled`);
+      refetch();
+    } else {
+      toast.error('Failed to cancel meeting.');
+    }
+  };
+
+  const handleReminder = async (meeting: typeof upcoming[number]) => {
+    try {
+      await dispatchAutomationEvent('meeting.reminder', {
+        meeting_id: meeting.id,
+        title: meeting.title,
+        date: meeting.date,
+        time: meeting.time,
+        attendee: meeting.attendee,
+      });
+      toast.success(`Reminder sent for "${meeting.title}"`);
+    } catch {
+      toast.error('Failed to send reminder.');
+    }
+  };
+
+  const handleWhatsAppAlert = async (meeting: typeof upcoming[number]) => {
+    try {
+      await dispatchAutomationEvent('meeting.whatsapp_alert', {
+        meeting_id: meeting.id,
+        title: meeting.title,
+        date: meeting.date,
+        time: meeting.time,
+        attendee: meeting.attendee,
+      });
+      toast.success(`WhatsApp alert sent for "${meeting.title}"`);
+    } catch {
+      toast.error('Failed to send WhatsApp alert.');
+    }
+  };
+
   return (
     <AppShell>
       <PageHeader title="Meetings" description={`${upcoming.length} upcoming meetings`}>
@@ -126,6 +178,32 @@ export default function MeetingsPage() {
                         <div className="mt-3 flex items-center gap-3 text-xs text-text-secondary">
                           <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" strokeWidth={1.5} /> {meeting.location}</span>
                           <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" strokeWidth={1.5} /> {meeting.attendee}</span>
+                        </div>
+                        <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
+                          <button
+                            onClick={() => handleReminder(meeting)}
+                            className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-2.5 py-1.5 text-[11px] font-medium text-text-secondary transition-colors hover:border-gold-border hover:text-gold"
+                          >
+                            <Bell className="h-3.5 w-3.5" strokeWidth={1.5} /> Remind
+                          </button>
+                          <button
+                            onClick={() => handleWhatsAppAlert(meeting)}
+                            className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-2.5 py-1.5 text-[11px] font-medium text-text-secondary transition-colors hover:border-success/40 hover:text-success"
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" strokeWidth={1.5} /> WhatsApp
+                          </button>
+                          <button
+                            onClick={() => handleComplete(meeting.id, meeting.title)}
+                            className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-2.5 py-1.5 text-[11px] font-medium text-text-secondary transition-colors hover:border-success/40 hover:text-success"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.5} /> Complete
+                          </button>
+                          <button
+                            onClick={() => handleCancel(meeting.id, meeting.title)}
+                            className="ml-auto flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-2.5 py-1.5 text-[11px] font-medium text-text-secondary transition-colors hover:border-error/40 hover:text-error"
+                          >
+                            <XCircle className="h-3.5 w-3.5" strokeWidth={1.5} /> Cancel
+                          </button>
                         </div>
                       </div>
                     </div>

@@ -58,7 +58,38 @@ export function MeetingModal({ open, onClose }: { open: boolean; onClose: () => 
         notes: form.notes || undefined,
       });
       if (result) {
-        toast.success(`Meeting "${form.title}" scheduled`);
+        // If Google Calendar sync is selected, push the event to Google
+        if (form.calendarSync === 'Google Calendar') {
+          try {
+            const googleRes = await fetch('/api/calendar/events', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: form.title,
+                starts_at: startsAt,
+                duration_minutes: Number(form.duration) || 30,
+                location: form.location || undefined,
+                attendee_name: form.attendeeName || undefined,
+                attendee_email: undefined,
+                notes: form.notes || undefined,
+                meeting_type: form.type,
+              }),
+            });
+            if (googleRes.ok) {
+              const googleData = await googleRes.json();
+              toast.success(`Meeting "${form.title}" scheduled and synced to Google Calendar`);
+              if (googleData.hangout_link) {
+                toast.info(`Google Meet link: ${googleData.hangout_link}`, { duration: 6000 });
+              }
+            } else {
+              toast.success(`Meeting "${form.title}" scheduled (Google Calendar sync failed — you can retry)`);
+            }
+          } catch {
+            toast.success(`Meeting "${form.title}" scheduled (Google Calendar sync failed — you can retry)`);
+          }
+        } else {
+          toast.success(`Meeting "${form.title}" scheduled`);
+        }
         triggerRefresh();
         onClose();
         setForm({ title: '', date: '', time: '10:00', duration: '30', type: 'in-person', location: '', attendeeName: '', leadId: '', contactId: '', agentId: '', calendarSync: 'Google Calendar', notes: '' });

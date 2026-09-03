@@ -56,6 +56,8 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1));
   const [syncing, setSyncing] = useState(false);
   const [calendarConnected, setCalendarConnected] = useState(false);
+  const [googleEvents, setGoogleEvents] = useState<any[]>([]);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const { data, loading, error, refetch } = useSupabaseQuery(fetchMeetings);
 
@@ -76,6 +78,35 @@ export default function CalendarPage() {
     })();
     return () => { active = false; };
   }, []);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  // Fetch Google Calendar events when connected
+  const fetchGoogleEvents = async () => {
+    if (!calendarConnected) return;
+    setGoogleLoading(true);
+    try {
+      const timeMin = new Date(year, 0, 1).toISOString();
+      const timeMax = new Date(year, 11, 31).toISOString();
+      const res = await fetch(`/api/calendar/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setGoogleEvents(data.events ?? []);
+      } else {
+        setGoogleEvents([]);
+      }
+    } catch {
+      setGoogleEvents([]);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (calendarConnected) fetchGoogleEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calendarConnected, year]);
 
   // Check URL params for sync result
   useEffect(() => {
@@ -100,13 +131,43 @@ export default function CalendarPage() {
   }, [refetch]);
 
   // Default to [] while loading/null and map DB rows to the display shape.
-  const meetings = useMemo(
+  const dbMeetings = useMemo(
     () => (data ?? []).map(toDisplayMeeting),
     [data],
   );
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
+  // Map Google Calendar events to the same display shape
+  const googleMeetings = useMemo(
+    () => googleEvents.map((e) => {
+      const startsAt = e.starts_at ? new Date(e.starts_at) : null;
+      return {
+        id: e.id,
+        title: e.title,
+        date: startsAt ? startsAt.toISOString().slice(0, 10) : '',
+        time: startsAt ? `${String(startsAt.getHours()).padStart(2, '0')}:${String(startsAt.getMinutes()).padStart(2, '0')}` : '',
+        duration: e.ends_at ? Math.round((new Date(e.ends_at).getTime() - startsAt!.getTime()) / 60000) : 30,
+        type: 'google_meet',
+        attendee: e.attendee || 'TBD',
+        location: e.location || '',
+        status: 'upcoming',
+        source: 'google',
+      };
+    }),
+    [googleEvents],
+  );
+
+  // Merge DB meetings with Google events, deduplicating by title+date
+  const meetings = useMemo(() => {
+    const merged = [...dbMeetings, ...googleMeetings];
+    const seen = new Set<string>();
+    return merged.filter((m) => {
+      const key = `${m.title}-${m.date}-${m.time}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).sort((a, b) => new Date(a.date + 'T' + (a.time || '00:00')).getTime() - new Date(b.date + 'T' + (b.time || '00:00')).getTime());
+  }, [dbMeetings, googleMeetings]);
+
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const prevMonthDays = new Date(year, month, 0).getDate();
@@ -149,7 +210,8 @@ export default function CalendarPage() {
                 setSyncing(true);
                 try {
                   await dispatchAutomationEvent('calendar.sync_requested', { timestamp: new Date().toISOString() });
-                  toast.success('Calendar sync triggered. n8n will update your events.');
+                  await fetchGoogleEvents();
+                  toast.success('Calendar synced with Google Calendar events.');
                 } catch {
                   toast.error('Failed to trigger sync.');
                 } finally {
