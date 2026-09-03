@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 const EVOLUTION_API_URL =
   process.env.NEXT_PUBLIC_EVOLUTION_API_URL ||
@@ -13,6 +14,68 @@ function buildHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (EVOLUTION_API_KEY) headers['apikey'] = EVOLUTION_API_KEY;
   return headers;
+}
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+function serverSupabase() {
+  return createClient(SUPABASE_URL, SERVICE_KEY);
+}
+
+async function dispatchAutomationEvent(event: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const sb = serverSupabase();
+    const { data: n8nRow } = await sb.from('integrations').select('config, connected').eq('service', 'n8n').maybeSingle();
+    if (!n8nRow || !n8nRow.connected) return;
+    const config = (n8nRow.config ?? {}) as Record<string, unknown>;
+    const webhookUrl = typeof config.webhook_url === 'string' ? config.webhook_url : '';
+    const secret = typeof config.webhook_secret === 'string' ? config.webhook_secret : '';
+    if (!webhookUrl) return;
+
+    const { data: automations } = await sb.from('automations').select('id').eq('trigger_event', event).eq('enabled', true);
+    if (!automations || automations.length === 0) return;
+
+    for (const auto of automations) {
+      const { data: execRow } = await sb.from('automation_executions').insert({
+        automation_id: auto.id,
+        event_type: event,
+        payload: data,
+        status: 'pending',
+      }).select('id').single();
+
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (secret) headers['x-webhook-secret'] = secret;
+
+      try {
+        const res = await fetch(webhookUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ source: 'mehans-crm', event, data, timestamp: new Date().toISOString() }),
+          signal: AbortSignal.timeout(15000),
+        });
+        const body = await res.json().catch(() => ({}));
+        await sb.from('automation_executions').update({
+          status: res.ok ? 'success' : 'error',
+          n8n_execution_id: typeof body.executionId === 'string' ? body.executionId : null,
+          error_message: res.ok ? null : `n8n returned ${res.status}`,
+          completed_at: new Date().toISOString(),
+        }).eq('id', execRow?.id ?? '');
+        await sb.from('automations').update({
+          last_execution_at: new Date().toISOString(),
+          last_execution_status: res.ok ? 'success' : 'error',
+        }).eq('id', auto.id);
+      } catch (err) {
+        await sb.from('automation_executions').update({
+          status: 'error',
+          error_message: err instanceof Error ? err.message : 'fetch failed',
+          completed_at: new Date().toISOString(),
+        }).eq('id', execRow?.id ?? '');
+      }
+    }
+  } catch (err) {
+    console.error('[whatsapp-proxy] automation dispatch failed:', err);
+  }
 }
 
 async function parseJsonSafe(res: Response): Promise<any | null> {
@@ -167,6 +230,7 @@ export async function POST(request: NextRequest) {
 
       const statusData = await parseJsonSafe(statusRes);
       const state = statusData?.instance?.state ?? statusData?.state ?? null;
+      void dispatchAutomationEvent('whatsapp.connection_change', { instanceName: name, state });
       return NextResponse.json({ success: true, status: state, instanceName: name });
     }
 
@@ -193,6 +257,7 @@ export async function POST(request: NextRequest) {
 
       const chatsData = await parseJsonSafe(chatsRes);
       const chats = Array.isArray(chatsData) ? chatsData : Array.isArray(chatsData?.chats) ? chatsData.chats : [];
+      if (chats.length > 0) void dispatchAutomationEvent('whatsapp.new_conversation', { instanceName: name, conversationCount: chats.length });
       return NextResponse.json({ success: true, conversations: chats });
     }
 
@@ -213,6 +278,7 @@ export async function POST(request: NextRequest) {
 
       const msgData = await parseJsonSafe(msgRes);
       const messages = Array.isArray(msgData?.messages) ? msgData.messages : Array.isArray(msgData) ? msgData : [];
+      if (messages.length > 0) void dispatchAutomationEvent('whatsapp.new_message', { instanceName, remoteJid, messageCount: messages.length });
       return NextResponse.json({ success: true, messages });
     }
 
@@ -241,6 +307,7 @@ export async function POST(request: NextRequest) {
       }
 
       const sendData = await parseJsonSafe(sendRes);
+      void dispatchAutomationEvent('whatsapp.outgoing_message', { instanceName, remoteJid, text });
       return NextResponse.json({ success: true, key: sendData?.key ?? null });
     }
 

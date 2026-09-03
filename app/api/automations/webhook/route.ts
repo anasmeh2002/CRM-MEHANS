@@ -24,7 +24,28 @@ export async function OPTIONS() {
   return new Response(null, { status: 200, headers: corsHeaders });
 }
 
+async function validateWebhookSecret(request: NextRequest): Promise<boolean> {
+  const provided = request.headers.get('x-webhook-secret');
+  if (!provided) return false;
+  const sb = serverSupabase();
+  const { data } = await sb
+    .from('integrations')
+    .select('config')
+    .eq('service', 'n8n')
+    .maybeSingle();
+  if (!data) return false;
+  const config = (data.config ?? {}) as Record<string, unknown>;
+  const expected = typeof config.webhook_secret === 'string' ? config.webhook_secret : '';
+  if (!expected) return false;
+  return provided === expected;
+}
+
 export async function POST(request: NextRequest) {
+  const isValid = await validateWebhookSecret(request);
+  if (!isValid) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+  }
+
   let body: WebhookAction;
   try {
     body = await request.json();

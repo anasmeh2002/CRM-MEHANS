@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { dispatchAutomationEvent } from './automations';
 import type {
   Lead, Contact, Property, Deal, Task, Meeting, Activity, TeamMember, PropertyImage, Note, Attachment,
 } from './types';
@@ -241,6 +242,7 @@ export async function fetchLeads(): Promise<Lead[]> {
 }
 
 export async function createLead(input: Partial<Lead>): Promise<Lead | null> {
+  void dispatchAutomationEvent('lead.created', { lead: input });
   const payload: Record<string, unknown> = {
     first_name: input.first_name,
     last_name: input.last_name,
@@ -283,6 +285,7 @@ export async function updateLead(id: string, patch: Partial<Lead>): Promise<Lead
   if (patch.property_interest !== undefined) dbPatch.interested_in = patch.property_interest;
   const { data, error } = await db().from('leads').update(dbPatch).eq('id', id).select('*, assigned_agent:profiles!assigned_to(*)').single();
   if (error) { console.error('[data] updateLead failed', error); return null; }
+  if (patch.status === 'qualified') void dispatchAutomationEvent('lead.qualified', { lead_id: id, status: patch.status });
   return mapLead(data);
 }
 
@@ -310,6 +313,7 @@ export async function fetchProperties(): Promise<Property[]> {
 }
 
 export async function createProperty(input: Partial<Property>): Promise<Property | null> {
+  void dispatchAutomationEvent('property.match', { property: input });
   const payload: Record<string, unknown> = {
     title: input.title,
     address: input.address,
@@ -411,6 +415,8 @@ export async function updateDeal(id: string, patch: Partial<Deal>): Promise<Deal
   if (patch.notes !== undefined) dbPatch.notes = patch.notes;
   const { data, error } = await db().from('deals').update(dbPatch).eq('id', id).select('*, lead:leads(*), contact:contacts(*), property:properties(*), owner:profiles!owner_id(*)').single();
   if (error) { console.error('[data] updateDeal failed', error); return null; }
+  if (patch.stage === 'won') void dispatchAutomationEvent('deal.won', { deal_id: id, stage: 'won' });
+  if (patch.stage === 'lost') void dispatchAutomationEvent('deal.lost', { deal_id: id, stage: 'lost' });
   return mapDeal(data);
 }
 
@@ -479,6 +485,7 @@ export async function fetchMeetings(): Promise<Meeting[]> {
 }
 
 export async function createMeeting(input: Partial<Meeting>): Promise<Meeting | null> {
+  void dispatchAutomationEvent('meeting.created', { meeting: input });
   const payload: Record<string, unknown> = {
     title: input.title,
     starts_at: input.starts_at ?? new Date().toISOString(),
@@ -510,6 +517,9 @@ export async function updateMeeting(id: string, patch: Partial<Meeting>): Promis
   if (patch.notes !== undefined) dbPatch.notes = patch.notes;
   const { data, error } = await db().from('meetings').update(dbPatch).eq('id', id).select('*, lead:leads(*), contact:contacts(*), assigned_agent:profiles!assigned_agent_id(*)').single();
   if (error) { console.error('[data] updateMeeting failed', error); return null; }
+  if (patch.status === 'cancelled') void dispatchAutomationEvent('meeting.cancelled', { meeting_id: id });
+  if (patch.status === 'completed') void dispatchAutomationEvent('meeting.completed', { meeting_id: id });
+  void dispatchAutomationEvent('meeting.updated', { meeting_id: id, patch });
   return mapMeeting(data);
 }
 

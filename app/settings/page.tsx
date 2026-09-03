@@ -40,6 +40,7 @@ const integrationMeta: Record<string, { icon: string; description: string; color
   'Google Calendar': { icon: '📅', description: 'Sync meetings and events', color: '#4285F4' },
   'OpenAI': { icon: '✦', description: 'AI assistant and lead scoring', color: '#D4AF37' },
   'Zapier': { icon: '⚡', description: 'Connect 5,000+ apps', color: '#FF4A00' },
+  'n8n': { icon: '⚙', description: 'Automation workflow engine', color: '#FF6D5A' },
 };
 
 const modules = ['leads', 'properties', 'deals', 'tasks', 'meetings', 'contacts'];
@@ -643,10 +644,19 @@ function ApiTab() {
       <Card>
         <h3 className="mb-4 font-serif text-lg font-medium text-text-primary">Webhooks</h3>
         <div className="rounded-xl border border-border bg-bg-elevated p-3.5">
-          <p className="text-sm font-medium text-text-primary">Endpoint URL</p>
-          <input className="input mt-2 w-full" placeholder="https://your-app.com/webhook/mehans" />
+          <p className="text-sm font-medium text-text-primary">n8n Action Webhook (n8n → CRM)</p>
+          <p className="mt-1 text-[11px] text-text-muted">n8n sends actions to this endpoint. Requires x-webhook-secret header.</p>
+          <code className="mt-2 block truncate rounded-lg border border-border bg-bg-primary px-3 py-2 font-mono text-xs text-gold">
+            {typeof window !== 'undefined' ? `${window.location.origin}/api/automations/webhook` : '/api/automations/webhook'}
+          </code>
         </div>
-        <button onClick={() => toast.success('Webhook saved')} className="btn btn-gold btn-md mt-4">Save Webhook</button>
+        <div className="mt-3 rounded-xl border border-border bg-bg-elevated p-3.5">
+          <p className="text-sm font-medium text-text-primary">CRM Event Dispatch (CRM → n8n)</p>
+          <p className="mt-1 text-[11px] text-text-muted">CRM events are dispatched to your n8n webhook URL. Configure it in the Automations tab.</p>
+          <code className="mt-2 block truncate rounded-lg border border-border bg-bg-primary px-3 py-2 font-mono text-xs text-gold">
+            {typeof window !== 'undefined' ? `${window.location.origin}/api/automations/events` : '/api/automations/events'}
+          </code>
+        </div>
       </Card>
     </div>
   );

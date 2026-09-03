@@ -155,6 +155,18 @@ export async function saveN8nConfig(cfg: N8nConfig): Promise<void> {
   if (error) throw error;
 }
 
+export async function dispatchAutomationEvent(event: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    await fetch('/api/automations/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event, data, timestamp: new Date().toISOString() }),
+    });
+  } catch (err) {
+    console.error('[automations] dispatch failed:', err);
+  }
+}
+
 export async function testN8nConnection(): Promise<{ ok: boolean; message: string }> {
   const config = await fetchN8nConfig();
   if (!config.webhookUrl) {
