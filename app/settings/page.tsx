@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Building2, Users, Shield, Plug, Palette, Code, CreditCard,
-  Check, Plus, Sparkles, Trash2, Copy, Loader2,
+  Check, Plus, Sparkles, Trash2, Copy, Loader2, Zap, Workflow,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, Card, Badge, Avatar } from '@/components/shared';
@@ -18,6 +18,7 @@ import {
   fetchIntegrations, toggleIntegration,
   fetchApiKeys, createApiKey, revokeApiKey,
 } from '@/lib/data';
+import { fetchN8nConfig, saveN8nConfig, testN8nConnection } from '@/lib/automations';
 import type { OrgSettings, RolePermissionRow, IntegrationRow, ApiKeyRow } from '@/lib/data';
 import type { TeamMember } from '@/lib/types';
 
@@ -26,6 +27,7 @@ const tabs = [
   { id: 'users', label: 'Users', icon: Users },
   { id: 'permissions', label: 'Permissions', icon: Shield },
   { id: 'integrations', label: 'Integrations', icon: Plug },
+  { id: 'automations', label: 'Automations', icon: Workflow },
   { id: 'branding', label: 'Branding', icon: Palette },
   { id: 'api', label: 'API', icon: Code },
   { id: 'billing', label: 'Billing', icon: CreditCard },
@@ -82,6 +84,7 @@ export default function SettingsPage() {
               {activeTab === 'users' && <UsersTab />}
               {activeTab === 'permissions' && <PermissionsTab />}
               {activeTab === 'integrations' && <IntegrationsTab />}
+              {activeTab === 'automations' && <AutomationsTab />}
               {activeTab === 'branding' && <BrandingTab />}
               {activeTab === 'api' && <ApiTab />}
               {activeTab === 'billing' && <BillingTab />}
@@ -676,6 +679,147 @@ function BillingTab() {
         <p className="mt-4 text-sm font-medium text-text-primary">Billing is active</p>
       </div>
     </Card>
+  );
+}
+
+// ─── Automations (n8n) ───────────────────────────────────────────────────────────
+
+function AutomationsTab() {
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [apiUrl, setApiUrl] = useState('');
+  const [webhookSecret, setWebhookSecret] = useState('');
+  const [connected, setConnected] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    fetchN8nConfig()
+      .then((cfg) => {
+        setWebhookUrl(cfg.webhookUrl);
+        setApiUrl(cfg.apiUrl);
+        setWebhookSecret(cfg.webhookSecret);
+        setConnected(cfg.connected);
+      })
+      .catch(() => toast.error('Failed to load n8n config'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await saveN8nConfig({ webhookUrl: webhookUrl, apiUrl: apiUrl, webhookSecret: webhookSecret, connected: connected || !!webhookUrl });
+      toast.success('n8n settings saved');
+    } catch {
+      toast.error('Failed to save n8n settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    try {
+      const result = await testN8nConnection();
+      if (result.ok) toast.success(result.message);
+      else toast.error(result.message);
+    } catch {
+      toast.error('Test failed');
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  if (loading) return <LoadingCard />;
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold-bg text-gold">
+            <Workflow className="h-5 w-5" strokeWidth={1.5} />
+          </div>
+          <div>
+            <h3 className="font-serif text-lg font-medium text-text-primary">n8n Automation Engine</h3>
+            <p className="text-xs text-text-muted">Connect your n8n instance to trigger CRM automations</p>
+          </div>
+          {connected && <Badge variant="success" className="ml-auto"><Check className="h-3 w-3" strokeWidth={1.5} /> Connected</Badge>}
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-text-muted">n8n Webhook URL</label>
+            <input
+              className="input w-full"
+              placeholder="https://your-n8n.com/webhook/mehans-crm"
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+            />
+            <p className="mt-1 text-[11px] text-text-muted">CRM events are sent to this URL. Keep it secret.</p>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-text-muted">n8n API URL (optional)</label>
+            <input
+              className="input w-full"
+              placeholder="https://your-n8n.com/api/v1"
+              value={apiUrl}
+              onChange={(e) => setApiUrl(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-text-muted">Webhook Secret</label>
+            <input
+              type="password"
+              className="input w-full"
+              placeholder="Shared secret for webhook validation"
+              value={webhookSecret}
+              onChange={(e) => setWebhookSecret(e.target.value)}
+            />
+            <p className="mt-1 text-[11px] text-text-muted">Sent as x-webhook-secret header. n8n must validate this.</p>
+          </div>
+
+          <div className="flex gap-2">
+            <button onClick={handleSave} disabled={saving} className="btn btn-gold btn-md">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Settings'}
+            </button>
+            <button onClick={handleTest} disabled={testing || !webhookUrl} className="btn btn-ghost btn-md">
+              {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Test Connection'}
+            </button>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="mb-4 flex items-center gap-2.5">
+          <Zap className="h-4 w-4 text-gold" strokeWidth={1.5} />
+          <h3 className="font-serif text-lg font-medium text-text-primary">Available Webhook Events</h3>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {[
+            { event: 'whatsapp.new_message', label: 'New WhatsApp Message' },
+            { event: 'whatsapp.outgoing_message', label: 'Outgoing WhatsApp Message' },
+            { event: 'whatsapp.new_conversation', label: 'New WhatsApp Conversation' },
+            { event: 'whatsapp.connection_change', label: 'WhatsApp Connection Changed' },
+            { event: 'lead.created', label: 'Lead Created' },
+            { event: 'lead.inactive', label: 'Lead Inactive (48h)' },
+            { event: 'deal.won', label: 'Deal Won' },
+            { event: 'deal.lost', label: 'Deal Lost' },
+            { event: 'meeting.created', label: 'Appointment Created' },
+            { event: 'meeting.updated', label: 'Appointment Updated' },
+            { event: 'meeting.cancelled', label: 'Appointment Cancelled' },
+            { event: 'meeting.completed', label: 'Appointment Completed' },
+          ].map((evt) => (
+            <div key={evt.event} className="flex items-center gap-2 rounded-lg border border-border bg-bg-elevated px-3 py-2">
+              <code className="text-[11px] font-mono text-gold">{evt.event}</code>
+              <span className="ml-auto text-[11px] text-text-muted">{evt.label}</span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[11px] text-text-muted">
+          These events are sent to your n8n webhook URL. Use them as trigger nodes in your n8n workflows.
+        </p>
+      </Card>
+    </div>
   );
 }
 
