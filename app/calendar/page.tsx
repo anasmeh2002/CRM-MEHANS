@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus, Phone, Video, MapPin, Users, Clock, CalendarX, AlertCircle, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Phone, Video, MapPin, Users, Clock, CalendarX, AlertCircle, RefreshCw, CalendarCheck } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, Card, Badge, Skeleton, EmptyState } from '@/components/shared';
 import { useGlobalModal } from '@/components/modal-provider';
@@ -13,6 +13,7 @@ import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { Meeting } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -54,8 +55,42 @@ export default function CalendarPage() {
   const { openModal } = useGlobalModal();
   const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1));
   const [syncing, setSyncing] = useState(false);
+  const [calendarConnected, setCalendarConnected] = useState(false);
 
   const { data, loading, error, refetch } = useSupabaseQuery(fetchMeetings);
+
+  // Check Google Calendar connection status
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { data: row } = await supabase
+          .from('integrations')
+          .select('connected')
+          .eq('service', 'Google Calendar')
+          .maybeSingle();
+        if (active) setCalendarConnected(row?.connected ?? false);
+      } catch {
+        if (active) setCalendarConnected(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // Check URL params for sync result
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('sync_success') === 'true') {
+      toast.success('Google Calendar connected successfully!');
+      setCalendarConnected(true);
+      window.history.replaceState({}, '', '/calendar');
+    }
+    const syncError = params.get('sync_error');
+    if (syncError) {
+      toast.error('Google Calendar sync failed. Please try again.');
+      window.history.replaceState({}, '', '/calendar');
+    }
+  }, []);
 
   // Refetch when the window regains focus so stale meetings don't linger.
   useEffect(() => {
@@ -108,24 +143,36 @@ export default function CalendarPage() {
     <AppShell>
       <PageHeader title="Calendar" description="Schedule and manage your meetings">
         <div className="flex items-center gap-2">
-          <button
-            onClick={async () => {
-              setSyncing(true);
-              try {
-                await dispatchAutomationEvent('calendar.sync_requested', { timestamp: new Date().toISOString() });
-                toast.success('Google Calendar sync requested. n8n will handle the rest.');
-              } catch {
-                toast.error('Failed to request sync. Check your n8n integration.');
-              } finally {
-                setSyncing(false);
-              }
-            }}
-            disabled={syncing}
-            className="btn btn-outline btn-md"
-          >
-            <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} strokeWidth={1.5} />
-            {syncing ? 'Syncing...' : 'Sync with Google Calendar'}
-          </button>
+          {calendarConnected ? (
+            <button
+              onClick={async () => {
+                setSyncing(true);
+                try {
+                  await dispatchAutomationEvent('calendar.sync_requested', { timestamp: new Date().toISOString() });
+                  toast.success('Calendar sync triggered. n8n will update your events.');
+                } catch {
+                  toast.error('Failed to trigger sync.');
+                } finally {
+                  setSyncing(false);
+                }
+              }}
+              disabled={syncing}
+              className="btn btn-md border border-success/40 bg-success-bg text-success hover:bg-success/10"
+            >
+              {syncing ? <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={1.5} /> : <CalendarCheck className="h-4 w-4" strokeWidth={1.5} />}
+              {syncing ? 'Syncing...' : 'Calendar Connected'}
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                window.location.href = '/api/calendar/auth';
+              }}
+              className="btn btn-outline btn-md"
+            >
+              <RefreshCw className="h-4 w-4" strokeWidth={1.5} />
+              Sync with Google Calendar
+            </button>
+          )}
           <button onClick={() => openModal('meeting')} className="btn btn-gold btn-md">
             <Plus className="h-4 w-4" strokeWidth={1.5} /> New Meeting
           </button>

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Bed, Bath, Maximize, MapPin, Star, X, Home, Search,
   Phone, Mail, MessageCircle, Building, Trash2, Pencil,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, Card, Badge, Avatar, EmptyState, SkeletonCard } from '@/components/shared';
@@ -84,6 +85,7 @@ export default function PropertiesPage() {
   const [saving, setSaving] = useState(false);
   const [createFiles, setCreateFiles] = useState<File[]>([]);
   const [createPreviews, setCreatePreviews] = useState<string[]>([]);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const [form, setForm] = useState({
     title: '', address: '', city: '', price: '', type: 'apartment' as PropertyType,
@@ -417,8 +419,44 @@ export default function PropertiesPage() {
               className="fixed right-0 top-0 z-50 flex h-screen w-full max-w-lg flex-col border-l border-border bg-bg-secondary shadow-modal"
             >
               <div className="relative h-72 overflow-hidden">
-                <img src={selected.gallery[galleryIndex]} alt={selected.title} className="h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-bg-secondary to-transparent" />
+                <div id="property-carousel" className="flex h-full w-full snap-x snap-mandatory overflow-x-auto scrollbar-thin" style={{ scrollSnapType: 'x mandatory' }}>
+                  {selected.gallery.map((src, i) => (
+                    <div key={i} className="relative h-full w-full shrink-0 snap-center" style={{ scrollSnapAlign: 'center' }}>
+                      <img src={src} alt={`${selected.title} ${i + 1}`} className="h-full w-full object-cover" onClick={() => { setGalleryIndex(i); setLightboxOpen(true); }} />
+                    </div>
+                  ))}
+                </div>
+                {selected.gallery.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => {
+                        const container = document.getElementById('property-carousel');
+                        if (container) {
+                          const newIndex = galleryIndex > 0 ? galleryIndex - 1 : selected.gallery.length - 1;
+                          container.scrollTo({ left: newIndex * container.clientWidth, behavior: 'smooth' });
+                          setGalleryIndex(newIndex);
+                        }
+                      }}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 rounded-lg bg-black/40 p-2 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+                    >
+                      <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const container = document.getElementById('property-carousel');
+                        if (container) {
+                          const newIndex = galleryIndex < selected.gallery.length - 1 ? galleryIndex + 1 : 0;
+                          container.scrollTo({ left: newIndex * container.clientWidth, behavior: 'smooth' });
+                          setGalleryIndex(newIndex);
+                        }
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-black/40 p-2 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+                    >
+                      <ChevronRight className="h-5 w-5" strokeWidth={1.5} />
+                    </button>
+                  </>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-bg-secondary to-transparent pointer-events-none" />
                 <button onClick={() => setSelected(null)} className="absolute right-3 top-3 rounded-lg bg-black/40 p-2 text-white backdrop-blur-sm transition-colors hover:bg-black/60">
                   <X className="h-5 w-5" strokeWidth={1.5} />
                 </button>
@@ -430,7 +468,7 @@ export default function PropertiesPage() {
                 {selected.gallery.length > 1 && (
                   <div className="absolute bottom-3 right-4 flex gap-1.5">
                     {selected.gallery.map((_, i) => (
-                      <button key={i} onClick={(e) => { e.stopPropagation(); setGalleryIndex(i); }} className={cn('h-1.5 rounded-full transition-all', i === galleryIndex ? 'w-6 bg-gold' : 'w-1.5 bg-white/40')} />
+                      <button key={i} onClick={(e) => { e.stopPropagation(); setGalleryIndex(i); const container = document.getElementById('property-carousel'); if (container) container.scrollTo({ left: i * container.clientWidth, behavior: 'smooth' }); }} className={cn('h-1.5 rounded-full transition-all', i === galleryIndex ? 'w-6 bg-gold' : 'w-1.5 bg-white/40')} />
                     ))}
                   </div>
                 )}
@@ -478,6 +516,71 @@ export default function PropertiesPage() {
                 <button onClick={() => handleDelete(selected.id)} className="btn btn-danger btn-sm"><Trash2 className="h-4 w-4" strokeWidth={1.5} /> Delete</button>
               </div>
             </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightboxOpen && selected && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setLightboxOpen(false)}
+              className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm"
+            />
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+              <button
+                onClick={() => setLightboxOpen(false)}
+                className="absolute right-4 top-4 rounded-lg bg-white/10 p-2.5 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+              >
+                <X className="h-6 w-6" strokeWidth={1.5} />
+              </button>
+              {selected.gallery.length > 1 && (
+                <>
+                  <button
+                    onClick={() => {
+                      const newIndex = galleryIndex > 0 ? galleryIndex - 1 : selected.gallery.length - 1;
+                      setGalleryIndex(newIndex);
+                    }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 rounded-xl bg-white/10 p-3 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+                  >
+                    <ChevronLeft className="h-6 w-6" strokeWidth={1.5} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      const newIndex = galleryIndex < selected.gallery.length - 1 ? galleryIndex + 1 : 0;
+                      setGalleryIndex(newIndex);
+                    }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-xl bg-white/10 p-3 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+                  >
+                    <ChevronRight className="h-6 w-6" strokeWidth={1.5} />
+                  </button>
+                </>
+              )}
+              <motion.img
+                key={galleryIndex}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.2 }}
+                src={selected.gallery[galleryIndex]}
+                alt={`${selected.title} ${galleryIndex + 1}`}
+                className="max-h-[85vh] max-w-[90vw] rounded-xl object-contain"
+              />
+              {selected.gallery.length > 1 && (
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+                  {selected.gallery.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setGalleryIndex(i)}
+                      className={cn('h-2 rounded-full transition-all', i === galleryIndex ? 'w-8 bg-gold' : 'w-2 bg-white/30')}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </>
         )}
       </AnimatePresence>
