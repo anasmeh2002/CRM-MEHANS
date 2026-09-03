@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, CheckCheck, Link2, Loader2, MoreVertical, Paperclip, Plus, Search, Send, Settings2, RefreshCw, CheckCircle2, AlertCircle, Sparkles, X, FileText, Image as ImageIcon } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, CheckCheck, Link2, Loader2, MoreVertical, Paperclip, Plus, Search, Send, Settings2, RefreshCw, CheckCircle2, AlertCircle, Sparkles, X, FileText, Image as ImageIcon, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppShell } from '@/components/layout/app-shell';
 import { Avatar, PageHeader } from '@/components/shared';
@@ -11,6 +11,8 @@ import {
   fetchWhatsAppConnection,
   fetchWhatsAppConversations,
   fetchWhatsAppMessages,
+  fetchCachedMessages,
+  subscribeToMessages,
   sendWhatsAppMessage,
   sendEvolutionMedia,
   updateWhatsAppConnection,
@@ -40,6 +42,7 @@ function formatDate(value: string | null): string {
 
 const ACCEPTED_MEDIA = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const PAGE_SIZE = 20;
 
 type Attachment = {
   file: File;
@@ -48,6 +51,8 @@ type Attachment = {
   mimetype: string;
   preview: string | null;
 };
+
+type MessageCache = Map<string, { messages: WhatsAppMessage[]; hasMore: boolean }>;
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -102,6 +107,12 @@ export default function WhatsAppPage() {
   const [aiHistory, setAiHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const [crmContext, setCrmContext] = useState<CRMContext | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Message cache: keyed by remote_jid
+  const cacheRef = useRef<MessageCache>(new Map());
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const stopStatusPolling = () => {
     if (statusPollRef.current) { clearInterval(statusPollRef.current); statusPollRef.current = null; }
@@ -153,32 +164,99 @@ export default function WhatsAppPage() {
     return () => { active = false; clearInterval(refreshRef); };
   }, [userId, connection.connected]);
 
+  // Load messages: cached first, then background fetch + realtime
   useEffect(() => {
-    if (!selectedJid || !userId) { setMessages([]); setMessagesError(null); return; }
+    if (!selectedJid || !userId) { setMessages([]); setMessagesError(null); setHasMore(false); return; }
     let active = true;
-    const loadMessages = async (showLoading: boolean) => {
-      if (showLoading) setLoadingMessages(true);
+
+    // 1. Immediately show cached messages if available
+    const cached = cacheRef.current.get(selectedJid);
+    if (cached) {
+      setMessages(cached.messages);
+      setHasMore(cached.hasMore);
+    } else {
+      setMessages([]);
+    }
+
+    // 2. Fetch from DB (fast) — then sync with Evolution API in background
+    const loadInitial = async () => {
+      setLoadingMessages(true);
       setMessagesError(null);
       try {
-        const data = await fetchWhatsAppMessages(userId, selectedJid);
-        if (active) setMessages((prev) => dedupMessages([...prev.filter(m => !data.some(d => d.id === m.id)), ...data]));
-      } catch (error) {
-        if (active) setMessagesError(error instanceof Error ? error.message : 'Unable to load messages');
+        const { messages: dbMsgs, hasMore: more } = await fetchCachedMessages(selectedJid, PAGE_SIZE);
+        if (!active) return;
+        setMessages(dbMsgs);
+        setHasMore(more);
+        cacheRef.current.set(selectedJid, { messages: dbMsgs, hasMore: more });
+      } catch {
+        // DB might not have conversation yet — try full fetch
       } finally {
-        if (active && showLoading) setLoadingMessages(false);
+        if (active) setLoadingMessages(false);
+      }
+
+      // 3. Background sync from Evolution API (non-blocking)
+      try {
+        await fetchWhatsAppMessages(userId, selectedJid);
+        if (!active) return;
+        const { messages: synced, hasMore: more } = await fetchCachedMessages(selectedJid, PAGE_SIZE);
+        if (active) {
+          setMessages(synced);
+          setHasMore(more);
+          cacheRef.current.set(selectedJid, { messages: synced, hasMore: more });
+        }
+      } catch (error) {
+        if (active && !cached) {
+          setMessagesError(error instanceof Error ? error.message : 'Unable to load messages');
+        }
       }
     };
-    loadMessages(true);
-    const refreshRef = setInterval(() => { loadMessages(false); }, 10000);
-    return () => { active = false; clearInterval(refreshRef); };
+
+    loadInitial();
+
+    // 4. Realtime subscription for new messages
+    const unsubscribe = subscribeToMessages(selectedJid, (newMsg) => {
+      if (!active) return;
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === newMsg.id)) return prev;
+        const updated = [...prev, newMsg];
+        const cached = cacheRef.current.get(selectedJid);
+        if (cached) {
+          cacheRef.current.set(selectedJid, { messages: updated, hasMore: cached.hasMore });
+        }
+        return updated;
+      });
+    });
+
+    return () => { active = false; unsubscribe(); };
   }, [userId, selectedJid]);
+
+  // Load older messages (pagination)
+  const loadMore = useCallback(async () => {
+    if (!selectedJid || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const oldest = messages[0]?.timestamp;
+      const { messages: older, hasMore: more } = await fetchCachedMessages(selectedJid, PAGE_SIZE, oldest);
+      setMessages((prev) => dedupMessages([...older, ...prev]));
+      setHasMore(more);
+      const cached = cacheRef.current.get(selectedJid);
+      if (cached) {
+        cacheRef.current.set(selectedJid, { messages: dedupMessages([...older, ...cached.messages]), hasMore: more });
+      }
+    } catch {
+      toast.error('Unable to load older messages');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [selectedJid, loadingMore, hasMore, messages]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [messages.length]);
 
+  // Fetch CRM context when conversation changes
   useEffect(() => {
     if (!selectedJid || !messages.length) { setCrmContext(null); return; }
     const selected = conversations.find((c) => c.remote_jid === selectedJid);
@@ -186,7 +264,95 @@ export default function WhatsAppPage() {
     fetchCRMContext(selectedJid, selected.phone_number, messages)
       .then(setCrmContext)
       .catch(() => {});
-  }, [selectedJid, messages.length]);
+  }, [selectedJid, messages.length, conversations]);
+
+  // AI auto-analysis when conversation is selected
+  const buildAISystemPrompt = useCallback((): string => {
+    let context = `You are the MEHANS CRM WhatsApp assistant for a real estate business.\n\n`;
+    if (crmContext) {
+      context += `CONVERSATION CONTEXT:\n`;
+      context += `Contact: ${crmContext.contactName}\n`;
+      context += `Phone: ${crmContext.phoneNumber ?? 'Unknown'}\n\n`;
+      if (crmContext.recentMessages.length > 0) {
+        context += `RECENT MESSAGES:\n`;
+        crmContext.recentMessages.forEach((m) => {
+          context += `[${m.time}] ${m.from}: ${m.text}\n`;
+        });
+        context += `\n`;
+      }
+      if (crmContext.lead) {
+        const lead = crmContext.lead;
+        context += `LEAD INFO:\n`;
+        context += `- Name: ${lead.first_name ?? ''} ${lead.last_name ?? ''}\n`;
+        context += `- Status: ${lead.status ?? 'unknown'}\n`;
+        context += `- Source: ${lead.source ?? 'unknown'}\n`;
+        context += `- Budget: ${lead.budget_min ?? '?'} - ${lead.budget_max ?? '?'}\n`;
+        context += `- Property interest: ${lead.property_type ?? lead.interested_in ?? 'unknown'}\n`;
+        context += `- City: ${lead.city ?? 'unknown'}\n`;
+        context += `- Notes: ${lead.notes ?? 'none'}\n\n`;
+      }
+      if (crmContext.properties.length > 0) {
+        context += `RELEVANT PROPERTIES:\n`;
+        crmContext.properties.forEach((p) => {
+          context += `- ${p.title} (${p.type}, ${p.city}): ${p.price} MAD, ${p.bedrooms} bed, ${p.bathrooms} bath, ${p.area}m²\n`;
+        });
+        context += `\n`;
+      }
+      if (crmContext.deals.length > 0) {
+        context += `DEALS:\n`;
+        crmContext.deals.forEach((d) => {
+          context += `- ${d.title}: stage=${d.stage}, value=${d.value}\n`;
+        });
+        context += `\n`;
+      }
+      if (crmContext.tasks.length > 0) {
+        context += `UPCOMING TASKS:\n`;
+        crmContext.tasks.forEach((t) => {
+          context += `- ${t.title} (due: ${t.due_date ?? 'no date'})\n`;
+        });
+        context += `\n`;
+      }
+    }
+    context += `Rules:\n- If the user asks you to write a reply, generate ONLY the reply text, ready to send. No preamble.\n- If the user asks for analysis (summary, report, lead qualification), provide a concise structured response.\n- Never send messages yourself. The user will review and send.\n- Keep replies under 200 words unless asked for detail.\n- For CRM reports, use this format: CLIENT SUMMARY, NEED, BUDGET, LOCATION, PROPERTY TYPE, INTENT, LEAD QUALITY, CURRENT STAGE, OBJECTIONS, NEXT ACTION, SUGGESTED FOLLOW-UP. Only include sections where information is available.`;
+    return context;
+  }, [crmContext]);
+
+  const aiSend = useCallback(async (text: string) => {
+    if (!text.trim() || aiLoading) return;
+    setAiInput('');
+    setAiLoading(true);
+    setAiSuggestion(null);
+    const userMsg = { role: 'user' as const, content: text };
+    setAiHistory((prev) => [...prev, userMsg]);
+    try {
+      const response = await askAI([...aiHistory, userMsg], buildAISystemPrompt());
+      setAiHistory((prev) => [...prev, { role: 'assistant', content: response }]);
+      setAiSuggestion(response);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to reach the AI service');
+    } finally { setAiLoading(false); }
+  }, [aiLoading, aiHistory, buildAISystemPrompt]);
+
+  // Auto-trigger AI summary when a conversation is selected and AI panel is open
+  const autoSummaryTriggered = useRef<string | null>(null);
+  useEffect(() => {
+    if (!selectedJid || !aiOpen || !crmContext) return;
+    if (autoSummaryTriggered.current === selectedJid) return;
+    if (crmContext.recentMessages.length === 0) return;
+    autoSummaryTriggered.current = selectedJid;
+    setAiHistory([]);
+    setAiSuggestion(null);
+    aiSend('Provide a brief summary of this conversation and the lead\'s needs. Include any key details from the CRM context.');
+  }, [selectedJid, aiOpen, crmContext, aiSend]);
+
+  const aiQuickActions = useMemo(() => [
+    'Summarize Lead Needs',
+    'Draft Follow-up Reply',
+    'Suggest Property Match',
+    'Write a professional reply',
+    'Generate a CRM report',
+    'Reply in French',
+  ], []);
 
   const selected = conversations.find((c) => c.remote_jid === selectedJid) ?? null;
   const filtered = useMemo(() => conversations.filter((c) => c.display_name.toLowerCase().includes(search.toLowerCase())), [conversations, search]);
@@ -253,82 +419,6 @@ export default function WhatsAppPage() {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
-
-  const buildAISystemPrompt = (): string => {
-    let context = `You are the MEHANS CRM WhatsApp assistant for a real estate business.\n\n`;
-    if (crmContext) {
-      context += `CONVERSATION CONTEXT:\n`;
-      context += `Contact: ${crmContext.contactName}\n`;
-      context += `Phone: ${crmContext.phoneNumber ?? 'Unknown'}\n\n`;
-      if (crmContext.recentMessages.length > 0) {
-        context += `RECENT MESSAGES:\n`;
-        crmContext.recentMessages.forEach((m) => {
-          context += `[${m.time}] ${m.from}: ${m.text}\n`;
-        });
-        context += `\n`;
-      }
-      if (crmContext.lead) {
-        const lead = crmContext.lead;
-        context += `LEAD INFO:\n`;
-        context += `- Name: ${lead.first_name ?? ''} ${lead.last_name ?? ''}\n`;
-        context += `- Status: ${lead.status ?? 'unknown'}\n`;
-        context += `- Source: ${lead.source ?? 'unknown'}\n`;
-        context += `- Budget: ${lead.budget_min ?? '?'} - ${lead.budget_max ?? '?'}\n`;
-        context += `- Property interest: ${lead.property_type ?? lead.interested_in ?? 'unknown'}\n`;
-        context += `- City: ${lead.city ?? 'unknown'}\n`;
-        context += `- Notes: ${lead.notes ?? 'none'}\n\n`;
-      }
-      if (crmContext.properties.length > 0) {
-        context += `RELEVANT PROPERTIES:\n`;
-        crmContext.properties.forEach((p) => {
-          context += `- ${p.title} (${p.type}, ${p.city}): ${p.price} MAD, ${p.bedrooms} bed, ${p.bathrooms} bath, ${p.area}m²\n`;
-        });
-        context += `\n`;
-      }
-      if (crmContext.deals.length > 0) {
-        context += `DEALS:\n`;
-        crmContext.deals.forEach((d) => {
-          context += `- ${d.title}: stage=${d.stage}, value=${d.value}\n`;
-        });
-        context += `\n`;
-      }
-      if (crmContext.tasks.length > 0) {
-        context += `UPCOMING TASKS:\n`;
-        crmContext.tasks.forEach((t) => {
-          context += `- ${t.title} (due: ${t.due_date ?? 'no date'})\n`;
-        });
-        context += `\n`;
-      }
-    }
-    context += `Rules:\n- If the user asks you to write a reply, generate ONLY the reply text, ready to send. No preamble.\n- If the user asks for analysis (summary, report, lead qualification), provide a concise structured response.\n- Never send messages yourself. The user will review and send.\n- Keep replies under 200 words unless asked for detail.\n- For CRM reports, use this format: CLIENT SUMMARY, NEED, BUDGET, LOCATION, PROPERTY TYPE, INTENT, LEAD QUALITY, CURRENT STAGE, OBJECTIONS, NEXT ACTION, SUGGESTED FOLLOW-UP. Only include sections where information is available.`;
-    return context;
-  };
-
-  const aiSend = async (text: string) => {
-    if (!text.trim() || aiLoading) return;
-    setAiInput('');
-    setAiLoading(true);
-    setAiSuggestion(null);
-    const userMsg = { role: 'user' as const, content: text };
-    setAiHistory((prev) => [...prev, userMsg]);
-    try {
-      const response = await askAI([...aiHistory, userMsg], buildAISystemPrompt());
-      setAiHistory((prev) => [...prev, { role: 'assistant', content: response }]);
-      setAiSuggestion(response);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to reach the AI service');
-    } finally { setAiLoading(false); }
-  };
-
-  const aiQuickActions = [
-    'Write a professional reply',
-    'Summarize this conversation',
-    'What is this client looking for?',
-    'Generate a follow-up message for tomorrow',
-    'Reply in French',
-    'Make the last reply more professional',
-    'Generate a CRM report',
-  ];
 
   const stopPolling = () => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
@@ -449,7 +539,7 @@ export default function WhatsAppPage() {
       </div>
 
       <div className="flex h-[calc(100vh-270px)] min-h-[520px] gap-4 overflow-hidden">
-        {/* Conversation list - full width on mobile when no conversation selected, sidebar on desktop */}
+        {/* Conversation list */}
         <aside className={cn(
           'flex shrink-0 flex-col rounded-2xl border border-border bg-bg-secondary',
           'w-full md:w-80',
@@ -465,7 +555,7 @@ export default function WhatsAppPage() {
             {conversationsLoading ? <div className="flex justify-center py-10 text-text-muted"><Loader2 className="h-5 w-5 animate-spin" /></div>
               : filtered.length === 0 ? <div className="p-6 text-center text-xs text-text-muted"><Plus className="mx-auto mb-2 h-5 w-5" />No WhatsApp conversations yet.</div>
               : filtered.map((conversation) => (
-                <button key={conversation.id} onClick={() => setSelectedJid(conversation.remote_jid)} className={cn('flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors', selectedJid === conversation.remote_jid ? 'bg-gold-bg' : 'hover:bg-bg-elevated')}>
+                <button key={conversation.id} onClick={() => { setSelectedJid(conversation.remote_jid); setAiOpen(false); }} className={cn('flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors', selectedJid === conversation.remote_jid ? 'bg-gold-bg' : 'hover:bg-bg-elevated')}>
                   <Avatar name={conversation.display_name} color="#4A90D9" size="md" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
@@ -482,7 +572,7 @@ export default function WhatsAppPage() {
           </div>
         </aside>
 
-        {/* Conversation view - full screen on mobile when selected, flex-1 on desktop */}
+        {/* Conversation view */}
         <section className={cn(
           'flex min-w-0 flex-1 flex-col rounded-2xl border border-border bg-bg-secondary',
           showConversationOnMobile ? 'flex' : 'hidden md:flex'
@@ -507,7 +597,7 @@ export default function WhatsAppPage() {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <button onClick={() => { setAiOpen(!aiOpen); setAiSuggestion(null); }} className={cn('flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors', aiOpen ? 'bg-gold-bg text-gold' : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary')}>
+                  <button onClick={() => { setAiOpen(!aiOpen); if (!aiOpen) setAiSuggestion(null); }} className={cn('flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors', aiOpen ? 'bg-gold-bg text-gold' : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary')}>
                     <Sparkles className="h-3.5 w-3.5" /> <span className="hidden sm:inline">AI Assistant</span>
                   </button>
                   <button className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated"><MoreVertical className="h-4 w-4" /></button>
@@ -515,9 +605,18 @@ export default function WhatsAppPage() {
               </header>
               <div className="flex flex-1 overflow-hidden">
                 <div className="flex flex-1 flex-col overflow-hidden">
-                  <div className="flex-1 overflow-y-auto bg-bg-primary/40 p-3 sm:p-5">
+                  <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-bg-primary/40 p-3 sm:p-5">
+                    {/* Load more button */}
+                    {hasMore && (
+                      <div className="mb-3 flex justify-center">
+                        <button onClick={loadMore} disabled={loadingMore} className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-xs text-text-secondary hover:border-gold-border hover:text-gold disabled:opacity-50">
+                          {loadingMore ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronUp className="h-3.5 w-3.5" />}
+                          {loadingMore ? 'Loading…' : 'Load older messages'}
+                        </button>
+                      </div>
+                    )}
                     <div className="mx-auto mb-5 max-w-xs rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-center text-[11px] text-text-muted">Messages are delivered via Evolution API</div>
-                    {loadingMessages ? <div className="flex justify-center py-10 text-text-muted"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                    {loadingMessages && messages.length === 0 ? <div className="flex justify-center py-10 text-text-muted"><Loader2 className="h-5 w-5 animate-spin" /></div>
                       : messagesError ? <p className="px-5 py-10 text-center text-xs text-error">{messagesError}</p>
                       : messages.length === 0 ? <p className="py-10 text-center text-xs text-text-muted">No messages in this conversation yet.</p>
                       : <div className="space-y-2">{dedupMessages(messages).map((item) => (
@@ -561,7 +660,7 @@ export default function WhatsAppPage() {
                     </div>
                   </footer>
                 </div>
-                {/* AI Assistant panel - desktop side panel, mobile full overlay */}
+                {/* AI Assistant panel */}
                 {aiOpen && (
                   <div className="flex w-80 shrink-0 flex-col border-l border-border bg-bg-elevated max-md:fixed max-md:inset-0 max-md:z-50 max-md:w-full max-md:border-l-0">
                     <div className="flex items-center justify-between border-b border-border p-3">
@@ -574,7 +673,18 @@ export default function WhatsAppPage() {
                       </button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-3">
-                      {aiHistory.length === 0 && !aiSuggestion && (
+                      {/* Context indicator */}
+                      {crmContext && (
+                        <div className="mb-3 rounded-lg border border-border bg-bg-secondary px-3 py-2">
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gold">Active Context</p>
+                          <p className="mt-1 text-[11px] text-text-secondary">
+                            {crmContext.contactName} · {crmContext.phoneNumber ?? 'Unknown'}
+                            {crmContext.lead ? ` · Lead: ${crmContext.lead.status ?? 'new'}` : ' · No lead found'}
+                          </p>
+                        </div>
+                      )}
+                      {/* Quick actions - contextual */}
+                      {aiHistory.length === 0 && !aiSuggestion && !aiLoading && (
                         <div className="space-y-2">
                           <p className="text-xs text-text-muted">Quick actions:</p>
                           {aiQuickActions.map((action) => (

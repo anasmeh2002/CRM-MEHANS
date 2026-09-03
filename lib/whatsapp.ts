@@ -524,6 +524,66 @@ export async function fetchWhatsAppMessages(userId: string, remoteJid: string): 
   return fetchEvolutionMessages(userId, remoteJid);
 }
 
+export async function fetchCachedMessages(remoteJid: string, limit = 20, beforeTimestamp?: string): Promise<{ messages: WhatsAppMessage[]; hasMore: boolean }> {
+  const { data: conv } = await supabase
+    .from('whatsapp_conversations')
+    .select('id')
+    .eq('remote_jid', remoteJid)
+    .maybeSingle();
+
+  if (!conv) return { messages: [], hasMore: false };
+
+  let query = supabase
+    .from('whatsapp_messages')
+    .select('*')
+    .eq('conversation_id', conv.id)
+    .order('timestamp', { ascending: false })
+    .limit(limit + 1);
+
+  if (beforeTimestamp) {
+    query = query.lt('timestamp', beforeTimestamp);
+  }
+
+  const { data, error } = await query;
+  if (error) return { messages: [], hasMore: false };
+
+  const hasMore = (data?.length ?? 0) > limit;
+  const rows = (data ?? []).slice(0, limit);
+  return { messages: rows.reverse().map(mapDbMessage), hasMore };
+}
+
+export function subscribeToMessages(remoteJid: string, onInsert: (msg: WhatsAppMessage) => void): () => void {
+  let subscription: ReturnType<typeof supabase.channel> | null = null;
+  let cancelled = false;
+
+  (async () => {
+    const { data: conv } = await supabase
+      .from('whatsapp_conversations')
+      .select('id')
+      .eq('remote_jid', remoteJid)
+      .maybeSingle();
+
+    if (cancelled || !conv) return;
+
+    subscription = supabase
+      .channel(`whatsapp_messages:${conv.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'whatsapp_messages',
+        filter: `conversation_id=eq.${conv.id}`,
+      }, (payload) => {
+        onInsert(mapDbMessage(payload.new as Record<string, unknown>));
+      })
+      .subscribe();
+  })();
+
+  return () => {
+    cancelled = true;
+    if (subscription) supabase.removeChannel(subscription);
+  };
+}
+
 export async function sendWhatsAppMessage(userId: string, remoteJid: string, text: string, phoneNumber?: string | null): Promise<WhatsAppMessage> {
   return sendEvolutionMessage(userId, remoteJid, text, phoneNumber);
 }

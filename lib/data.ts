@@ -595,7 +595,21 @@ export async function deletePropertyImage(imageId: string, storagePath: string):
 
 // ─── Dashboard Stats ───
 
-export async function fetchDashboardStats() {
+export type DateRange = 'today' | 'week' | 'month' | 'quarter' | 'all';
+
+export function getDateRangeStart(range: DateRange): Date | null {
+  const now = new Date();
+  switch (range) {
+    case 'today': return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    case 'week': { const d = new Date(now); d.setDate(d.getDate() - 7); return d; }
+    case 'month': return new Date(now.getFullYear(), now.getMonth(), 1);
+    case 'quarter': { const q = Math.floor(now.getMonth() / 3); return new Date(now.getFullYear(), q * 3, 1); }
+    case 'all': return null;
+  }
+}
+
+export async function fetchDashboardStats(range: DateRange = 'month') {
+  const startDate = getDateRangeStart(range);
   const [leads, deals, meetings, tasks, properties] = await Promise.all([
     fetchLeads(),
     fetchDeals(),
@@ -604,11 +618,18 @@ export async function fetchDashboardStats() {
     fetchProperties(),
   ]);
 
-  const wonDeals = deals.filter((d) => d.stage === 'won');
+  const inRange = (dateStr: string | null | undefined) => {
+    if (!startDate) return true;
+    if (!dateStr) return false;
+    return new Date(dateStr) >= startDate;
+  };
+
+  const wonDeals = deals.filter((d) => d.stage === 'won' && inRange(d.createdAt ?? d.closeDate));
   const revenue = wonDeals.reduce((sum, d) => sum + (d.value ?? 0), 0);
   const openDeals = deals.filter((d) => d.stage !== 'won' && d.stage !== 'lost');
   const pipelineValue = openDeals.reduce((sum, d) => sum + (d.value ?? 0), 0);
-  const conversionRate = leads.length > 0 ? (wonDeals.length / leads.length) * 100 : 0;
+  const rangeLeads = leads.filter((l) => inRange(l.createdAt));
+  const conversionRate = rangeLeads.length > 0 ? (wonDeals.length / rangeLeads.length) * 100 : 0;
   const upcomingMeetings = meetings.filter((m) => m.status === 'upcoming');
   const openTasks = tasks.filter((t) => t.status !== 'done');
 
@@ -619,7 +640,7 @@ export async function fetchDashboardStats() {
     appointmentsCount: upcomingMeetings.length,
     tasksCount: openTasks.length,
     propertiesCount: properties.length,
-    leadsCount: leads.length,
+    leadsCount: rangeLeads.length,
     dealsCount: deals.length,
   };
 }

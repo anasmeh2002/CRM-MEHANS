@@ -1,10 +1,11 @@
 'use client';
 
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   DollarSign, TrendingUp, Target, Calendar, CheckSquare, Home,
   Sparkles, Clock, ArrowUpRight, Phone, Mail, MessageCircle, FileText,
-  Building, Users,
+  Building, Users, ChevronDown, CalendarDays,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -15,11 +16,13 @@ import { PageHeader, StatCard, Card, Badge, Avatar, SkeletonCard } from '@/compo
 import {
   fetchActivities, fetchMeetings, fetchTeamMembers, fetchDeals, fetchLeads,
   fetchRevenueData, fetchPipelineData, fetchLeadSourceData, fetchFunnelData,
+  fetchDashboardStats, type DateRange,
 } from '@/lib/data';
 import { aiInsights, formatCurrency } from '@/lib/format';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import { useRefresh } from '@/components/refresh-provider';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 const activityIcons: Record<string, React.ElementType> = {
   deal_won: DollarSign, lead_created: Users, property_listed: Building,
@@ -41,9 +44,25 @@ const tooltipStyle = {
   borderRadius: '12px', fontSize: '12px', color: 'var(--text-primary)',
 };
 
+const dateRangeLabels: Record<DateRange, string> = {
+  today: 'Today',
+  week: 'This Week',
+  month: 'This Month',
+  quarter: 'This Quarter',
+  all: 'All Time',
+};
+
 export default function DashboardPage() {
   const { refreshKey } = useRefresh();
+  const router = useRouter();
 
+  const [dateRange, setDateRange] = useState<DateRange>('month');
+  const [dateFilterOpen, setDateFilterOpen] = useState(false);
+  const [aiInsightsVisible, setAiInsightsVisible] = useState(true);
+  const dateFilterRef = useRef<HTMLDivElement>(null);
+  const aiInsightsRef = useRef<HTMLDivElement>(null);
+
+  const statsQuery = useSupabaseQuery(() => fetchDashboardStats(dateRange), [dateRange], refreshKey);
   const activitiesQuery = useSupabaseQuery(fetchActivities, [], refreshKey);
   const meetingsQuery = useSupabaseQuery(fetchMeetings, [], refreshKey);
   const teamMembersQuery = useSupabaseQuery(fetchTeamMembers, [], refreshKey);
@@ -55,10 +74,11 @@ export default function DashboardPage() {
   const funnelQuery = useSupabaseQuery(fetchFunnelData, [], refreshKey);
 
   const loading =
-    activitiesQuery.loading || meetingsQuery.loading || teamMembersQuery.loading ||
+    statsQuery.loading || activitiesQuery.loading || meetingsQuery.loading || teamMembersQuery.loading ||
     dealsQuery.loading || leadsQuery.loading || revenueQuery.loading ||
     pipelineQuery.loading || leadSourceQuery.loading || funnelQuery.loading;
 
+  const stats = statsQuery.data;
   const activities = activitiesQuery.data ?? [];
   const meetings = meetingsQuery.data ?? [];
   const teamMembers = teamMembersQuery.data ?? [];
@@ -69,28 +89,100 @@ export default function DashboardPage() {
   const leadSourceData = leadSourceQuery.data ?? [];
   const funnelData = funnelQuery.data ?? [];
 
+  // Use stats from the date-range-aware query when available, fall back to local calc
   const wonDeals = deals.filter((d) => d.stage === 'won');
-  const revenue = wonDeals.reduce((sum, d) => sum + (d.value ?? 0), 0);
+  const revenue = stats?.revenue ?? wonDeals.reduce((sum, d) => sum + (d.value ?? 0), 0);
   const openDeals = deals.filter((d) => d.stage !== 'won' && d.stage !== 'lost');
-  const pipelineValue = openDeals.reduce((sum, d) => sum + (d.value ?? 0), 0);
-  const conversionRate = leads.length > 0 ? (wonDeals.length / leads.length) * 100 : 0;
-  const upcomingMeetings = meetings.filter((m) => m.status === 'upcoming');
-  const appointmentsCount = upcomingMeetings.length;
-  const tasksCount = activities.filter((a) => a.type === 'task_completed').length;
-  const propertiesCount = new Set(deals.map((d) => d.property_id).filter(Boolean)).size;
+  const pipelineValue = stats?.pipelineValue ?? openDeals.reduce((sum, d) => sum + (d.value ?? 0), 0);
+  const conversionRate = stats?.conversionRate ?? (leads.length > 0 ? (wonDeals.length / leads.length) * 100 : 0);
+  const appointmentsCount = stats?.appointmentsCount ?? meetings.filter((m) => m.status === 'upcoming').length;
+  const tasksCount = stats?.tasksCount ?? activities.filter((a) => a.type === 'task_completed').length;
+  const propertiesCount = stats?.propertiesCount ?? new Set(deals.map((d) => d.property_id).filter(Boolean)).size;
+  const leadsCount = stats?.leadsCount ?? leads.length;
+
+  // Close date filter dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dateFilterRef.current && !dateFilterRef.current.contains(e.target as Node)) {
+        setDateFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleInsightAction = (action: string) => {
+    if (action === 'Contact lead') {
+      const lead = leads.find((l) => l.phone || l.whatsapp);
+      if (lead?.phone) {
+        router.push(`/whatsapp?phone=${encodeURIComponent(lead.phone)}`);
+      } else {
+        router.push('/leads');
+      }
+    } else if (action === 'View analytics') {
+      router.push('/pipeline');
+    } else if (action === 'Adjust schedules') {
+      router.push('/calendar');
+    }
+  };
+
+  const scrollToAIInsights = () => {
+    aiInsightsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  const toggleAIInsights = () => {
+    if (aiInsightsVisible) {
+      setAiInsightsVisible(false);
+    } else {
+      setAiInsightsVisible(true);
+      setTimeout(scrollToAIInsights, 100);
+    }
+  };
+
+  const dateRangeOptions: DateRange[] = ['today', 'week', 'month', 'quarter', 'all'];
 
   return (
     <AppShell>
       <PageHeader title="Overview" description="Welcome back, Aarav. Here's what's happening today.">
-        <button className="btn btn-outline btn-md">
-          <Calendar className="h-4 w-4" strokeWidth={1.5} /> This Month
-        </button>
-        <button className="btn btn-gold btn-md">
-          <Sparkles className="h-4 w-4" strokeWidth={1.5} /> AI Insights
+        {/* Date range dropdown */}
+        <div ref={dateFilterRef} className="relative">
+          <button
+            onClick={() => setDateFilterOpen(!dateFilterOpen)}
+            className={cn('btn btn-outline btn-md', dateFilterOpen && 'border-gold-border')}
+          >
+            <CalendarDays className="h-4 w-4" strokeWidth={1.5} />
+            {dateRangeLabels[dateRange]}
+            <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', dateFilterOpen && 'rotate-180')} />
+          </button>
+          {dateFilterOpen && (
+            <div className="absolute right-0 top-full z-30 mt-2 w-44 rounded-xl border border-border bg-bg-elevated p-1.5 shadow-modal">
+              {dateRangeOptions.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => { setDateRange(option); setDateFilterOpen(false); }}
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors',
+                    dateRange === option ? 'bg-gold-bg text-gold' : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+                  )}
+                >
+                  {dateRangeLabels[option]}
+                  {dateRange === option && <span className="h-2 w-2 rounded-full bg-gold" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {/* AI Insights toggle */}
+        <button
+          onClick={toggleAIInsights}
+          className={cn('btn btn-md transition-all', aiInsightsVisible ? 'btn-gold' : 'btn-outline')}
+        >
+          <Sparkles className="h-4 w-4" strokeWidth={1.5} />
+          AI Insights
         </button>
       </PageHeader>
 
-      {loading ? (
+      {loading && !stats ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
@@ -226,36 +318,44 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        <Card className="card-gold" delay={0.25}>
-          <div className="mb-5 flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gold-bg text-gold">
-              <Sparkles className="h-4 w-4" strokeWidth={1.5} />
-            </div>
-            <div>
-              <h3 className="font-serif text-lg font-medium text-text-primary">AI Insights</h3>
-              <p className="text-[12px] text-text-muted">Powered by MEHANS AI</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            {aiInsights.slice(0, 3).map((insight) => {
-              const Icon = insightIcons[insight.type] || Sparkles;
-              return (
-                <div key={insight.id} className="rounded-xl border border-border bg-bg-secondary p-4 transition-colors hover:border-border-strong">
-                  <div className="flex items-start gap-2.5">
-                    <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', insight.type === 'alert' ? 'text-warning' : 'text-gold')} strokeWidth={1.5} />
-                    <div className="flex-1">
-                      <p className="text-[13px] font-medium text-text-primary">{insight.title}</p>
-                      <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">{insight.description}</p>
-                      <button className="mt-2.5 text-[12px] font-medium text-gold transition-colors hover:text-gold-soft">
-                        {insight.action} →
-                      </button>
-                    </div>
-                  </div>
+        {/* AI Insights card - toggleable */}
+        {aiInsightsVisible && (
+          <Card className="card-gold" delay={0.25} >
+            <div ref={aiInsightsRef}>
+              <div className="mb-5 flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gold-bg text-gold">
+                  <Sparkles className="h-4 w-4" strokeWidth={1.5} />
                 </div>
-              );
-            })}
-          </div>
-        </Card>
+                <div>
+                  <h3 className="font-serif text-lg font-medium text-text-primary">AI Insights</h3>
+                  <p className="text-[12px] text-text-muted">Powered by MEHANS AI</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {aiInsights.slice(0, 3).map((insight) => {
+                  const Icon = insightIcons[insight.type] || Sparkles;
+                  return (
+                    <div key={insight.id} className="rounded-xl border border-border bg-bg-secondary p-4 transition-colors hover:border-border-strong">
+                      <div className="flex items-start gap-2.5">
+                        <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', insight.type === 'alert' ? 'text-warning' : 'text-gold')} strokeWidth={1.5} />
+                        <div className="flex-1">
+                          <p className="text-[13px] font-medium text-text-primary">{insight.title}</p>
+                          <p className="mt-1 text-[12px] leading-relaxed text-text-secondary">{insight.description}</p>
+                          <button
+                            onClick={() => handleInsightAction(insight.action)}
+                            className="mt-2.5 text-[12px] font-medium text-gold transition-colors hover:text-gold-soft"
+                          >
+                            {insight.action} →
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -289,7 +389,7 @@ export default function DashboardPage() {
         <Card delay={0.35}>
           <div className="mb-5 flex items-center justify-between">
             <h3 className="font-serif text-lg font-medium text-text-primary">Upcoming Meetings</h3>
-            <button className="text-[12px] font-medium text-gold transition-colors hover:text-gold-soft">View calendar</button>
+            <button onClick={() => router.push('/calendar')} className="text-[12px] font-medium text-gold transition-colors hover:text-gold-soft">View calendar</button>
           </div>
           <div className="space-y-2">
             {meetings.filter((m) => m.status === 'upcoming').slice(0, 5).map((meeting, i) => {
