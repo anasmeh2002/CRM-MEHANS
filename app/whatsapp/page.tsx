@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCheck, Link2, Loader2, MoreVertical, Paperclip, Plus, Search, Send, Settings2, RefreshCw, CheckCircle2, AlertCircle, Sparkles, X, FileText, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, CheckCheck, Link2, Loader2, MoreVertical, Paperclip, Plus, Search, Send, Settings2, RefreshCw, CheckCircle2, AlertCircle, Sparkles, X, FileText, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppShell } from '@/components/layout/app-shell';
 import { Avatar, PageHeader } from '@/components/shared';
@@ -19,9 +19,11 @@ import {
   checkEvolutionInstanceStatus,
   checkEvolutionStatusByUserId,
   logoutEvolutionInstance,
+  fetchCRMContext,
   type WhatsAppConnection,
   type WhatsAppConversation,
   type WhatsAppMessage,
+  type CRMContext,
 } from '@/lib/whatsapp';
 import { askAI } from '@/lib/ai';
 import { cn } from '@/lib/utils';
@@ -60,6 +62,15 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+function dedupMessages(msgs: WhatsAppMessage[]): WhatsAppMessage[] {
+  const seen = new Set<string>();
+  return msgs.filter((m) => {
+    if (seen.has(m.id)) return false;
+    seen.add(m.id);
+    return true;
+  });
+}
+
 export default function WhatsAppPage() {
   const { user } = useAuth();
   const userId = user?.id ?? '';
@@ -89,6 +100,8 @@ export default function WhatsAppPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [aiHistory, setAiHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [crmContext, setCrmContext] = useState<CRMContext | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const stopStatusPolling = () => {
     if (statusPollRef.current) { clearInterval(statusPollRef.current); statusPollRef.current = null; }
@@ -148,7 +161,7 @@ export default function WhatsAppPage() {
       setMessagesError(null);
       try {
         const data = await fetchWhatsAppMessages(userId, selectedJid);
-        if (active) setMessages(data);
+        if (active) setMessages((prev) => dedupMessages([...prev.filter(m => !data.some(d => d.id === m.id)), ...data]));
       } catch (error) {
         if (active) setMessagesError(error instanceof Error ? error.message : 'Unable to load messages');
       } finally {
@@ -159,6 +172,21 @@ export default function WhatsAppPage() {
     const refreshRef = setInterval(() => { loadMessages(false); }, 10000);
     return () => { active = false; clearInterval(refreshRef); };
   }, [userId, selectedJid]);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (!selectedJid || !messages.length) { setCrmContext(null); return; }
+    const selected = conversations.find((c) => c.remote_jid === selectedJid);
+    if (!selected) return;
+    fetchCRMContext(selectedJid, selected.phone_number, messages)
+      .then(setCrmContext)
+      .catch(() => {});
+  }, [selectedJid, messages.length]);
 
   const selected = conversations.find((c) => c.remote_jid === selectedJid) ?? null;
   const filtered = useMemo(() => conversations.filter((c) => c.display_name.toLowerCase().includes(search.toLowerCase())), [conversations, search]);
@@ -178,7 +206,7 @@ export default function WhatsAppPage() {
           message.trim(),
           selected.phone_number,
         );
-        setMessages((current) => [...current, saved]);
+        setMessages((current) => dedupMessages([...current, saved]));
         setAttachment(null);
         setMessage('');
         setConversations((current) =>
@@ -193,7 +221,7 @@ export default function WhatsAppPage() {
     setSending(true);
     try {
       const saved = await sendWhatsAppMessage(userId, selected.remote_jid, message.trim(), selected.phone_number);
-      setMessages((current) => [...current, saved]);
+      setMessages((current) => dedupMessages([...current, saved]));
       setMessage('');
       setConversations((current) =>
         current.map((c) => c.remote_jid === selected.remote_jid ? { ...c, last_message: message.trim(), last_message_timestamp: new Date().toISOString() } : c)
@@ -226,18 +254,54 @@ export default function WhatsAppPage() {
     }
   };
 
-  const buildAIContext = (): string => {
-    if (!selected) return '';
-    const recent = messages.slice(-15).map((m) => ({
-      from: m.from_me ? 'Me' : (m.sender_name ?? 'Contact'),
-      text: m.text ?? '',
-      time: m.timestamp ?? '',
-    }));
-    return JSON.stringify({
-      contactName: selected.display_name,
-      phoneNumber: selected.phone_number,
-      recentMessages: recent,
-    });
+  const buildAISystemPrompt = (): string => {
+    let context = `You are the MEHANS CRM WhatsApp assistant for a real estate business.\n\n`;
+    if (crmContext) {
+      context += `CONVERSATION CONTEXT:\n`;
+      context += `Contact: ${crmContext.contactName}\n`;
+      context += `Phone: ${crmContext.phoneNumber ?? 'Unknown'}\n\n`;
+      if (crmContext.recentMessages.length > 0) {
+        context += `RECENT MESSAGES:\n`;
+        crmContext.recentMessages.forEach((m) => {
+          context += `[${m.time}] ${m.from}: ${m.text}\n`;
+        });
+        context += `\n`;
+      }
+      if (crmContext.lead) {
+        const lead = crmContext.lead;
+        context += `LEAD INFO:\n`;
+        context += `- Name: ${lead.first_name ?? ''} ${lead.last_name ?? ''}\n`;
+        context += `- Status: ${lead.status ?? 'unknown'}\n`;
+        context += `- Source: ${lead.source ?? 'unknown'}\n`;
+        context += `- Budget: ${lead.budget_min ?? '?'} - ${lead.budget_max ?? '?'}\n`;
+        context += `- Property interest: ${lead.property_type ?? lead.interested_in ?? 'unknown'}\n`;
+        context += `- City: ${lead.city ?? 'unknown'}\n`;
+        context += `- Notes: ${lead.notes ?? 'none'}\n\n`;
+      }
+      if (crmContext.properties.length > 0) {
+        context += `RELEVANT PROPERTIES:\n`;
+        crmContext.properties.forEach((p) => {
+          context += `- ${p.title} (${p.type}, ${p.city}): ${p.price} MAD, ${p.bedrooms} bed, ${p.bathrooms} bath, ${p.area}m²\n`;
+        });
+        context += `\n`;
+      }
+      if (crmContext.deals.length > 0) {
+        context += `DEALS:\n`;
+        crmContext.deals.forEach((d) => {
+          context += `- ${d.title}: stage=${d.stage}, value=${d.value}\n`;
+        });
+        context += `\n`;
+      }
+      if (crmContext.tasks.length > 0) {
+        context += `UPCOMING TASKS:\n`;
+        crmContext.tasks.forEach((t) => {
+          context += `- ${t.title} (due: ${t.due_date ?? 'no date'})\n`;
+        });
+        context += `\n`;
+      }
+    }
+    context += `Rules:\n- If the user asks you to write a reply, generate ONLY the reply text, ready to send. No preamble.\n- If the user asks for analysis (summary, report, lead qualification), provide a concise structured response.\n- Never send messages yourself. The user will review and send.\n- Keep replies under 200 words unless asked for detail.\n- For CRM reports, use this format: CLIENT SUMMARY, NEED, BUDGET, LOCATION, PROPERTY TYPE, INTENT, LEAD QUALITY, CURRENT STAGE, OBJECTIONS, NEXT ACTION, SUGGESTED FOLLOW-UP. Only include sections where information is available.`;
+    return context;
   };
 
   const aiSend = async (text: string) => {
@@ -248,8 +312,7 @@ export default function WhatsAppPage() {
     const userMsg = { role: 'user' as const, content: text };
     setAiHistory((prev) => [...prev, userMsg]);
     try {
-      const system = `You are the MEHANS CRM WhatsApp assistant. You help the user craft replies and analyze conversations. Context:\n${buildAIContext()}\n\nRules:\n- If the user asks you to write a reply, generate ONLY the reply text, ready to send. No preamble.\n- If the user asks for analysis (summary, report, lead qualification), provide a concise structured response.\n- Never send messages yourself. The user will review and send.\n- Keep replies under 200 words unless asked for detail.`;
-      const response = await askAI([...aiHistory, userMsg], system);
+      const response = await askAI([...aiHistory, userMsg], buildAISystemPrompt());
       setAiHistory((prev) => [...prev, { role: 'assistant', content: response }]);
       setAiSuggestion(response);
     } catch (error) {
@@ -264,6 +327,7 @@ export default function WhatsAppPage() {
     'Generate a follow-up message for tomorrow',
     'Reply in French',
     'Make the last reply more professional',
+    'Generate a CRM report',
   ];
 
   const stopPolling = () => {
@@ -366,26 +430,34 @@ export default function WhatsAppPage() {
     return <div className="flex flex-col items-center gap-2 text-text-muted"><RefreshCw className="h-8 w-8" /><span className="text-xs">Click to generate QR code</span></div>;
   };
 
+  const showConversationOnMobile = Boolean(selectedJid);
+
   return (
     <AppShell>
       <PageHeader title="WhatsApp" description="Manage conversations from your connected business number">
-        <button onClick={() => setConnectOpen(true)} className="btn btn-outline btn-md"><Settings2 className="h-4 w-4" /> {connection.connected ? 'Connection settings' : 'Connect WhatsApp'}</button>
+        <button onClick={() => setConnectOpen(true)} className="btn btn-outline btn-md"><Settings2 className="h-4 w-4" /> <span className="hidden sm:inline">{connection.connected ? 'Settings' : 'Connect'}</span></button>
       </PageHeader>
       <div className="mb-4 flex items-center justify-between rounded-2xl border border-border bg-bg-secondary px-4 py-3">
         <div className="flex items-center gap-3">
           <span className={cn('h-2.5 w-2.5 rounded-full', connection.connected ? 'bg-success' : 'bg-warning')} />
           <div>
             <p className="text-sm font-medium text-text-primary">{connection.connected ? 'Connected' : 'Not connected'}</p>
-            <p className="text-xs text-text-muted">{connection.connected ? `${connection.provider} · ${connection.instanceName}` : 'Connect a business number to manage WhatsApp conversations'}</p>
+            <p className="hidden text-xs text-text-muted sm:block">{connection.connected ? `${connection.provider} · ${connection.instanceName}` : 'Connect a business number to manage WhatsApp conversations'}</p>
           </div>
         </div>
         {!connection.connected && <button onClick={() => setConnectOpen(true)} className="text-xs font-medium text-gold hover:text-gold-soft">Set up <Link2 className="ml-1 inline h-3.5 w-3.5" /></button>}
       </div>
+
       <div className="flex h-[calc(100vh-270px)] min-h-[520px] gap-4 overflow-hidden">
-        <aside className="flex w-80 shrink-0 flex-col rounded-2xl border border-border bg-bg-secondary">
+        {/* Conversation list - full width on mobile when no conversation selected, sidebar on desktop */}
+        <aside className={cn(
+          'flex shrink-0 flex-col rounded-2xl border border-border bg-bg-secondary',
+          'w-full md:w-80',
+          showConversationOnMobile ? 'hidden md:flex' : 'flex'
+        )}>
           <div className="border-b border-border p-3">
             <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-elevated px-3 py-2">
-              <Search className="h-4 w-4 text-text-muted" />
+              <Search className="h-4 w-4 shrink-0 text-text-muted" />
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search conversations" className="w-full bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted" />
             </div>
           </div>
@@ -398,18 +470,23 @@ export default function WhatsAppPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-sm font-medium text-text-primary">{conversation.display_name}</p>
-                      <span className="text-[10px] text-text-muted">{formatDate(conversation.last_message_timestamp)}</span>
+                      <span className="shrink-0 text-[10px] text-text-muted">{formatDate(conversation.last_message_timestamp)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-xs text-text-secondary">{conversation.last_message ?? 'No messages yet'}</p>
-                      {conversation.unread_count > 0 && <span className="rounded-full bg-gold px-1.5 text-[10px] font-bold text-[#0D0D0F]">{conversation.unread_count}</span>}
+                      {conversation.unread_count > 0 && <span className="shrink-0 rounded-full bg-gold px-1.5 text-[10px] font-bold text-[#0D0D0F]">{conversation.unread_count}</span>}
                     </div>
                   </div>
                 </button>
               ))}
           </div>
         </aside>
-        <section className="flex min-w-0 flex-1 flex-col rounded-2xl border border-border bg-bg-secondary">
+
+        {/* Conversation view - full screen on mobile when selected, flex-1 on desktop */}
+        <section className={cn(
+          'flex min-w-0 flex-1 flex-col rounded-2xl border border-border bg-bg-secondary',
+          showConversationOnMobile ? 'flex' : 'hidden md:flex'
+        )}>
           {!selected ? (
             <div className="flex flex-1 flex-col items-center justify-center text-center">
               <div className="mb-4 rounded-2xl bg-gold-bg p-4 text-gold"><Send className="h-6 w-6" /></div>
@@ -418,38 +495,42 @@ export default function WhatsAppPage() {
             </div>
           ) : (
             <>
-              <header className="flex items-center justify-between border-b border-border p-4">
-                <div className="flex items-center gap-3">
+              <header className="flex items-center justify-between border-b border-border p-3 sm:p-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <button onClick={() => setSelectedJid(null)} className="shrink-0 rounded-lg p-1.5 text-text-muted hover:bg-bg-elevated md:hidden">
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
                   <Avatar name={selected.display_name} color="#4A90D9" size="md" />
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">{selected.display_name}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-text-primary">{selected.display_name}</p>
                     <p className="text-xs text-success">WhatsApp conversation</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <button onClick={() => { setAiOpen(!aiOpen); setAiSuggestion(null); }} className={cn('flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors', aiOpen ? 'bg-gold-bg text-gold' : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary')}>
-                    <Sparkles className="h-3.5 w-3.5" /> AI Assistant
+                    <Sparkles className="h-3.5 w-3.5" /> <span className="hidden sm:inline">AI Assistant</span>
                   </button>
                   <button className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated"><MoreVertical className="h-4 w-4" /></button>
                 </div>
               </header>
               <div className="flex flex-1 overflow-hidden">
                 <div className="flex flex-1 flex-col overflow-hidden">
-                  <div className="flex-1 overflow-y-auto bg-bg-primary/40 p-5">
+                  <div className="flex-1 overflow-y-auto bg-bg-primary/40 p-3 sm:p-5">
                     <div className="mx-auto mb-5 max-w-xs rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-center text-[11px] text-text-muted">Messages are delivered via Evolution API</div>
                     {loadingMessages ? <div className="flex justify-center py-10 text-text-muted"><Loader2 className="h-5 w-5 animate-spin" /></div>
                       : messagesError ? <p className="px-5 py-10 text-center text-xs text-error">{messagesError}</p>
                       : messages.length === 0 ? <p className="py-10 text-center text-xs text-text-muted">No messages in this conversation yet.</p>
-                      : <div className="space-y-2">{messages.map((item) => (
+                      : <div className="space-y-2">{dedupMessages(messages).map((item) => (
                         <div key={item.id} className={cn('flex', item.from_me ? 'justify-end' : 'justify-start')}>
-                          <div className={cn('max-w-[72%] rounded-2xl px-3.5 py-2.5 text-sm', item.from_me ? 'rounded-br-sm bg-gold-bg text-text-primary' : 'rounded-bl-sm bg-bg-elevated text-text-primary')}>
+                          <div className={cn('max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm sm:max-w-[72%]', item.from_me ? 'rounded-br-sm bg-gold-bg text-text-primary' : 'rounded-bl-sm bg-bg-elevated text-text-primary')}>
                             {item.message_type === 'image' && <p className="mb-1 italic text-text-muted">[Image]</p>}
                             {item.message_type === 'document' && <p className="mb-1 italic text-text-muted">[Document]</p>}
-                            <p>{item.text || ''}</p>
+                            <p className="whitespace-pre-wrap break-words">{item.text || ''}</p>
                             <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-text-muted">{formatTime(item.timestamp)}{item.from_me && <CheckCheck className="h-3 w-3 text-info" />}</div>
                           </div>
                         </div>
                       ))}</div>}
+                    <div ref={messagesEndRef} />
                   </div>
                   {attachment && (
                     <div className="flex items-center gap-3 border-t border-border bg-bg-elevated px-4 py-2.5">
@@ -462,26 +543,27 @@ export default function WhatsAppPage() {
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium text-text-primary">{attachment.file.name}</p>
-                        <p className="text-[10px] text-text-muted">{(attachment.file.size / 1024).toFixed(1)} KB · {attachment.mimetype}</p>
+                        <p className="text-[10px] text-text-muted">{(attachment.file.size / 1024).toFixed(1)} KB</p>
                       </div>
-                      <button onClick={() => setAttachment(null)} className="rounded-lg p-1.5 text-text-muted hover:bg-bg-secondary hover:text-error">
+                      <button onClick={() => setAttachment(null)} className="shrink-0 rounded-lg p-1.5 text-text-muted hover:bg-bg-secondary hover:text-error">
                         <X className="h-4 w-4" />
                       </button>
                     </div>
                   )}
-                  <footer className="border-t border-border p-3">
-                    <div className="flex items-center gap-2">
+                  <footer className="border-t border-border p-2 sm:p-3">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
                       <input ref={fileInputRef} type="file" onChange={handleFileSelect} accept={ACCEPTED_MEDIA.join(',')} className="hidden" />
-                      <button onClick={() => fileInputRef.current?.click()} disabled={sending} className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated disabled:opacity-50" title="Attach image or document">
+                      <button onClick={() => fileInputRef.current?.click()} disabled={sending} className="shrink-0 rounded-lg p-2 text-text-muted hover:bg-bg-elevated disabled:opacity-50" title="Attach image or document">
                         <Paperclip className="h-4 w-4" />
                       </button>
-                      <input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} placeholder={attachment ? 'Add a caption (optional)...' : 'Type a message...'} className="flex-1 rounded-xl border border-border bg-bg-elevated px-3.5 py-2.5 text-sm text-text-primary outline-none focus:border-gold-border" />
-                      <button disabled={sending || (!message.trim() && !attachment)} onClick={handleSend} className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold text-[#0D0D0F] hover:bg-gold-soft disabled:opacity-60">{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button>
+                      <input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} placeholder={attachment ? 'Add a caption...' : 'Type a message...'} className="min-w-0 flex-1 rounded-xl border border-border bg-bg-elevated px-3 py-2.5 text-sm text-text-primary outline-none focus:border-gold-border" />
+                      <button disabled={sending || (!message.trim() && !attachment)} onClick={handleSend} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold text-[#0D0D0F] hover:bg-gold-soft disabled:opacity-60">{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button>
                     </div>
                   </footer>
                 </div>
+                {/* AI Assistant panel - desktop side panel, mobile full overlay */}
                 {aiOpen && (
-                  <div className="flex w-80 shrink-0 flex-col border-l border-border bg-bg-elevated">
+                  <div className="flex w-80 shrink-0 flex-col border-l border-border bg-bg-elevated max-md:fixed max-md:inset-0 max-md:z-50 max-md:w-full max-md:border-l-0">
                     <div className="flex items-center justify-between border-b border-border p-3">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-4 w-4 text-gold" />
@@ -516,7 +598,7 @@ export default function WhatsAppPage() {
                         <div className="mt-3 rounded-xl border border-gold-border bg-gold-bg p-3">
                           <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-gold">AI Suggestion</p>
                           <p className="whitespace-pre-wrap text-xs text-text-primary">{aiSuggestion}</p>
-                          <div className="mt-3 flex gap-2">
+                          <div className="mt-3 flex flex-wrap gap-2">
                             <button onClick={() => { setMessage(aiSuggestion); setAiSuggestion(null); toast.success('Added to composer'); }} className="rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-bg-elevated">
                               Use message
                             </button>
@@ -525,7 +607,7 @@ export default function WhatsAppPage() {
                               setSending(true);
                               try {
                                 const saved = await sendWhatsAppMessage(userId, selected.remote_jid, aiSuggestion, selected.phone_number);
-                                setMessages((current) => [...current, saved]);
+                                setMessages((current) => dedupMessages([...current, saved]));
                                 setConversations((current) =>
                                   current.map((c) => c.remote_jid === selected.remote_jid ? { ...c, last_message: aiSuggestion, last_message_timestamp: new Date().toISOString() } : c)
                                 );
@@ -546,8 +628,8 @@ export default function WhatsAppPage() {
                     </div>
                     <div className="border-t border-border p-3">
                       <div className="flex items-center gap-2">
-                        <input value={aiInput} onChange={(e) => setAiInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); aiSend(aiInput); } }} placeholder="Ask AI…" className="flex-1 rounded-xl border border-border bg-bg-secondary px-3 py-2 text-xs text-text-primary outline-none focus:border-gold-border" />
-                        <button onClick={() => aiSend(aiInput)} disabled={aiLoading || !aiInput.trim()} className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold text-[#0D0D0F] hover:bg-gold-soft disabled:opacity-50">
+                        <input value={aiInput} onChange={(e) => setAiInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); aiSend(aiInput); } }} placeholder="Ask AI…" className="min-w-0 flex-1 rounded-xl border border-border bg-bg-secondary px-3 py-2 text-xs text-text-primary outline-none focus:border-gold-border" />
+                        <button onClick={() => aiSend(aiInput)} disabled={aiLoading || !aiInput.trim()} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gold text-[#0D0D0F] hover:bg-gold-soft disabled:opacity-50">
                           <Send className="h-3.5 w-3.5" />
                         </button>
                       </div>

@@ -36,6 +36,16 @@ export type WhatsAppConnection = {
   instanceName: string;
 };
 
+export type CRMContext = {
+  contactName: string;
+  phoneNumber: string | null;
+  lead: Record<string, unknown> | null;
+  properties: Record<string, unknown>[];
+  deals: Record<string, unknown>[];
+  tasks: Record<string, unknown>[];
+  recentMessages: { from: string; text: string; time: string }[];
+};
+
 function getInstanceName(userId: string): string {
   return `instance_${userId}`;
 }
@@ -176,6 +186,50 @@ export async function checkEvolutionStatusByUserId(userId: string): Promise<{ st
   }
 }
 
+async function upsertConversation(conv: Omit<WhatsAppConversation, 'id' | 'lead_id' | 'archived' | 'pinned'> & { archived?: boolean; pinned?: boolean; lead_id?: string | null }): Promise<string> {
+  const { data: existing } = await supabase
+    .from('whatsapp_conversations')
+    .select('id')
+    .eq('remote_jid', conv.remote_jid)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase
+      .from('whatsapp_conversations')
+      .update({
+        push_name: conv.push_name,
+        last_message: conv.last_message,
+        last_message_type: conv.last_message_type,
+        last_message_timestamp: conv.last_message_timestamp,
+        unread_count: conv.unread_count,
+        profile_pic: conv.profile_pic,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id);
+    return existing.id;
+  }
+
+  const { data, error } = await supabase
+    .from('whatsapp_conversations')
+    .insert({
+      remote_jid: conv.remote_jid,
+      push_name: conv.push_name,
+      profile_pic: conv.profile_pic,
+      unread_count: conv.unread_count,
+      last_message: conv.last_message,
+      last_message_type: conv.last_message_type,
+      last_message_timestamp: conv.last_message_timestamp,
+      archived: conv.archived ?? false,
+      pinned: conv.pinned ?? false,
+      lead_id: conv.lead_id ?? null,
+    })
+    .select('id')
+    .single();
+
+  if (error) throw error;
+  return data.id;
+}
+
 export async function fetchEvolutionConversations(userId: string): Promise<WhatsAppConversation[]> {
   const instanceName = getInstanceName(userId);
   try {
@@ -195,7 +249,7 @@ export async function fetchEvolutionConversations(userId: string): Promise<Whats
       }
     });
 
-    return rawChats
+    const conversations = rawChats
       .filter((chat: unknown): chat is Record<string, unknown> => chat !== null && typeof chat === 'object')
       .map((chat: Record<string, unknown>): WhatsAppConversation => {
         const remoteJid = safeString(chat.remoteJid) ?? safeString(chat.id) ?? '';
@@ -219,14 +273,98 @@ export async function fetchEvolutionConversations(userId: string): Promise<Whats
         };
       })
       .filter((conversation: WhatsAppConversation) => conversation.remote_jid.length > 0);
+
+    for (const conv of conversations) {
+      try {
+        await upsertConversation({
+          remote_jid: conv.remote_jid,
+          push_name: conv.push_name,
+          display_name: conv.display_name,
+          phone_number: conv.phone_number,
+          profile_pic: conv.profile_pic,
+          unread_count: conv.unread_count,
+          last_message: conv.last_message,
+          last_message_type: conv.last_message_type,
+          last_message_timestamp: conv.last_message_timestamp,
+        });
+      } catch {}
+    }
+
+    return conversations;
   } catch {
     return [];
   }
 }
 
+async function upsertMessage(convId: string, msg: Omit<WhatsAppMessage, 'id' | 'conversation_id'>, messageId: string): Promise<WhatsAppMessage> {
+  const { data: existing } = await supabase
+    .from('whatsapp_messages')
+    .select('id')
+    .eq('message_id', messageId)
+    .maybeSingle();
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from('whatsapp_messages')
+      .update({ status: msg.status })
+      .eq('id', existing.id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return mapDbMessage(data);
+  }
+
+  const { data, error } = await supabase
+    .from('whatsapp_messages')
+    .insert({
+      conversation_id: convId,
+      message_id: messageId,
+      remote_jid: msg.remote_jid,
+      from_me: msg.from_me,
+      sender_name: msg.sender_name,
+      message_type: msg.message_type,
+      text: msg.text,
+      media_url: msg.media_url,
+      timestamp: msg.timestamp,
+      status: msg.status,
+    })
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return mapDbMessage(data);
+}
+
+function mapDbMessage(row: Record<string, unknown>): WhatsAppMessage {
+  return {
+    id: String(row.id ?? row.message_id ?? Date.now()),
+    conversation_id: (row.conversation_id as string) ?? null,
+    remote_jid: (row.remote_jid as string) ?? null,
+    from_me: Boolean(row.from_me),
+    sender_name: (row.sender_name as string) ?? null,
+    message_type: (row.message_type as string) ?? 'text',
+    text: (row.text as string) ?? null,
+    media_url: (row.media_url as string) ?? null,
+    timestamp: (row.timestamp as string) ?? null,
+    status: (row.status as string) ?? 'sent',
+  };
+}
+
 export async function fetchEvolutionMessages(userId: string, remoteJid: string): Promise<WhatsAppMessage[]> {
   const instanceName = getInstanceName(userId);
   try {
+    const convId = await upsertConversation({
+      remote_jid: remoteJid,
+      push_name: null,
+      display_name: remoteJid.split('@')[0],
+      phone_number: getPhoneNumber(remoteJid),
+      profile_pic: null,
+      unread_count: 0,
+      last_message: null,
+      last_message_type: 'text',
+      last_message_timestamp: null,
+    });
+
     const data = await edgeFetch({ action: 'find-messages', instanceName, remoteJid });
     const messageContainer = asRecord(data.messages);
     const rawMessages = Array.isArray(data.messages)
@@ -238,24 +376,37 @@ export async function fetchEvolutionMessages(userId: string, remoteJid: string):
           : Array.isArray(data)
             ? data
             : [];
-    return rawMessages
-      .filter((msg: unknown): msg is Record<string, unknown> => msg !== null && typeof msg === 'object')
-      .map((msg: Record<string, unknown>): WhatsAppMessage => {
-        const key = msg.key as Record<string, unknown> | undefined;
-        const message = msg.message as Record<string, unknown> | undefined;
-        return {
-          id: String(key?.id ?? msg.id ?? Date.now()),
-          conversation_id: null,
-          remote_jid: safeString(key?.remoteJid) ?? remoteJid,
-          from_me: Boolean(key?.fromMe ?? false),
-          sender_name: key?.fromMe ? 'You' : (safeString(msg.pushName) ?? 'Contact'),
-          message_type: message?.conversation ? 'text' : (safeString(msg.messageType) ?? 'text'),
-          text: extractMessageText(message) ?? '',
-          media_url: null,
-          timestamp: safeTimestamp(msg.messageTimestamp),
-          status: safeString(msg.status) ?? 'sent',
-        };
-      });
+
+    for (const raw of rawMessages) {
+      const msg = asRecord(raw);
+      if (!msg) continue;
+      const key = msg.key as Record<string, unknown> | undefined;
+      const message = msg.message as Record<string, unknown> | undefined;
+      const messageId = String(key?.id ?? msg.id ?? Date.now());
+      const mapped: Omit<WhatsAppMessage, 'id' | 'conversation_id'> = {
+        remote_jid: safeString(key?.remoteJid) ?? remoteJid,
+        from_me: Boolean(key?.fromMe ?? false),
+        sender_name: key?.fromMe ? 'You' : (safeString(msg.pushName) ?? 'Contact'),
+        message_type: message?.conversation ? 'text' : (safeString(msg.messageType) ?? 'text'),
+        text: extractMessageText(message) ?? '',
+        media_url: null,
+        timestamp: safeTimestamp(msg.messageTimestamp) ?? new Date().toISOString(),
+        status: safeString(msg.status) ?? 'sent',
+      };
+      try {
+        await upsertMessage(convId, mapped, messageId);
+      } catch {}
+    }
+
+    const { data: dbMessages, error } = await supabase
+      .from('whatsapp_messages')
+      .select('*')
+      .eq('conversation_id', convId)
+      .order('timestamp', { ascending: true })
+      .limit(200);
+
+    if (error) throw error;
+    return (dbMessages ?? []).map(mapDbMessage);
   } catch (error) {
     throw error;
   }
@@ -264,18 +415,33 @@ export async function fetchEvolutionMessages(userId: string, remoteJid: string):
 export async function sendEvolutionMessage(userId: string, remoteJid: string, text: string, phoneNumber?: string | null): Promise<WhatsAppMessage> {
   const instanceName = getInstanceName(userId);
   const data = await edgeFetch({ action: 'send-text', instanceName, remoteJid, phoneNumber, text });
-  return {
-    id: String(data?.key?.id ?? Date.now()),
-    conversation_id: null,
+  const evolutionMessageId = String(data?.key?.id ?? `local_${Date.now()}`);
+  const timestamp = new Date().toISOString();
+
+  const convId = await upsertConversation({
+    remote_jid: remoteJid,
+    push_name: null,
+    display_name: phoneNumber ?? remoteJid.split('@')[0],
+    phone_number: phoneNumber,
+    profile_pic: null,
+    unread_count: 0,
+    last_message: text,
+    last_message_type: 'text',
+    last_message_timestamp: timestamp,
+  });
+
+  const saved = await upsertMessage(convId, {
     remote_jid: remoteJid,
     from_me: true,
     sender_name: 'You',
     message_type: 'text',
     text,
     media_url: null,
-    timestamp: new Date().toISOString(),
+    timestamp,
     status: 'sent',
-  };
+  }, evolutionMessageId);
+
+  return saved;
 }
 
 export async function sendEvolutionMedia(
@@ -290,18 +456,33 @@ export async function sendEvolutionMedia(
 ): Promise<WhatsAppMessage> {
   const instanceName = getInstanceName(userId);
   const data = await edgeFetch({ action: 'send-media', instanceName, remoteJid, phoneNumber, mediatype, mimetype, media, fileName, caption });
-  return {
-    id: String(data?.key?.id ?? Date.now()),
-    conversation_id: null,
+  const evolutionMessageId = String(data?.key?.id ?? `local_${Date.now()}`);
+  const timestamp = new Date().toISOString();
+
+  const convId = await upsertConversation({
+    remote_jid: remoteJid,
+    push_name: null,
+    display_name: phoneNumber ?? remoteJid.split('@')[0],
+    phone_number: phoneNumber,
+    profile_pic: null,
+    unread_count: 0,
+    last_message: caption || (mediatype === 'image' ? 'Photo' : 'Document'),
+    last_message_type: mediatype,
+    last_message_timestamp: timestamp,
+  });
+
+  const saved = await upsertMessage(convId, {
     remote_jid: remoteJid,
     from_me: true,
     sender_name: 'You',
     message_type: mediatype,
     text: caption || (mediatype === 'image' ? 'Photo' : 'Document'),
     media_url: null,
-    timestamp: new Date().toISOString(),
+    timestamp,
     status: 'sent',
-  };
+  }, evolutionMessageId);
+
+  return saved;
 }
 
 export async function logoutEvolutionInstance(userId: string, instanceName?: string): Promise<void> {
@@ -345,4 +526,53 @@ export async function fetchWhatsAppMessages(userId: string, remoteJid: string): 
 
 export async function sendWhatsAppMessage(userId: string, remoteJid: string, text: string, phoneNumber?: string | null): Promise<WhatsAppMessage> {
   return sendEvolutionMessage(userId, remoteJid, text, phoneNumber);
+}
+
+export async function fetchCRMContext(remoteJid: string, phoneNumber: string | null, recentMessages: WhatsAppMessage[]): Promise<CRMContext> {
+  const phone = phoneNumber ?? getPhoneNumber(remoteJid) ?? remoteJid.split('@')[0];
+  const phoneDigits = phone.replace(/[^0-9]/g, '');
+
+  const leadQuery = supabase
+    .from('leads')
+    .select('*')
+    .or(`phone.ilike.%${phoneDigits}%,whatsapp.ilike.%${phoneDigits}%`)
+    .limit(1);
+
+  const [leadResult, dealsResult, tasksResult] = await Promise.all([
+    leadQuery,
+    phoneDigits
+      ? supabase.from('deals').select('*, lead:leads(*), property:properties(*)').or(`lead.phone.ilike.%${phoneDigits}%,lead.whatsapp.ilike.%${phoneDigits}%`).limit(5)
+      : Promise.resolve({ data: [], error: null }),
+    phoneDigits
+      ? supabase.from('tasks').select('*').eq('status', 'todo').limit(5)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  let properties: Record<string, unknown>[] = [];
+  if (leadResult.data && leadResult.data.length > 0) {
+    const lead = leadResult.data[0] as Record<string, unknown>;
+    const interest = (lead.property_type as string) ?? (lead.interested_in as string);
+    if (interest) {
+      const propResult = await supabase
+        .from('properties')
+        .select('*')
+        .ilike('type', `%${interest}%`)
+        .limit(3);
+      properties = (propResult.data ?? []) as Record<string, unknown>[];
+    }
+  }
+
+  return {
+    contactName: recentMessages.length > 0 ? (recentMessages[recentMessages.length - 1].sender_name ?? 'Contact') : 'Contact',
+    phoneNumber: phone,
+    lead: (leadResult.data?.[0] as Record<string, unknown>) ?? null,
+    properties,
+    deals: (dealsResult.data ?? []) as Record<string, unknown>[],
+    tasks: (tasksResult.data ?? []) as Record<string, unknown>[],
+    recentMessages: recentMessages.slice(-15).map((m) => ({
+      from: m.from_me ? 'Me' : (m.sender_name ?? 'Contact'),
+      text: m.text ?? '',
+      time: m.timestamp ?? '',
+    })),
+  };
 }
