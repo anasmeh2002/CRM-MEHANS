@@ -236,7 +236,7 @@ export default function WhatsAppPage() {
     setLoadingMore(true);
     try {
       const oldest = messages[0]?.timestamp;
-      const { messages: older, hasMore: more } = await fetchCachedMessages(selectedJid, PAGE_SIZE, oldest);
+      const { messages: older, hasMore: more } = await fetchCachedMessages(selectedJid, PAGE_SIZE, oldest ?? undefined);
       setMessages((prev) => dedupMessages([...older, ...prev]));
       setHasMore(more);
       const cached = cacheRef.current.get(selectedJid);
