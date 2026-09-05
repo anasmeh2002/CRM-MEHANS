@@ -108,6 +108,8 @@ export default function WhatsAppPage() {
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [aiHistory, setAiHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const [crmContext, setCrmContext] = useState<CRMContext | null>(null);
+  const [replySuggestions, setReplySuggestions] = useState<string[]>([]);
+  const [replyLoading, setReplyLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -381,6 +383,37 @@ export default function WhatsAppPage() {
     'Generate a CRM report',
     'Reply in French',
   ], []);
+
+  // Generate reply suggestions when conversation context is loaded
+  const generateReplySuggestions = useCallback(async () => {
+    if (!crmContext || crmContext.recentMessages.length === 0) return;
+    setReplyLoading(true);
+    try {
+      const system = `You are the MEHANS CRM WhatsApp assistant for a real estate business. Based on the conversation context and CRM data, generate 3 reply suggestions. Each reply should be a different approach (e.g. formal, casual, or action-oriented). Replies should be in the same language the customer is using. Keep each reply under 80 words. Return ONLY a JSON array of 3 strings, no preamble.`;
+      const contextStr = `Contact: ${crmContext.contactName}\nPhone: ${crmContext.phoneNumber ?? 'Unknown'}\nRecent messages:\n${crmContext.recentMessages.map(m => `${m.from}: ${m.text}`).join('\n')}\n${crmContext.lead ? `Lead: ${crmContext.lead.first_name ?? ''} ${crmContext.lead.last_name ?? ''}, status=${crmContext.lead.status ?? 'new'}, interest=${crmContext.lead.property_type ?? crmContext.lead.interested_in ?? 'unknown'}` : 'No lead found'}`;
+      const raw = await askAI([{ role: 'user', content: contextStr }], system);
+      let suggestions: string[] = [];
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) suggestions = parsed.map(String).slice(0, 3);
+      } catch {}
+      if (suggestions.length === 0) {
+        suggestions = raw.split(/\n\n+|(?=^\d\.\s)/m).filter(s => s.trim().length > 10).slice(0, 3);
+      }
+      setReplySuggestions(suggestions);
+    } catch {
+      setReplySuggestions([]);
+    } finally {
+      setReplyLoading(false);
+    }
+  }, [crmContext]);
+
+  useEffect(() => {
+    if (aiOpen && crmContext && crmContext.recentMessages.length > 0) {
+      setReplySuggestions([]);
+      generateReplySuggestions();
+    }
+  }, [aiOpen, crmContext, generateReplySuggestions]);
 
   const selected = conversations.find((c) => c.remote_jid === selectedJid) ?? null;
   const filtered = useMemo(() => conversations.filter((c) => c.display_name.toLowerCase().includes(search.toLowerCase())), [conversations, search]);
@@ -714,6 +747,28 @@ export default function WhatsAppPage() {
                             {crmContext.contactName} · {crmContext.phoneNumber ?? 'Unknown'}
                             {crmContext.lead ? ` · Lead: ${crmContext.lead.status ?? 'new'}` : ' · No lead found'}
                           </p>
+                        </div>
+                      )}
+                      {/* Reply suggestions */}
+                      {replyLoading && (
+                        <div className="mb-3 flex items-center gap-2 text-xs text-text-muted">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating reply suggestions...
+                        </div>
+                      )}
+                      {!replyLoading && replySuggestions.length > 0 && (
+                        <div className="mb-3 space-y-2">
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gold">Reply Suggestions</p>
+                          {replySuggestions.map((reply, i) => (
+                            <div key={i} className="rounded-xl border border-border bg-bg-secondary p-2.5">
+                              <p className="whitespace-pre-wrap text-[11px] text-text-secondary">{reply}</p>
+                              <button
+                                onClick={() => { setMessage(reply); toast.success('Added to composer'); }}
+                                className="mt-2 rounded-lg border border-border bg-bg-elevated px-2.5 py-1 text-[10px] font-medium text-gold transition-colors hover:border-gold-border"
+                              >
+                                Use Reply
+                              </button>
+                            </div>
+                          ))}
                         </div>
                       )}
                       {/* Quick actions - contextual */}

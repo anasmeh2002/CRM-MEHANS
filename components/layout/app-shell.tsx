@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sidebar, MobileNav } from './sidebar';
 import { Navbar } from './navbar';
+import { AICopilot } from '@/components/ai-copilot';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -24,6 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </motion.main>
       </div>
       <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      <AICopilot />
     </div>
   );
 }

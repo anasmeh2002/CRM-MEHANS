@@ -273,7 +273,7 @@ export default function CalendarPage() {
                 <AlertCircle className="h-6 w-6" strokeWidth={1.5} />
               </div>
               <div>
-                <p className="font-serif text-lg font-medium text-text-primary">Couldn’t load meetings</p>
+                <p className="font-serif text-lg font-medium text-text-primary">Couldn't load meetings</p>
                 <p className="mt-1 text-sm text-text-muted">{error}</p>
               </div>
               <button onClick={() => refetch()} className="btn btn-ghost btn-sm mt-1">Try again</button>
@@ -297,13 +297,13 @@ export default function CalendarPage() {
                       key={i}
                       onClick={() => setSelectedDay(cell.date)}
                       className={cn(
-                        ‘min-h-[56px] sm:min-h-[80px] rounded-xl border p-1 sm:p-1.5 transition-colors text-left’,
-                        cell.current ? ‘border-border bg-bg-secondary’ : ‘border-transparent bg-bg-elevated/30’,
-                        isToday(cell.date) && ‘border-gold-border bg-gold-bg’,
-                        selectedDay && dateKey(selectedDay) === dateKey(cell.date) && ‘ring-1 ring-gold’
+                        'min-h-[56px] sm:min-h-[80px] rounded-xl border p-1 sm:p-1.5 transition-colors text-left',
+                        cell.current ? 'border-border bg-bg-secondary' : 'border-transparent bg-bg-elevated/30',
+                        isToday(cell.date) && 'border-gold-border bg-gold-bg',
+                        selectedDay && dateKey(selectedDay) === dateKey(cell.date) && 'ring-1 ring-gold'
                       )}
                     >
-                      <span className={cn(‘text-[10px] sm:text-xs font-medium’, cell.current ? ‘text-text-primary’ : ‘text-text-muted/50’, isToday(cell.date) && ‘text-gold’)}>
+                      <span className={cn('text-[10px] sm:text-xs font-medium', cell.current ? 'text-text-primary' : 'text-text-muted/50', isToday(cell.date) && 'text-gold')}>
                         {cell.day}
                       </span>
                       <div className="mt-0.5 sm:mt-1 space-y-0.5 sm:space-y-1">
@@ -312,9 +312,9 @@ export default function CalendarPage() {
                           {dayMeetings.slice(0, 2).map((m) => {
                             const Icon = meetingTypeIcons[m.type] || Clock;
                             return (
-                              <div key={m.id} className={cn(‘flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium’, safeConfig(meetingColors, m.type, ‘border-border text-text-muted bg-bg-elevated’))}>
+                              <div key={m.id} className={cn('flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium', safeConfig(meetingColors, m.type, 'border-border text-text-muted bg-bg-elevated'))}>
                                 <Icon className="h-2.5 w-2.5 shrink-0" strokeWidth={1.5} />
-                                <span className="truncate">{m.time} {m.attendee.split(‘ ‘)[0]}</span>
+                                <span className="truncate">{m.time} {m.attendee.split(' ')[0]}</span>
                               </div>
                             );
                           })}
@@ -323,7 +323,7 @@ export default function CalendarPage() {
                         {/* Mobile: show dots only */}
                         <div className="flex sm:hidden flex-wrap gap-0.5">
                           {dayMeetings.slice(0, 3).map((m) => (
-                            <span key={m.id} className={cn(‘h-1.5 w-1.5 rounded-full’, safeConfig(meetingColors, m.type, ‘bg-text-muted’).replace(/border-\S+/, ‘’).replace(/text-\S+/, ‘’).replace(/bg-\S+/, ‘’) || ‘bg-gold’)} />
+                            <span key={m.id} className={cn('h-1.5 w-1.5 rounded-full', safeConfig(meetingColors, m.type, 'bg-text-muted').replace(/border-\S+/, '').replace(/text-\S+/, '').replace(/bg-\S+/, '') || 'bg-gold')} />
                           ))}
                           {dayMeetings.length > 3 && <span className="text-[8px] text-text-muted">+{dayMeetings.length - 3}</span>}
                         </div>
@@ -367,7 +367,7 @@ export default function CalendarPage() {
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border border-border bg-bg-elevated">
                         <span className="text-[9px] font-medium text-text-muted">
-                          {new Date(meeting.date + ‘T00:00:00’).toLocaleDateString(‘en-US’, { month: ‘short’ }).toUpperCase()}
+                          {new Date(meeting.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
                         </span>
                         <span className="text-sm font-bold text-text-primary">{parseInt(meeting.date.slice(8), 10)}</span>
                       </div>
@@ -376,7 +376,7 @@ export default function CalendarPage() {
                         <p className="text-xs text-text-muted">{meeting.time} · {meeting.duration}min</p>
                         <p className="mt-1 truncate text-[11px] text-text-muted">{meeting.location}</p>
                       </div>
-                      <div className={cn(‘flex h-8 w-8 items-center justify-center rounded-lg border’, safeConfig(meetingColors, meeting.type, ‘border-border text-text-muted bg-bg-elevated’))}>
+                      <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg border', safeConfig(meetingColors, meeting.type, 'border-border text-text-muted bg-bg-elevated'))}>
                         <Icon className="h-4 w-4" strokeWidth={1.5} />
                       </div>
                     </div>
@@ -394,7 +394,7 @@ export default function CalendarPage() {
           <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-border bg-bg-elevated p-5 shadow-modal max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="font-serif text-lg font-medium text-text-primary">
-                {selectedDay.toLocaleDateString(‘en-US’, { weekday: ‘long’, month: ‘long’, day: ‘numeric’ })}
+                {selectedDay.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
               </h3>
               <button onClick={() => setSelectedDay(null)} className="rounded-lg p-1.5 text-text-muted hover:bg-bg-secondary">
                 <X className="h-5 w-5" />
@@ -411,7 +411,7 @@ export default function CalendarPage() {
                     const Icon = meetingTypeIcons[m.type] || Clock;
                     return (
                       <div key={m.id} className="flex items-start gap-3 rounded-xl border border-border p-3">
-                        <div className={cn(‘flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border’, safeConfig(meetingColors, m.type, ‘border-border text-text-muted bg-bg-elevated’))}>
+                        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border', safeConfig(meetingColors, m.type, 'border-border text-text-muted bg-bg-elevated'))}>
                           <Icon className="h-4 w-4" strokeWidth={1.5} />
                         </div>
                         <div className="min-w-0 flex-1">

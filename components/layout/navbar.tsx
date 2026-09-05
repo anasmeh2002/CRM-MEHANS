@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Bell, Plus, ChevronDown, Command, User, Settings, LogOut, Check, Menu,
-  Users, Home, TrendingUp, CheckSquare, CalendarClock, Loader2,
+  Users, Home, TrendingUp, CheckSquare, CalendarClock, Loader2, Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -222,6 +222,18 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
       {/* Right */}
       <div className="ml-auto flex items-center gap-2">
         <ThemeToggle />
+
+        {/* AI Copilot button */}
+        <button
+          onClick={() => {
+            const event = new CustomEvent('open-ai-copilot');
+            window.dispatchEvent(event);
+          }}
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-gold-border bg-gold-bg text-gold transition-all hover:scale-105 hover:bg-gold-soft hover:text-[#0D0D0F]"
+          title="AI Copilot"
+        >
+          <Sparkles className="h-[18px] w-[18px]" strokeWidth={1.5} />
+        </button>
 
         {/* Quick Add */}
         <div ref={refs.quick} className="relative">
