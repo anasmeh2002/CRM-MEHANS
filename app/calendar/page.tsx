@@ -118,7 +118,9 @@ export default function CalendarPage() {
     }
     const syncError = params.get('sync_error');
     if (syncError) {
-      toast.error('Google Calendar sync failed. Please try again.');
+      const errorMsg = decodeURIComponent(syncError);
+      console.error('[calendar] sync error from callback:', errorMsg);
+      toast.error(`Calendar sync failed: ${errorMsg}`);
       window.history.replaceState({}, '', '/calendar');
     }
   }, []);

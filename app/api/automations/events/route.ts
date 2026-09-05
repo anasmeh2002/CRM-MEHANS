@@ -3,9 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const SUPABASE_KEY = SERVICE_KEY || ANON_KEY;
 
 function serverSupabase() {
-  return createClient(SUPABASE_URL, SERVICE_KEY);
+  return createClient(SUPABASE_URL, SUPABASE_KEY);
 }
 
 interface EventPayload {

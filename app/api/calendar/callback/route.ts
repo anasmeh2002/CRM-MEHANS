@@ -9,10 +9,14 @@ function getBaseUrl(): string {
 }
 
 function serverSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const key = serviceKey || anonKey;
+  if (!url || !key) {
+    console.error('[calendar/callback] Missing Supabase credentials. SUPABASE_SERVICE_ROLE_KEY:', !!serviceKey, 'NEXT_PUBLIC_SUPABASE_ANON_KEY:', !!anonKey, 'URL:', !!url);
+  }
+  return createClient(url, key);
 }
 
 export async function GET(request: NextRequest) {
@@ -53,7 +57,7 @@ export async function GET(request: NextRequest) {
     if (!tokenRes.ok) {
       const errBody = await tokenRes.text();
       console.error('[calendar/callback] token exchange failed:', errBody);
-      return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=token_exchange_failed`);
+      return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=${encodeURIComponent('token_exchange_failed:' + errBody.slice(0, 200))}`);
     }
 
     const tokens = await tokenRes.json();
@@ -76,13 +80,14 @@ export async function GET(request: NextRequest) {
       );
 
     if (upsertError) {
-      console.error('[calendar/callback] failed to store tokens:', upsertError);
-      return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=storage_failed`);
+      console.error('[calendar/callback] failed to store tokens:', upsertError.message);
+      return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=${encodeURIComponent('storage_failed:' + upsertError.message.slice(0, 200))}`);
     }
 
     return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_success=true`);
   } catch (err) {
-    console.error('[calendar/callback] unexpected error:', err);
-    return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=unexpected`);
+    const msg = err instanceof Error ? err.message : 'unexpected';
+    console.error('[calendar/callback] unexpected error:', msg);
+    return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=${encodeURIComponent('unexpected:' + msg.slice(0, 200))}`);
   }
 }

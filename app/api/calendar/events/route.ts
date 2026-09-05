@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 function serverSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const key = serviceKey || anonKey;
+  if (!url || !key) {
+    console.error('[calendar/events] Missing Supabase credentials. SUPABASE_SERVICE_ROLE_KEY:', !!serviceKey, 'NEXT_PUBLIC_SUPABASE_ANON_KEY:', !!anonKey, 'URL:', !!url);
+  }
+  return createClient(url, key);
 }
 
 interface CalendarTokens {
@@ -55,6 +59,10 @@ async function refreshAccessToken(refreshToken: string): Promise<CalendarTokens 
 
   if (!res.ok) return null;
   const tokens = await res.json();
+  if (!tokens.access_token) {
+    console.error('[calendar/events] refresh returned no access_token:', JSON.stringify(tokens).slice(0, 500));
+    return null;
+  }
 
   const sb = serverSupabase();
   const newConfig = {
@@ -113,8 +121,8 @@ export async function GET(request: NextRequest) {
 
     if (!res.ok) {
       const err = await res.text();
-      console.error('[calendar/events] Google API error:', err);
-      return NextResponse.json({ error: 'Failed to fetch Google Calendar events' }, { status: 502 });
+      console.error('[calendar/events] Google API error:', res.status, err);
+      return NextResponse.json({ error: `Google API ${res.status}: ${err.slice(0, 300)}` }, { status: 502 });
     }
 
     const data = await res.json();
@@ -193,8 +201,8 @@ export async function POST(request: NextRequest) {
 
     if (!res.ok) {
       const err = await res.text();
-      console.error('[calendar/events] create failed:', err);
-      return NextResponse.json({ error: 'Failed to create Google Calendar event' }, { status: 502 });
+      console.error('[calendar/events] create failed:', res.status, err);
+      return NextResponse.json({ error: `Google API ${res.status}: ${err.slice(0, 300)}` }, { status: 502 });
     }
 
     const created = await res.json();
@@ -230,8 +238,8 @@ export async function DELETE(request: NextRequest) {
 
     if (!res.ok && res.status !== 410) {
       const err = await res.text();
-      console.error('[calendar/events] delete failed:', err);
-      return NextResponse.json({ error: 'Failed to delete Google Calendar event' }, { status: 502 });
+      console.error('[calendar/events] delete failed:', res.status, err);
+      return NextResponse.json({ error: `Google API ${res.status}: ${err.slice(0, 300)}` }, { status: 502 });
     }
 
     return NextResponse.json({ success: true });
