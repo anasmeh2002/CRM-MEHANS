@@ -39,7 +39,7 @@ const meetingColors: Record<string, string> = {
 /** Map a raw DB Meeting row to the display shape the calendar UI expects. */
 function toDisplayMeeting(m: Meeting) {
   const startsAt = m.starts_at ? new Date(m.starts_at) : null;
-  const date = startsAt ? startsAt.toISOString().slice(0, 10) : '';
+  const date = startsAt ? `${startsAt.getFullYear()}-${String(startsAt.getMonth() + 1).padStart(2, '0')}-${String(startsAt.getDate()).padStart(2, '0')}` : '';
   const time = startsAt
     ? `${String(startsAt.getHours()).padStart(2, '0')}:${String(startsAt.getMinutes()).padStart(2, '0')}`
     : '';
@@ -145,7 +145,7 @@ export default function CalendarPage() {
       return {
         id: e.id,
         title: e.title,
-        date: startsAt ? startsAt.toISOString().slice(0, 10) : '',
+        date: startsAt ? `${startsAt.getFullYear()}-${String(startsAt.getMonth() + 1).padStart(2, '0')}-${String(startsAt.getDate()).padStart(2, '0')}` : '',
         time: startsAt ? `${String(startsAt.getHours()).padStart(2, '0')}:${String(startsAt.getMinutes()).padStart(2, '0')}` : '',
         duration: e.ends_at ? Math.round((new Date(e.ends_at).getTime() - startsAt!.getTime()) / 60000) : 30,
         type: 'google_meet',
@@ -186,18 +186,17 @@ export default function CalendarPage() {
     cells.push({ day: i, current: false, date: new Date(year, month + 1, i) });
   }
 
-  const sameDay = (a: Date, b: Date) =>
-    a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+  const dateKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-  const getMeetingsForDay = (date: Date) =>
-    meetings.filter((m) => {
-      if (!m.date) return false;
-      const mDate = new Date(m.date);
-      return sameDay(mDate, date);
-    });
+  const getMeetingsForDay = (date: Date) => {
+    const key = dateKey(date);
+    return meetings.filter((m) => m.date === key);
+  };
 
   const today = new Date();
-  const isToday = (date: Date) => sameDay(date, today);
+  const todayKey = dateKey(today);
+  const isToday = (date: Date) => dateKey(date) === todayKey;
   const upcomingMeetings = meetings
     .filter((m) => m.status === 'upcoming')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -346,9 +345,9 @@ export default function CalendarPage() {
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border border-border bg-bg-elevated">
                         <span className="text-[9px] font-medium text-text-muted">
-                          {new Date(meeting.date).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                          {new Date(meeting.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
                         </span>
-                        <span className="text-sm font-bold text-text-primary">{new Date(meeting.date).getDate()}</span>
+                        <span className="text-sm font-bold text-text-primary">{parseInt(meeting.date.slice(8), 10)}</span>
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-text-primary">{meeting.title}</p>

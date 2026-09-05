@@ -162,7 +162,7 @@ function mapMeeting(row: any): Meeting {
   const startsAt = row.starts_at ? new Date(row.starts_at) : null;
   return {
     ...row,
-    date: startsAt ? startsAt.toISOString().slice(0, 10) : '',
+    date: startsAt ? `${startsAt.getFullYear()}-${String(startsAt.getMonth() + 1).padStart(2, '0')}-${String(startsAt.getDate()).padStart(2, '0')}` : '',
     time: startsAt ? `${String(startsAt.getHours()).padStart(2, '0')}:${String(startsAt.getMinutes()).padStart(2, '0')}` : '',
     duration: row.duration_minutes ?? 30,
     type: row.meeting_type ?? 'in-person',
