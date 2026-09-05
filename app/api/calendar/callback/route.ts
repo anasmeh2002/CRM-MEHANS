@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       .from('integrations')
       .upsert(
         { service: 'Google Calendar', connected: true, config },
-        { onConflict: 'service' },
+        { onConflict: 'agency_id,service' },
       );
 
     if (upsertError) {

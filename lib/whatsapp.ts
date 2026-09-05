@@ -545,7 +545,7 @@ export async function updateWhatsAppConnection(connection: WhatsAppConnection): 
       instance_name: connection.instanceName,
     },
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'service' });
+  }, { onConflict: 'agency_id,service' });
   if (error) throw error;
 }
 

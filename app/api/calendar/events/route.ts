@@ -75,7 +75,7 @@ async function refreshAccessToken(refreshToken: string): Promise<CalendarTokens 
   };
   await sb.from('integrations').upsert(
     { service: 'Google Calendar', connected: true, config: newConfig },
-    { onConflict: 'service' },
+    { onConflict: 'agency_id,service' },
   );
 
   return newConfig as unknown as CalendarTokens;
