@@ -7,7 +7,7 @@ import { useState } from 'react';
 import {
   LayoutDashboard, Users, Home, KanbanSquare, TrendingUp,
   Calendar, CheckSquare, CalendarClock, MessageCircle, BarChart3,
-  Sparkles, Zap, FileText, Settings, ChevronLeft, X,
+  Sparkles, FileText, Settings, ChevronLeft, X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MehansLogo, MehansLogoIcon } from '@/components/logo';
@@ -24,7 +24,6 @@ const navItems = [
   { label: 'WhatsApp', href: '/whatsapp', icon: MessageCircle },
   { label: 'Analytics', href: '/analytics', icon: BarChart3 },
   { label: 'AI Assistant', href: '/ai-assistant', icon: Sparkles },
-  { label: 'Automations', href: '/automations', icon: Zap },
   { label: 'Reports', href: '/reports', icon: FileText },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
@@ -90,31 +89,6 @@ export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; o
           );
         })}
       </nav>
-
-      <div className="p-3">
-        {!collapsed ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-gold rounded-2xl border p-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gold-bg text-gold">
-                <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
-              </div>
-              <span className="eyebrow text-text-primary">AI Briefing</span>
-            </div>
-            <p className="mt-3 text-[11.5px] leading-relaxed text-text-secondary">
-              3 deals need attention. Emma Davis is cooling off. Response time is 4.2h — above target.
-            </p>
-            <Link href="/ai-assistant" className="mt-3 inline-block text-[11px] font-medium text-gold transition-colors hover:text-gold-soft">
-              View full briefing →
-            </Link>
-          </motion.div>
-        ) : (
-          <Link href="/ai-assistant" className="flex justify-center">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-gold-border bg-gold-bg text-gold">
-              <Sparkles className="h-4 w-4" strokeWidth={1.5} />
-            </div>
-          </Link>
-        )}
-      </div>
 
       <div className="border-t border-border p-3">
         <button

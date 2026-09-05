@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Building2, Users, Shield, Plug, Palette, Code, CreditCard,
-  Check, Plus, Sparkles, Trash2, Copy, Loader2, Zap, Workflow,
+  Building2, Users, Shield, Plug, Code,
+  Check, Plus, Trash2, Copy, Loader2, Zap, Workflow,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, Card, Badge, Avatar } from '@/components/shared';
@@ -21,6 +21,7 @@ import {
 import { fetchN8nConfig, saveN8nConfig, testN8nConnection } from '@/lib/automations';
 import type { OrgSettings, RolePermissionRow, IntegrationRow, ApiKeyRow } from '@/lib/data';
 import type { TeamMember } from '@/lib/types';
+import { useRouter } from 'next/navigation';
 
 const tabs = [
   { id: 'organization', label: 'Organization', icon: Building2 },
@@ -28,19 +29,12 @@ const tabs = [
   { id: 'permissions', label: 'Permissions', icon: Shield },
   { id: 'integrations', label: 'Integrations', icon: Plug },
   { id: 'automations', label: 'Automations', icon: Workflow },
-  { id: 'branding', label: 'Branding', icon: Palette },
   { id: 'api', label: 'API', icon: Code },
-  { id: 'billing', label: 'Billing', icon: CreditCard },
 ];
 
 const integrationMeta: Record<string, { icon: string; description: string; color: string }> = {
-  'Slack': { icon: '💬', description: 'Get notifications in Slack', color: '#4A154B' },
-  'Gmail': { icon: '✉', description: 'Sync emails with CRM', color: '#EA4335' },
-  'WhatsApp Business': { icon: '📱', description: 'Send messages to leads', color: '#25D366' },
   'Google Calendar': { icon: '📅', description: 'Sync meetings and events', color: '#4285F4' },
-  'OpenAI': { icon: '✦', description: 'AI assistant and lead scoring', color: '#D4AF37' },
-  'Zapier': { icon: '⚡', description: 'Connect 5,000+ apps', color: '#FF4A00' },
-  'n8n': { icon: '⚙', description: 'Automation workflow engine', color: '#FF6D5A' },
+  'WhatsApp Business': { icon: '📱', description: 'Send messages to leads', color: '#25D366' },
 };
 
 const modules = ['leads', 'properties', 'deals', 'tasks', 'meetings', 'contacts'];
@@ -86,9 +80,7 @@ export default function SettingsPage() {
               {activeTab === 'permissions' && <PermissionsTab />}
               {activeTab === 'integrations' && <IntegrationsTab />}
               {activeTab === 'automations' && <AutomationsTab />}
-              {activeTab === 'branding' && <BrandingTab />}
               {activeTab === 'api' && <ApiTab />}
-              {activeTab === 'billing' && <BillingTab />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -398,22 +390,35 @@ function PermissionsTab() {
 
 function IntegrationsTab() {
   const { data: integrations, loading, refetch } = useSupabaseQuery<IntegrationRow[]>(fetchIntegrations);
+  const router = useRouter();
 
-  const handleToggle = async (service: string, currentlyConnected: boolean) => {
+  const workingServices = ['Google Calendar', 'WhatsApp Business'];
+
+  const handleConnect = (service: string) => {
+    if (service === 'Google Calendar') {
+      window.location.href = '/api/calendar/auth';
+    } else if (service === 'WhatsApp Business') {
+      router.push('/whatsapp');
+    }
+  };
+
+  const handleDisconnect = async (service: string) => {
     try {
-      await toggleIntegration(service, !currentlyConnected);
-      toast.success(currentlyConnected ? `${service} disconnected` : `${service} connected`);
+      await toggleIntegration(service, false);
+      toast.success(`${service} disconnected`);
       refetch();
     } catch {
-      toast.error('Failed to update integration');
+      toast.error('Failed to disconnect integration');
     }
   };
 
   if (loading) return <LoadingCard />;
 
+  const filtered = (integrations ?? []).filter((i) => workingServices.includes(i.service));
+
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {(integrations ?? []).map((int, i) => {
+      {filtered.map((int, i) => {
         const meta = integrationMeta[int.service] ?? { icon: '🔌', description: 'Integration', color: '#888' };
         return (
           <Card key={int.service} hover delay={i * 0.04}>
@@ -428,16 +433,25 @@ function IntegrationsTab() {
               {int.connected ? (
                 <div className="flex items-center gap-2">
                   <Badge variant="success"><Check className="h-3 w-3" strokeWidth={1.5} /> Connected</Badge>
-                  <button
-                    onClick={() => handleToggle(int.service, true)}
-                    className="rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:border-error hover:text-error"
-                  >
-                    Disconnect
-                  </button>
+                  {int.service === 'Google Calendar' ? (
+                    <button
+                      onClick={() => handleDisconnect(int.service)}
+                      className="rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:border-error hover:text-error"
+                    >
+                      Disconnect
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => router.push('/whatsapp')}
+                      className="rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-gold-border hover:text-gold"
+                    >
+                      Manage
+                    </button>
+                  )}
                 </div>
               ) : (
                 <button
-                  onClick={() => handleToggle(int.service, false)}
+                  onClick={() => handleConnect(int.service)}
                   className="rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-gold-border hover:text-gold"
                 >
                   Connect
@@ -447,91 +461,12 @@ function IntegrationsTab() {
           </Card>
         );
       })}
+      {filtered.length === 0 && (
+        <Card className="sm:col-span-2">
+          <p className="py-8 text-center text-sm text-text-muted">No integrations configured.</p>
+        </Card>
+      )}
     </div>
-  );
-}
-
-// ─── Branding ────────────────────────────────────────────────────────────────
-
-function BrandingTab() {
-  const { data: settings, loading, refetch } = useSupabaseQuery<OrgSettings | null>(fetchSettings);
-  const [color, setColor] = useState('#D4AF37');
-  const [theme, setTheme] = useState('dark');
-  const [orgName, setOrgName] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (settings) {
-      setColor(settings.primary_color ?? '#D4AF37');
-      setTheme(settings.theme ?? 'dark');
-      setOrgName(settings.org_name ?? '');
-    }
-  }, [settings]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await updateSettings({ primary_color: color, theme, org_name: orgName });
-      toast.success('Branding saved');
-      refetch();
-    } catch {
-      toast.error('Failed to save branding');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading || !settings) return <LoadingCard />;
-
-  return (
-    <Card>
-      <h3 className="mb-5 font-serif text-lg font-medium text-text-primary">Branding</h3>
-      <div className="space-y-5">
-        <div>
-          <label className="mb-2.5 block text-xs font-medium text-text-muted">Organization Name</label>
-          <input className="input w-full" value={orgName} onChange={(e) => setOrgName(e.target.value)} />
-        </div>
-        <div>
-          <label className="mb-2.5 block text-xs font-medium text-text-muted">Primary Color</label>
-          <div className="flex items-center gap-3">
-            <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-10 w-16 cursor-pointer rounded-xl border border-border bg-transparent" />
-            <span className="text-sm font-mono text-text-primary">{color}</span>
-          </div>
-        </div>
-        <div>
-          <label className="mb-2.5 block text-xs font-medium text-text-muted">Theme</label>
-          <div className="flex gap-3">
-            {['dark', 'light'].map((t) => (
-              <button
-                key={t}
-                onClick={() => setTheme(t)}
-                className={cn(
-                  'flex h-16 w-24 cursor-pointer items-center justify-center rounded-xl border-2 transition-all',
-                  t === 'dark' ? 'bg-bg-primary' : 'bg-white',
-                  theme === t ? 'border-gold' : 'border-border'
-                )}
-              >
-                <span className={cn('text-xs font-medium capitalize', t === 'dark' ? 'text-gold' : 'text-gray-900')}>
-                  {t}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label className="mb-2.5 block text-xs font-medium text-text-muted">Logo</label>
-          <div className="flex items-center gap-4 rounded-xl border border-border bg-bg-elevated p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gold text-lg font-bold text-[#0D0D0F]">
-              {(orgName || 'M').charAt(0).toUpperCase()}
-            </div>
-            <span className="text-sm text-text-muted">Logo upload requires storage integration</span>
-          </div>
-        </div>
-        <button onClick={handleSave} disabled={saving} className="btn btn-gold btn-md">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Branding'}
-        </button>
-      </div>
-    </Card>
   );
 }
 
@@ -659,36 +594,6 @@ function ApiTab() {
         </div>
       </Card>
     </div>
-  );
-}
-
-// ─── Billing ──────────────────────────────────────────────────────────────────
-
-function BillingTab() {
-  const { data: integrations, loading } = useSupabaseQuery<IntegrationRow[]>(fetchIntegrations);
-  const billingConnected = (integrations ?? []).some((i) => i.service === 'Stripe' && i.connected);
-
-  if (loading) return <LoadingCard />;
-
-  if (!billingConnected) {
-    return (
-      <Card>
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <CreditCard className="h-12 w-12 text-text-muted" strokeWidth={1} />
-          <p className="mt-4 text-sm font-medium text-text-primary">Billing integration not configured</p>
-          <p className="mt-1 text-xs text-text-muted">Connect a billing integration to manage your subscription and invoices.</p>
-        </div>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Sparkles className="h-12 w-12 text-gold" strokeWidth={1} />
-        <p className="mt-4 text-sm font-medium text-text-primary">Billing is active</p>
-      </div>
-    </Card>
   );
 }
 

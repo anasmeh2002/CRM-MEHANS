@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus, Phone, Video, MapPin, Users, Clock, CalendarX, AlertCircle, RefreshCw, CalendarCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Phone, Video, MapPin, Users, Clock, CalendarX, AlertCircle, RefreshCw, CalendarCheck, X } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, Card, Badge, Skeleton, EmptyState } from '@/components/shared';
 import { useGlobalModal } from '@/components/modal-provider';
@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 
 const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const daysShort = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 const meetingTypeIcons: Record<string, React.ElementType> = {
@@ -58,6 +59,7 @@ export default function CalendarPage() {
   const [calendarConnected, setCalendarConnected] = useState(false);
   const [googleEvents, setGoogleEvents] = useState<any[]>([]);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
 
   const { data, loading, error, refetch } = useSupabaseQuery(fetchMeetings);
 
@@ -243,9 +245,9 @@ export default function CalendarPage() {
       </PageHeader>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2 p-5" delay={0.1}>
+        <Card className="lg:col-span-2 p-3 sm:p-5" delay={0.1}>
           <div className="mb-5 flex items-center justify-between">
-            <h3 className="font-serif text-xl font-medium text-text-primary">{monthNames[month]} {year}</h3>
+            <h3 className="font-serif text-base sm:text-xl font-medium text-text-primary">{monthNames[month]} {year}</h3>
             <div className="flex items-center gap-1">
               <button onClick={() => setCurrentDate(new Date(year, month - 1, 1))} className="rounded-lg p-2 text-text-muted transition-colors hover:bg-bg-elevated hover:text-text-primary">
                 <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
@@ -262,7 +264,7 @@ export default function CalendarPage() {
           {loading ? (
             <div className="grid grid-cols-7 gap-1">
               {Array.from({ length: 42 }).map((_, i) => (
-                <Skeleton key={i} className="min-h-[80px] rounded-xl" />
+                <Skeleton key={i} className="min-h-[60px] sm:min-h-[80px] rounded-xl" />
               ))}
             </div>
           ) : error ? (
@@ -277,40 +279,60 @@ export default function CalendarPage() {
               <button onClick={() => refetch()} className="btn btn-ghost btn-sm mt-1">Try again</button>
             </div>
           ) : (
-            <div className="grid grid-cols-7 gap-1">
-              {days.map((day) => (
-                <div key={day} className="pb-2 text-center text-xs font-medium text-text-muted">{day}</div>
-              ))}
-              {cells.map((cell, i) => {
-                const dayMeetings = getMeetingsForDay(cell.date);
-                return (
-                  <div
-                    key={i}
-                    className={cn(
-                      'min-h-[80px] rounded-xl border p-1.5 transition-colors',
-                      cell.current ? 'border-border bg-bg-secondary' : 'border-transparent bg-bg-elevated/30',
-                      isToday(cell.date) && 'border-gold-border bg-gold-bg'
-                    )}
-                  >
-                    <span className={cn('text-xs font-medium', cell.current ? 'text-text-primary' : 'text-text-muted/50', isToday(cell.date) && 'text-gold')}>
-                      {cell.day}
-                    </span>
-                    <div className="mt-1 space-y-1">
-                      {dayMeetings.slice(0, 2).map((m) => {
-                        const Icon = meetingTypeIcons[m.type] || Clock;
-                        return (
-                          <div key={m.id} className={cn('flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium', safeConfig(meetingColors, m.type, 'border-border text-text-muted bg-bg-elevated'))}>
-                            <Icon className="h-2.5 w-2.5 shrink-0" strokeWidth={1.5} />
-                            <span className="truncate">{m.time} {m.attendee.split(' ')[0]}</span>
-                          </div>
-                        );
-                      })}
-                      {dayMeetings.length > 2 && <p className="text-[10px] text-text-muted">+{dayMeetings.length - 2} more</p>}
-                    </div>
+            <>
+              {/* Day headers - short on mobile, full on desktop */}
+              <div className="grid grid-cols-7 gap-1">
+                {days.map((day, i) => (
+                  <div key={day} className="pb-2 text-center text-[10px] sm:text-xs font-medium text-text-muted">
+                    <span className="sm:hidden">{daysShort[i]}</span>
+                    <span className="hidden sm:inline">{day}</span>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {cells.map((cell, i) => {
+                  const dayMeetings = getMeetingsForDay(cell.date);
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedDay(cell.date)}
+                      className={cn(
+                        ‘min-h-[56px] sm:min-h-[80px] rounded-xl border p-1 sm:p-1.5 transition-colors text-left’,
+                        cell.current ? ‘border-border bg-bg-secondary’ : ‘border-transparent bg-bg-elevated/30’,
+                        isToday(cell.date) && ‘border-gold-border bg-gold-bg’,
+                        selectedDay && dateKey(selectedDay) === dateKey(cell.date) && ‘ring-1 ring-gold’
+                      )}
+                    >
+                      <span className={cn(‘text-[10px] sm:text-xs font-medium’, cell.current ? ‘text-text-primary’ : ‘text-text-muted/50’, isToday(cell.date) && ‘text-gold’)}>
+                        {cell.day}
+                      </span>
+                      <div className="mt-0.5 sm:mt-1 space-y-0.5 sm:space-y-1">
+                        {/* Desktop: show event chips */}
+                        <div className="hidden sm:block space-y-1">
+                          {dayMeetings.slice(0, 2).map((m) => {
+                            const Icon = meetingTypeIcons[m.type] || Clock;
+                            return (
+                              <div key={m.id} className={cn(‘flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium’, safeConfig(meetingColors, m.type, ‘border-border text-text-muted bg-bg-elevated’))}>
+                                <Icon className="h-2.5 w-2.5 shrink-0" strokeWidth={1.5} />
+                                <span className="truncate">{m.time} {m.attendee.split(‘ ‘)[0]}</span>
+                              </div>
+                            );
+                          })}
+                          {dayMeetings.length > 2 && <p className="text-[10px] text-text-muted">+{dayMeetings.length - 2} more</p>}
+                        </div>
+                        {/* Mobile: show dots only */}
+                        <div className="flex sm:hidden flex-wrap gap-0.5">
+                          {dayMeetings.slice(0, 3).map((m) => (
+                            <span key={m.id} className={cn(‘h-1.5 w-1.5 rounded-full’, safeConfig(meetingColors, m.type, ‘bg-text-muted’).replace(/border-\S+/, ‘’).replace(/text-\S+/, ‘’).replace(/bg-\S+/, ‘’) || ‘bg-gold’)} />
+                          ))}
+                          {dayMeetings.length > 3 && <span className="text-[8px] text-text-muted">+{dayMeetings.length - 3}</span>}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
           )}
         </Card>
 
@@ -345,7 +367,7 @@ export default function CalendarPage() {
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border border-border bg-bg-elevated">
                         <span className="text-[9px] font-medium text-text-muted">
-                          {new Date(meeting.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                          {new Date(meeting.date + ‘T00:00:00’).toLocaleDateString(‘en-US’, { month: ‘short’ }).toUpperCase()}
                         </span>
                         <span className="text-sm font-bold text-text-primary">{parseInt(meeting.date.slice(8), 10)}</span>
                       </div>
@@ -354,7 +376,7 @@ export default function CalendarPage() {
                         <p className="text-xs text-text-muted">{meeting.time} · {meeting.duration}min</p>
                         <p className="mt-1 truncate text-[11px] text-text-muted">{meeting.location}</p>
                       </div>
-                      <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg border', safeConfig(meetingColors, meeting.type, 'border-border text-text-muted bg-bg-elevated'))}>
+                      <div className={cn(‘flex h-8 w-8 items-center justify-center rounded-lg border’, safeConfig(meetingColors, meeting.type, ‘border-border text-text-muted bg-bg-elevated’))}>
                         <Icon className="h-4 w-4" strokeWidth={1.5} />
                       </div>
                     </div>
@@ -365,6 +387,47 @@ export default function CalendarPage() {
           )}
         </Card>
       </div>
+
+      {/* Mobile day detail modal */}
+      {selectedDay && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-5 lg:hidden" onClick={() => setSelectedDay(null)}>
+          <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-border bg-bg-elevated p-5 shadow-modal max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-serif text-lg font-medium text-text-primary">
+                {selectedDay.toLocaleDateString(‘en-US’, { weekday: ‘long’, month: ‘long’, day: ‘numeric’ })}
+              </h3>
+              <button onClick={() => setSelectedDay(null)} className="rounded-lg p-1.5 text-text-muted hover:bg-bg-secondary">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {(() => {
+              const dayMeetings = getMeetingsForDay(selectedDay);
+              if (dayMeetings.length === 0) {
+                return <p className="py-6 text-center text-sm text-text-muted">No meetings on this day.</p>;
+              }
+              return (
+                <div className="space-y-2">
+                  {dayMeetings.map((m) => {
+                    const Icon = meetingTypeIcons[m.type] || Clock;
+                    return (
+                      <div key={m.id} className="flex items-start gap-3 rounded-xl border border-border p-3">
+                        <div className={cn(‘flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border’, safeConfig(meetingColors, m.type, ‘border-border text-text-muted bg-bg-elevated’))}>
+                          <Icon className="h-4 w-4" strokeWidth={1.5} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-text-primary">{m.title}</p>
+                          <p className="text-xs text-text-muted">{m.time} · {m.duration}min</p>
+                          {m.location && <p className="mt-0.5 truncate text-[11px] text-text-muted">{m.location}</p>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
