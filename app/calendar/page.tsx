@@ -15,6 +15,7 @@ import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/auth-provider';
+import { useLanguage } from '@/components/language-provider';
 
 const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const daysShort = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -56,6 +57,7 @@ function toDisplayMeeting(m: Meeting) {
 export default function CalendarPage() {
   const { openModal } = useGlobalModal();
   const { session } = useAuth();
+  const { t } = useLanguage();
   const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1));
   const [syncing, setSyncing] = useState(false);
   const [calendarConnected, setCalendarConnected] = useState(false);
@@ -211,7 +213,7 @@ export default function CalendarPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Calendar" description="Schedule and manage your meetings">
+      <PageHeader title={t('calendar.title')} description={t('calendar.description')}>
         <div className="flex items-center gap-2">
           {calendarConnected ? (
             <button
@@ -231,7 +233,7 @@ export default function CalendarPage() {
               className="btn btn-md border border-success/40 bg-success-bg text-success hover:bg-success/10"
             >
               {syncing ? <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={1.5} /> : <CalendarCheck className="h-4 w-4" strokeWidth={1.5} />}
-              {syncing ? 'Syncing...' : 'Calendar Connected'}
+              {syncing ? 'Syncing...' : '{t('calendar.connected')}'}
             </button>
           ) : (
             <button
@@ -260,11 +262,11 @@ export default function CalendarPage() {
               className="btn btn-outline btn-md"
             >
               <RefreshCw className="h-4 w-4" strokeWidth={1.5} />
-              Sync with Google Calendar
+              {t('calendar.syncGoogle')}
             </button>
           )}
           <button onClick={() => openModal('meeting')} className="btn btn-gold btn-md">
-            <Plus className="h-4 w-4" strokeWidth={1.5} /> New Meeting
+            <Plus className="h-4 w-4" strokeWidth={1.5} /> {t('calendar.newMeeting')}
           </button>
         </div>
       </PageHeader>

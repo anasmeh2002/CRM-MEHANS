@@ -11,25 +11,27 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MehansLogo, MehansLogoIcon } from '@/components/logo';
+import { useLanguage } from '@/components/language-provider';
 
 const navItems = [
-  { label: 'Overview', href: '/', icon: LayoutDashboard },
-  { label: 'Leads', href: '/leads', icon: Users },
-  { label: 'Properties', href: '/properties', icon: Home },
-  { label: 'Pipeline', href: '/pipeline', icon: KanbanSquare },
-  { label: 'Deals', href: '/deals', icon: TrendingUp },
-  { label: 'Calendar', href: '/calendar', icon: Calendar },
-  { label: 'Tasks', href: '/tasks', icon: CheckSquare },
-  { label: 'Meetings', href: '/meetings', icon: CalendarClock },
-  { label: 'WhatsApp', href: '/whatsapp', icon: MessageCircle },
-  { label: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { label: 'AI Assistant', href: '/ai-assistant', icon: Sparkles },
-  { label: 'Reports', href: '/reports', icon: FileText },
-  { label: 'Settings', href: '/settings', icon: Settings },
+  { labelKey: 'nav.overview', href: '/', icon: LayoutDashboard },
+  { labelKey: 'nav.leads', href: '/leads', icon: Users },
+  { labelKey: 'nav.properties', href: '/properties', icon: Home },
+  { labelKey: 'nav.pipeline', href: '/pipeline', icon: KanbanSquare },
+  { labelKey: 'nav.deals', href: '/deals', icon: TrendingUp },
+  { labelKey: 'nav.calendar', href: '/calendar', icon: Calendar },
+  { labelKey: 'nav.tasks', href: '/tasks', icon: CheckSquare },
+  { labelKey: 'nav.meetings', href: '/meetings', icon: CalendarClock },
+  { labelKey: 'nav.whatsapp', href: '/whatsapp', icon: MessageCircle },
+  { labelKey: 'nav.analytics', href: '/analytics', icon: BarChart3 },
+  { labelKey: 'nav.aiAssistant', href: '/ai-assistant', icon: Sparkles },
+  { labelKey: 'nav.reports', href: '/reports', icon: FileText },
+  { labelKey: 'nav.settings', href: '/settings', icon: Settings },
 ];
 
 export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggleCollapse: () => void }) {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   return (
     <aside
@@ -82,7 +84,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; o
               <Icon className={cn('relative z-10 h-[18px] w-[18px] shrink-0 transition-colors', active && 'text-gold')} strokeWidth={1.5} />
               <AnimatePresence>
                 {!collapsed && (
-                  <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative z-10 whitespace-nowrap">{item.label}</motion.span>
+                  <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative z-10 whitespace-nowrap">{t(item.labelKey)}</motion.span>
                 )}
               </AnimatePresence>
             </Link>
@@ -96,7 +98,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; o
           className="flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] text-text-muted transition-colors hover:bg-bg-elevated hover:text-text-primary"
         >
           <ChevronLeft className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')} strokeWidth={1.5} />
-          {!collapsed && <span>Collapse</span>}
+          {!collapsed && <span>{t('nav.collapse')}</span>}
         </button>
       </div>
     </aside>
@@ -105,6 +107,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; o
 
 export function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   return (
     <AnimatePresence>
@@ -122,7 +125,7 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
             animate={{ x: 0 }}
             exit={{ x: -280 }}
             transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-            className="fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-border bg-bg-secondary lg:hidden"
+            className="fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-border bg-bg-secondary lg:hidden rtl:left-auto rtl:right-0 rtl:border-l rtl:border-r-0"
           >
             <div className="flex items-center justify-between px-6 pb-6 pt-8">
               <MehansLogo height={42} />
@@ -145,7 +148,7 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
                     )}
                   >
                     <Icon className={cn('h-[18px] w-[18px] shrink-0', active && 'text-gold')} strokeWidth={1.5} />
-                    {item.label}
+                    {t(item.labelKey)}
                   </Link>
                 );
               })}

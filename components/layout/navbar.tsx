@@ -10,9 +10,11 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { LanguageSwitcher } from '@/components/language-switcher';
 import { MehansLogoIcon } from '@/components/logo';
 import { useGlobalModal } from '@/components/modal-provider';
 import { useAuth } from '@/components/auth-provider';
+import { useLanguage } from '@/components/language-provider';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import {
   fetchNotifications, markNotificationRead, markAllNotificationsRead,
@@ -21,11 +23,11 @@ import {
 } from '@/lib/data';
 
 const quickActions = [
-  { id: 'lead', label: 'New Lead', icon: Users, modal: 'lead' as const },
-  { id: 'property', label: 'New Property', icon: Home, modal: 'property' as const },
-  { id: 'deal', label: 'New Deal', icon: TrendingUp, modal: 'deal' as const },
-  { id: 'task', label: 'New Task', icon: CheckSquare, modal: 'task' as const },
-  { id: 'meeting', label: 'New Meeting', icon: CalendarClock, modal: 'meeting' as const },
+  { id: 'lead', labelKey: 'navbar.newLead', icon: Users, modal: 'lead' as const },
+  { id: 'property', labelKey: 'navbar.newProperty', icon: Home, modal: 'property' as const },
+  { id: 'deal', labelKey: 'navbar.newDeal', icon: TrendingUp, modal: 'deal' as const },
+  { id: 'task', labelKey: 'navbar.newTask', icon: CheckSquare, modal: 'task' as const },
+  { id: 'meeting', labelKey: 'navbar.newMeeting', icon: CalendarClock, modal: 'meeting' as const },
 ];
 
 function timeAgo(date: string): string {
@@ -48,6 +50,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const [userOpen, setUserOpen] = useState(false);
   const { openModal } = useGlobalModal();
   const { user, signOut } = useAuth();
+  const { t } = useLanguage();
 
   const { data: notifList, refetch: refetchNotifs } = useSupabaseQuery<NotificationRow[]>(fetchNotifications);
   const { data: settings } = useSupabaseQuery<OrgSettings | null>(fetchSettings);
@@ -170,8 +173,8 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
           className="flex w-full items-center gap-2 rounded-xl border border-border bg-bg-secondary px-3 py-2 text-[13px] text-text-muted transition-colors hover:border-border-strong"
         >
           <Search className="h-4 w-4" strokeWidth={1.5} />
-          <span className="hidden sm:block">Search leads, deals, properties...</span>
-          <span className="sm:hidden">Search...</span>
+          <span className="hidden sm:block">{t('navbar.search')}</span>
+          <span className="sm:hidden">{t('navbar.searchShort')}</span>
           <kbd className="ml-auto hidden items-center gap-1 rounded-md border border-border bg-bg-elevated px-1.5 py-0.5 text-[10px] font-medium text-text-muted sm:flex">
             <Command className="h-3 w-3" />K
           </kbd>
@@ -186,7 +189,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
                 <Search className="h-4 w-4 text-text-muted" strokeWidth={1.5} />
                 <input
                   autoFocus
-                  placeholder="Search leads, properties, deals, tasks, meetings..."
+                  placeholder={t('navbar.searchPlaceholder')}
                   className="flex-1 bg-transparent text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -195,9 +198,9 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
               </div>
               <div className="mt-2 max-h-80 overflow-y-auto">
                 {searchQuery.trim() === '' ? (
-                  <div className="px-3 py-6 text-center text-[12px] text-text-muted">Start typing to search across your CRM</div>
+                  <div className="px-3 py-6 text-center text-[12px] text-text-muted">{t('navbar.searchStart')}</div>
                 ) : searchResults.length === 0 && !searching ? (
-                  <div className="px-3 py-6 text-center text-[12px] text-text-muted">No results found</div>
+                  <div className="px-3 py-6 text-center text-[12px] text-text-muted">{t('navbar.searchNoResults')}</div>
                 ) : (
                   searchResults.map((result) => (
                     <button
@@ -221,6 +224,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
 
       {/* Right */}
       <div className="ml-auto flex items-center gap-2">
+        <LanguageSwitcher />
         <ThemeToggle />
 
         {/* AI Copilot button */}
@@ -239,7 +243,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
         <div ref={refs.quick} className="relative">
           <button onClick={() => setQuickOpen(!quickOpen)} className="btn btn-gold btn-md">
             <Plus className="h-4 w-4" strokeWidth={2} />
-            <span className="hidden sm:block">Quick Add</span>
+            <span className="hidden sm:block">{t('navbar.quickAdd')}</span>
           </button>
           <AnimatePresence>
             {quickOpen && (
@@ -255,7 +259,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
                       onClick={() => { openModal(action.modal); setQuickOpen(false); }}
                       className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] text-text-primary transition-colors hover:bg-bg-hover"
                     >
-                      <Icon className="h-4 w-4 text-text-muted" strokeWidth={1.5} /> {action.label}
+                      <Icon className="h-4 w-4 text-text-muted" strokeWidth={1.5} /> {t(action.labelKey)}
                     </button>
                   );
                 })}
@@ -284,18 +288,18 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
                 className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-border bg-bg-elevated shadow-modal"
               >
                 <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                  <span className="text-[13px] font-semibold text-text-primary">Notifications</span>
+                  <span className="text-[13px] font-semibold text-text-primary">{t('navbar.notifications')}</span>
                   <button
                     onClick={handleMarkAllRead}
                     disabled={markingRead || unreadCount === 0}
                     className="text-[12px] font-medium text-gold transition-colors hover:text-gold-soft disabled:opacity-50"
                   >
-                    {markingRead ? 'Marking...' : 'Mark all read'}
+                    {markingRead ? t('navbar.marking') : t('navbar.markAllRead')}
                   </button>
                 </div>
                 <div className="scrollbar-thin max-h-80 overflow-y-auto p-1.5">
                   {notifications.length === 0 ? (
-                    <div className="px-3 py-8 text-center text-[12px] text-text-muted">No notifications yet</div>
+                    <div className="px-3 py-8 text-center text-[12px] text-text-muted">{t('navbar.noNotifications')}</div>
                   ) : (
                     notifications.map((n) => (
                       <button

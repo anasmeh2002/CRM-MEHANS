@@ -363,3 +363,29 @@
 
   .divider { height: 1px; background: var(--border-default); }
 }
+
+/* ============================================================
+   RTL SUPPORT — Arabic layout mirroring
+   ============================================================ */
+
+[dir="rtl"] .lg\:pl-20 { padding-left: 0; padding-right: 5rem; }
+[dir="rtl"] .lg\:pl-\[260px\] { padding-left: 0; padding-right: 260px; }
+
+[dir="rtl"] aside.fixed.left-0 { left: auto; right: 0; }
+[dir="rtl"] aside.fixed.left-0 .absolute.left-0 { left: auto; right: 0; border-radius: 0 9999px 9999px 0; }
+
+[dir="rtl"] .ml-auto { margin-left: 0; margin-right: auto; }
+
+[dir="rtl"] .absolute.right-0 { right: auto; left: 0; }
+
+[dir="rtl"] .scrollbar-thin { direction: ltr; }
+[dir="rtl"] .scrollbar-thin > * { direction: rtl; }
+
+[dir="rtl"] .flex-row-reverse { flex-direction: row; }
+
+[dir="rtl"] input, [dir="rtl"] textarea, [dir="rtl"] select {
+  text-align: right;
+}
+
+[dir="rtl"] .rounded-r-full { border-radius: 9999px 0 0 9999px; }
+[dir="rtl"] .rounded-l-full { border-radius: 0 9999px 9999px 0; }

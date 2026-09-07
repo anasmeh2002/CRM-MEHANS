@@ -24,6 +24,7 @@ import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import { useRefresh } from '@/components/refresh-provider';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/components/language-provider';
 
 const activityIcons: Record<string, React.ElementType> = {
   deal_won: DollarSign, lead_created: Users, property_listed: Building,
@@ -56,6 +57,7 @@ const dateRangeLabels: Record<DateRange, string> = {
 export default function DashboardPage() {
   const { refreshKey } = useRefresh();
   const router = useRouter();
+  const { t } = useLanguage();
 
   const [dateRange, setDateRange] = useState<DateRange>('month');
   const [dateFilterOpen, setDateFilterOpen] = useState(false);
@@ -163,7 +165,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Overview" description="Here's what's happening in your agency today.">
+      <PageHeader title={t('dashboard.title')} description={t('dashboard.description')}>
         {/* Date range dropdown */}
         <div ref={dateFilterRef} className="relative">
           <button
@@ -198,7 +200,7 @@ export default function DashboardPage() {
           className={cn('btn btn-md transition-all', aiInsightsVisible ? 'btn-gold' : 'btn-outline')}
         >
           <Sparkles className="h-4 w-4" strokeWidth={1.5} />
-          AI Insights
+          {t('dashboard.aiInsights')}
         </button>
       </PageHeader>
 
@@ -208,12 +210,12 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-          <StatCard label="Revenue" value={formatCurrency(revenue)} icon={DollarSign} delay={0} />
-          <StatCard label="Pipeline" value={formatCurrency(pipelineValue)} icon={TrendingUp} delay={0.04} />
-          <StatCard label="Conversion" value={`${conversionRate.toFixed(1)}%`} icon={Target} delay={0.08} />
-          <StatCard label="Appointments" value={String(appointmentsCount)} icon={Calendar} delay={0.12} />
-          <StatCard label="Tasks" value={String(tasksCount)} icon={CheckSquare} delay={0.16} />
-          <StatCard label="Properties" value={String(propertiesCount)} icon={Home} delay={0.2} />
+          <StatCard label={t('dashboard.revenue')} value={formatCurrency(revenue)} icon={DollarSign} delay={0} />
+          <StatCard label={t('dashboard.pipeline')} value={formatCurrency(pipelineValue)} icon={TrendingUp} delay={0.04} />
+          <StatCard label={t('dashboard.conversion')} value={`${conversionRate.toFixed(1)}%`} icon={Target} delay={0.08} />
+          <StatCard label={t('dashboard.appointments')} value={String(appointmentsCount)} icon={Calendar} delay={0.12} />
+          <StatCard label={t('dashboard.tasks')} value={String(tasksCount)} icon={CheckSquare} delay={0.16} />
+          <StatCard label={t('dashboard.properties')} value={String(propertiesCount)} icon={Home} delay={0.2} />
         </div>
       )}
 
@@ -221,7 +223,7 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2" delay={0.1}>
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h3 className="font-serif text-lg font-medium text-text-primary">Revenue Overview</h3>
+              <h3 className="font-serif text-lg font-medium text-text-primary">{t('dashboard.revenueOverview')}</h3>
               <p className="mt-1 text-[12px] text-text-muted">Monthly revenue vs target</p>
             </div>
             <div className="flex items-center gap-4 text-[12px]">
@@ -284,7 +286,7 @@ export default function DashboardPage() {
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2" delay={0.2}>
           <div className="mb-6">
-            <h3 className="font-serif text-lg font-medium text-text-primary">Pipeline Value</h3>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('dashboard.pipelineValue')}</h3>
             <p className="mt-1 text-[12px] text-text-muted">Total pipeline value over time ($M)</p>
           </div>
           <ResponsiveContainer width="100%" height={200}>
@@ -304,7 +306,7 @@ export default function DashboardPage() {
           </ResponsiveContainer>
 
           <div className="mt-8">
-            <h4 className="mb-4 text-[13px] font-medium text-text-primary">Sales Funnel</h4>
+            <h4 className="mb-4 text-[13px] font-medium text-text-primary">{t('dashboard.salesFunnel')}</h4>
             <div className="space-y-3">
               {funnelData.length > 0 && funnelData.map((stage, i) => {
                 const maxCount = funnelData[0].count || 1;
@@ -347,18 +349,18 @@ export default function DashboardPage() {
                   <Sparkles className="h-4 w-4" strokeWidth={1.5} />
                 </div>
                 <div>
-                  <h3 className="font-serif text-lg font-medium text-text-primary">AI Insights</h3>
-                  <p className="text-[12px] text-text-muted">Powered by MEHANS AI</p>
+                  <h3 className="font-serif text-lg font-medium text-text-primary">{t('dashboard.aiInsights')}</h3>
+                  <p className="text-[12px] text-text-muted">{t('dashboard.aiPoweredBy')}</p>
                 </div>
               </div>
               <div className="space-y-3">
                 {insightsLoading && (
                   <div className="flex items-center justify-center gap-2 py-6 text-xs text-text-muted">
-                    <Sparkles className="h-4 w-4 animate-pulse" /> Analyzing your CRM data...
+                    <Sparkles className="h-4 w-4 animate-pulse" /> {t('dashboard.analyzing')}
                   </div>
                 )}
                 {!insightsLoading && aiInsights.length === 0 && (
-                  <p className="py-6 text-center text-xs text-text-muted">Add leads and deals to get AI insights.</p>
+                  <p className="py-6 text-center text-xs text-text-muted">{t('dashboard.addLeadsForInsights')}</p>
                 )}
                 {aiInsights.slice(0, 3).map((insight) => {
                   const Icon = insightIcons[insight.type] || Sparkles;
@@ -389,8 +391,8 @@ export default function DashboardPage() {
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card delay={0.3}>
           <div className="mb-5 flex items-center justify-between">
-            <h3 className="font-serif text-lg font-medium text-text-primary">Recent Activity</h3>
-            <button className="text-[12px] font-medium text-gold transition-colors hover:text-gold-soft">View all</button>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('dashboard.recentActivity')}</h3>
+            <button className="text-[12px] font-medium text-gold transition-colors hover:text-gold-soft">{t('common.viewAll')}</button>
           </div>
           <div className="space-y-1">
             {activities.slice(0, 6).map((activity, i) => {
@@ -416,8 +418,8 @@ export default function DashboardPage() {
 
         <Card delay={0.35}>
           <div className="mb-5 flex items-center justify-between">
-            <h3 className="font-serif text-lg font-medium text-text-primary">Upcoming Meetings</h3>
-            <button onClick={() => router.push('/calendar')} className="text-[12px] font-medium text-gold transition-colors hover:text-gold-soft">View calendar</button>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('dashboard.upcomingMeetings')}</h3>
+            <button onClick={() => router.push('/calendar')} className="text-[12px] font-medium text-gold transition-colors hover:text-gold-soft">{t('dashboard.viewCalendar')}</button>
           </div>
           <div className="space-y-2">
             {meetings.filter((m) => m.status === 'upcoming').slice(0, 5).map((meeting, i) => {

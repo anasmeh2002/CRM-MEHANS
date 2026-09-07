@@ -5,6 +5,7 @@ import { ArrowLeft, CheckCheck, Link2, Loader2, MoreVertical, Paperclip, Plus, S
 import { toast } from 'sonner';
 import { AppShell } from '@/components/layout/app-shell';
 import { Avatar, PageHeader } from '@/components/shared';
+import { useLanguage } from '@/components/language-provider';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import { useAuth } from '@/components/auth-provider';
 import {
@@ -79,6 +80,7 @@ function dedupMessages(msgs: WhatsAppMessage[]): WhatsAppMessage[] {
 
 export default function WhatsAppPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const userId = user?.id ?? '';
 
   const connectionQuery = useSupabaseQuery(fetchWhatsAppConnection);
@@ -585,7 +587,7 @@ export default function WhatsAppPage() {
 
   return (
     <AppShell>
-      <PageHeader title="WhatsApp" description="Manage conversations from your connected business number">
+      <PageHeader title={t('page.whatsapp')} description={t('page.whatsappDescription')}>
         <button onClick={() => setConnectOpen(true)} className="btn btn-outline btn-md"><Settings2 className="h-4 w-4" /> <span className="hidden sm:inline">{connection.connected ? 'Settings' : 'Connect'}</span></button>
       </PageHeader>
       <div className="mb-4 flex items-center justify-between rounded-2xl border border-border bg-bg-secondary px-4 py-3">

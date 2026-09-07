@@ -7,6 +7,7 @@ import { RefreshProvider } from '@/components/refresh-provider';
 import { ModalProvider } from '@/components/modal-provider';
 import { AuthProvider } from '@/components/auth-provider';
 import { AuthGuard } from '@/components/auth-guard';
+import { LanguageProvider } from '@/components/language-provider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -37,13 +38,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.variable} ${playfair.variable} font-sans`}>
         <ThemeProvider>
           <AuthProvider>
-            <AuthGuard>
-              <RefreshProvider>
-                <ModalProvider>
-                  {children}
-                </ModalProvider>
-              </RefreshProvider>
-            </AuthGuard>
+            <LanguageProvider>
+              <AuthGuard>
+                <RefreshProvider>
+                  <ModalProvider>
+                    {children}
+                  </ModalProvider>
+                </RefreshProvider>
+              </AuthGuard>
+            </LanguageProvider>
           </AuthProvider>
           <Toaster
             position="bottom-right"
