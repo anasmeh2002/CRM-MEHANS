@@ -18,15 +18,49 @@ interface CalendarTokens {
   expires_at: string | null;
   scope?: string;
   token_type?: string;
+  agency_id: string | null;
 }
 
-async function getGoogleTokens(): Promise<CalendarTokens | null> {
-  const sb = serverSupabase();
-  const { data, error } = await sb
-    .from('integrations')
-    .select('connected, config')
-    .eq('service', 'Google Calendar')
+/**
+ * Resolve the agency_id for the user identified by the given Supabase access token.
+ */
+async function resolveAgencyId(userToken: string): Promise<string | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  if (!url || !anonKey || !userToken) return null;
+
+  const userClient = createClient(url, anonKey, {
+    global: { headers: { Authorization: `Bearer ${userToken}` } },
+  });
+
+  const { data: userData, error: userError } = await userClient.auth.getUser();
+  if (userError || !userData?.user) return null;
+
+  const { data: profile, error: profileError } = await userClient
+    .from('profiles')
+    .select('agency_id')
+    .eq('id', userData.user.id)
     .maybeSingle();
+
+  if (profileError || !profile) return null;
+  return profile.agency_id ?? null;
+}
+
+async function getGoogleTokens(agencyId: string | null): Promise<CalendarTokens | null> {
+  const sb = serverSupabase();
+  let query = sb
+    .from('integrations')
+    .select('connected, config, agency_id')
+    .eq('service', 'Google Calendar');
+
+  // Filter by agency_id when set; otherwise fall back to the shared NULL-agency row.
+  if (agencyId !== null) {
+    query = query.eq('agency_id', agencyId);
+  } else {
+    query = query.is('agency_id', null);
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error || !data || !data.connected) return null;
   const config = data.config as Record<string, unknown>;
@@ -38,10 +72,11 @@ async function getGoogleTokens(): Promise<CalendarTokens | null> {
     expires_at: config.expires_at as string | null,
     scope: config.scope as string | undefined,
     token_type: config.token_type as string | undefined,
+    agency_id: (data as any).agency_id ?? null,
   };
 }
 
-async function refreshAccessToken(refreshToken: string): Promise<CalendarTokens | null> {
+async function refreshAccessToken(refreshToken: string, agencyId: string | null): Promise<CalendarTokens | null> {
   const clientId = process.env.ID_client;
   const clientSecret = process.env.Code_secret_du_client;
   if (!clientId || !clientSecret) return null;
@@ -74,20 +109,20 @@ async function refreshAccessToken(refreshToken: string): Promise<CalendarTokens 
     connected_at: new Date().toISOString(),
   };
   await sb.from('integrations').upsert(
-    { service: 'Google Calendar', connected: true, config: newConfig },
+    { service: 'Google Calendar', connected: true, config: newConfig, agency_id: agencyId },
     { onConflict: 'agency_id,service' },
   );
 
-  return newConfig as unknown as CalendarTokens;
+  return { ...newConfig, agency_id: agencyId } as unknown as CalendarTokens;
 }
 
-async function getValidTokens(): Promise<CalendarTokens | null> {
-  const tokens = await getGoogleTokens();
+async function getValidTokens(agencyId: string | null): Promise<CalendarTokens | null> {
+  const tokens = await getGoogleTokens(agencyId);
   if (!tokens) return null;
 
   if (tokens.expires_at && new Date(tokens.expires_at) <= new Date(Date.now() + 60000)) {
     if (tokens.refresh_token) {
-      return refreshAccessToken(tokens.refresh_token);
+      return refreshAccessToken(tokens.refresh_token, agencyId);
     }
     return null;
   }
@@ -97,7 +132,12 @@ async function getValidTokens(): Promise<CalendarTokens | null> {
 
 // GET — fetch events from Google Calendar
 export async function GET(request: NextRequest) {
-  const tokens = await getValidTokens();
+  // Resolve the requesting user's agency from their Supabase token.
+  const authHeader = request.headers.get('authorization') || '';
+  const userToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+  const agencyId = userToken ? await resolveAgencyId(userToken) : null;
+
+  const tokens = await getValidTokens(agencyId);
   if (!tokens) {
     return NextResponse.json({ error: 'Google Calendar not connected' }, { status: 401 });
   }
@@ -149,7 +189,11 @@ export async function GET(request: NextRequest) {
 
 // POST — create event in Google Calendar
 export async function POST(request: NextRequest) {
-  const tokens = await getValidTokens();
+  const authHeader = request.headers.get('authorization') || '';
+  const userToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+  const agencyId = userToken ? await resolveAgencyId(userToken) : null;
+
+  const tokens = await getValidTokens(agencyId);
   if (!tokens) {
     return NextResponse.json({ error: 'Google Calendar not connected' }, { status: 401 });
   }
@@ -219,7 +263,11 @@ export async function POST(request: NextRequest) {
 
 // DELETE — delete event from Google Calendar
 export async function DELETE(request: NextRequest) {
-  const tokens = await getValidTokens();
+  const authHeader = request.headers.get('authorization') || '';
+  const userToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+  const agencyId = userToken ? await resolveAgencyId(userToken) : null;
+
+  const tokens = await getValidTokens(agencyId);
   if (!tokens) {
     return NextResponse.json({ error: 'Google Calendar not connected' }, { status: 401 });
   }

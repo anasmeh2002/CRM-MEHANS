@@ -135,12 +135,12 @@ export default function DashboardPage() {
     if (!loading && leads.length > 0 && aiInsights.length === 0 && !insightsLoading) {
       setInsightsLoading(true);
       const crmContext = JSON.stringify({
-        leads: leads.slice(0, 20).map((l) => ({ name: l.name, status: l.status, score: l.score, budget: l.budget, lastActivity: l.updatedAt })),
+        leads: leads.slice(0, 20).map((l) => ({ name: l.name, status: l.status, score: l.score, budget: l.budget, lastActivity: l.updated_at })),
         deals: deals.slice(0, 20).map((d) => ({ title: d.title, stage: d.stage, value: d.value })),
         tasks: activities.filter((a) => a.type === 'task_completed').length,
       });
       getAIInsights(crmContext)
-        .then((result) => setInsights(result.map((insight, i) => ({ ...insight, id: `ai-${i}` }))))
+        .then((result) => setAiInsights(result.map((insight, i) => ({ ...insight, id: `ai-${i}` }))))
         .catch(() => {})
         .finally(() => setInsightsLoading(false));
     }

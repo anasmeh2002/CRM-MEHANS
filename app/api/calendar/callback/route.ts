@@ -19,10 +19,39 @@ function serverSupabase() {
   return createClient(url, key);
 }
 
+/**
+ * Resolve the agency_id for the user identified by the given Supabase access token.
+ * Returns null if the token is invalid or the user has no agency.
+ */
+async function resolveAgencyId(userToken: string): Promise<string | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  if (!url || !anonKey || !userToken) return null;
+
+  // Use the user's own token to resolve their identity (respects RLS).
+  const userClient = createClient(url, anonKey, {
+    global: { headers: { Authorization: `Bearer ${userToken}` } },
+  });
+
+  const { data: userData, error: userError } = await userClient.auth.getUser();
+  if (userError || !userData?.user) return null;
+
+  // Look up the agency_id from the profiles table.
+  const { data: profile, error: profileError } = await userClient
+    .from('profiles')
+    .select('agency_id')
+    .eq('id', userData.user.id)
+    .maybeSingle();
+
+  if (profileError || !profile) return null;
+  return profile.agency_id ?? null;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const error = searchParams.get('error');
+  const stateToken = searchParams.get('state') || '';
 
   if (error) {
     return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=${encodeURIComponent(error)}`);
@@ -62,6 +91,13 @@ export async function GET(request: NextRequest) {
 
     const tokens = await tokenRes.json();
 
+    // Resolve the agency_id from the state token so this connection is
+    // scoped to the authenticated user's agency, not shared globally.
+    let agencyId: string | null = null;
+    if (stateToken) {
+      agencyId = await resolveAgencyId(stateToken);
+    }
+
     const sb = serverSupabase();
     const config = {
       access_token: tokens.access_token,
@@ -75,7 +111,7 @@ export async function GET(request: NextRequest) {
     const { error: upsertError } = await sb
       .from('integrations')
       .upsert(
-        { service: 'Google Calendar', connected: true, config },
+        { service: 'Google Calendar', connected: true, config, agency_id: agencyId },
         { onConflict: 'agency_id,service' },
       );
 

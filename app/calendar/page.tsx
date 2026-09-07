@@ -14,6 +14,7 @@ import type { Meeting } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/components/auth-provider';
 
 const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const daysShort = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -54,6 +55,7 @@ function toDisplayMeeting(m: Meeting) {
 
 export default function CalendarPage() {
   const { openModal } = useGlobalModal();
+  const { session } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1));
   const [syncing, setSyncing] = useState(false);
   const [calendarConnected, setCalendarConnected] = useState(false);
@@ -63,7 +65,7 @@ export default function CalendarPage() {
 
   const { data, loading, error, refetch } = useSupabaseQuery(fetchMeetings);
 
-  // Check Google Calendar connection status
+  // Check Google Calendar connection status (RLS filters by agency automatically)
   useEffect(() => {
     let active = true;
     (async () => {
@@ -79,7 +81,7 @@ export default function CalendarPage() {
       }
     })();
     return () => { active = false; };
-  }, []);
+  }, [session?.user?.id]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -91,7 +93,11 @@ export default function CalendarPage() {
     try {
       const timeMin = new Date(year, 0, 1).toISOString();
       const timeMax = new Date(year, 11, 31).toISOString();
-      const res = await fetch(`/api/calendar/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`);
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      const res = await fetch(`/api/calendar/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`, { headers });
       if (res.ok) {
         const data = await res.json();
         setGoogleEvents(data.events ?? []);
@@ -108,7 +114,7 @@ export default function CalendarPage() {
   useEffect(() => {
     if (calendarConnected) fetchGoogleEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calendarConnected, year]);
+  }, [calendarConnected, year, session?.access_token]);
 
   // Check URL params for sync result
   useEffect(() => {
@@ -229,8 +235,27 @@ export default function CalendarPage() {
             </button>
           ) : (
             <button
-              onClick={() => {
-                window.location.href = '/api/calendar/auth';
+              onClick={async () => {
+                const headers: Record<string, string> = {};
+                if (session?.access_token) {
+                  headers['Authorization'] = `Bearer ${session.access_token}`;
+                }
+                // Fetch the auth URL from the server with the user token,
+                // then redirect. This keeps the token out of the URL bar.
+                try {
+                  const res = await fetch('/api/calendar/auth', { headers });
+                  if (res.ok) {
+                    const data = await res.json();
+                    if (data.url) {
+                      window.location.href = data.url;
+                      return;
+                    }
+                  }
+                  // Fallback: direct redirect (tokenless, shared connection)
+                  window.location.href = '/api/calendar/auth';
+                } catch {
+                  window.location.href = '/api/calendar/auth';
+                }
               }}
               className="btn btn-outline btn-md"
             >

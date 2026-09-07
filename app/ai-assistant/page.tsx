@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ElementType } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -35,6 +36,7 @@ const suggestions = [
 ];
 
 export default function AIAssistantPage() {
+  const router = useRouter();
   const { data: leadsData, loading: leadsLoading, error: leadsError } = useSupabaseQuery<Lead[]>(fetchLeads);
   const { data: propertiesData } = useSupabaseQuery<Property[]>(fetchProperties);
   const { data: dealsData } = useSupabaseQuery<Deal[]>(fetchDeals);
@@ -309,12 +311,12 @@ export default function AIAssistantPage() {
                 if (hotLeads.length === 0) {
                   return <p className="py-4 text-center text-xs text-text-muted">No high-priority leads yet.</p>;
                 }
-                const priorityMap: Record<string, 'urgent' | 'high' | 'medium'> = { negotiation: 'urgent', contacted: 'high', new: 'medium', qualified: 'high', won: 'medium', lost: 'medium' };
+                const priorityMap: Record<string, 'urgent' | 'high' | 'medium'> = { negotiation: 'urgent', new: 'medium', qualified: 'high', visit_scheduled: 'high', won: 'medium', lost: 'medium' };
                 return hotLeads.map((lead, i) => {
                   const priority = priorityMap[lead.status] ?? 'medium';
                   const action = lead.status === 'negotiation' ? `Call ${lead.name} (negotiation)`
                     : lead.status === 'new' ? `Email ${lead.name} (new lead)`
-                    : lead.status === 'contacted' ? `WhatsApp ${lead.name}`
+                    : lead.status === 'visit_scheduled' ? `WhatsApp ${lead.name}`
                     : `Follow up with ${lead.name}`;
                   return (
                     <button
