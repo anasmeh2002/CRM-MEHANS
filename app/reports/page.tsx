@@ -24,6 +24,7 @@ import type { Deal, Lead, Property } from '@/lib/types';
 import { toast } from 'sonner';
 import { getAIReport } from '@/lib/ai';
 import { downloadCSV } from '@/lib/csv';
+import { useLanguage } from '@/components/language-provider';
 
 const tooltipStyle = {
   background: '#0E0E10',
@@ -43,6 +44,7 @@ const reports = [
 ];
 
 export default function ReportsPage() {
+  const { t } = useLanguage();
   const { refreshKey } = useRefresh();
   const { data: dealsData, loading: dealsLoading, error: dealsError } = useSupabaseQuery<Deal[]>(fetchDeals, [], refreshKey);
   const { data: leadsData, loading: leadsLoading, error: leadsError } = useSupabaseQuery<Lead[]>(fetchLeads, [], refreshKey);
@@ -140,7 +142,7 @@ export default function ReportsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Reports" description="Generate and download business reports">
+      <PageHeader title={t('page.reports')} description={t('page.reportsDescription')}>
         <button onClick={generateAIReport} disabled={reportLoading || loading} className="btn btn-gold btn-md disabled:opacity-60">
           <FileText className="h-4 w-4" strokeWidth={1.5} /> {reportLoading ? 'Generating…' : 'Generate Report'}
         </button>

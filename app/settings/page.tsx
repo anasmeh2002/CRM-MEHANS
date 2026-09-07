@@ -22,6 +22,7 @@ import { fetchN8nConfig, saveN8nConfig, testN8nConnection } from '@/lib/automati
 import type { OrgSettings, RolePermissionRow, IntegrationRow, ApiKeyRow } from '@/lib/data';
 import type { TeamMember } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/components/language-provider';
 
 const tabs = [
   { id: 'organization', label: 'Organization', icon: Building2 },
@@ -41,11 +42,12 @@ const modules = ['leads', 'properties', 'deals', 'tasks', 'meetings', 'contacts'
 const roles = ['admin', 'manager', 'agent', 'viewer'];
 
 export default function SettingsPage() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('organization');
 
   return (
     <AppShell>
-      <PageHeader title="Settings" description="Manage your workspace and preferences" />
+      <PageHeader title={t('settings.title')} description={t('settings.description')} />
       <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
         <div className="flex gap-2 overflow-x-auto lg:flex-col">
           {tabs.map((tab) => {

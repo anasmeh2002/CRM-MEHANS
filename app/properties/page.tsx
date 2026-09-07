@@ -16,6 +16,7 @@ import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { Property, PropertyStatus, PropertyType, TeamMember } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useLanguage } from '@/components/language-provider';
 
 const statusConfig: Record<PropertyStatus, { label: string; variant: 'success' | 'gold' | 'error' | 'info' | 'neutral' }> = {
   draft: { label: 'Draft', variant: 'neutral' },
@@ -57,6 +58,7 @@ function mapProperty(p: any): Property {
 }
 
 export default function PropertiesPage() {
+  const { t } = useLanguage();
   const { data: rawProperties, loading, error, refetch } = useSupabaseQuery(fetchProperties);
 
   // Local copy of the mapped properties. Seeded from the query result and
@@ -198,9 +200,9 @@ export default function PropertiesPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Properties" description={`${properties.length} listings in your portfolio`}>
+      <PageHeader title={t('properties.title')} description={t('properties.description')}>
         <button onClick={() => setShowCreate(true)} className="btn btn-gold btn-md">
-          <Plus className="h-4 w-4" strokeWidth={1.5} /> New Property
+          <Plus className="h-4 w-4" strokeWidth={1.5} /> {t('properties.newProperty')}
         </button>
       </PageHeader>
 

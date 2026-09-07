@@ -11,8 +11,10 @@ import { formatCurrency } from '@/lib/format';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import { useGlobalModal } from '@/components/modal-provider';
 import type { Contact } from '@/lib/types';
+import { useLanguage } from '@/components/language-provider';
 
 export default function ContactsPage() {
+  const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const { data: contacts, loading, error, refetch } = useSupabaseQuery(fetchContacts);
   const { openModal } = useGlobalModal();
@@ -31,9 +33,9 @@ export default function ContactsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Contacts" description={`${list.length} contacts in your network`}>
+      <PageHeader title={t('page.contacts')} description={t('page.contactsDescription')}>
         <button onClick={() => openModal('contact')} className="btn btn-gold btn-md">
-          <Plus className="h-4 w-4" strokeWidth={1.5} /> New Contact
+          <Plus className="h-4 w-4" strokeWidth={1.5} /> {t('navbar.newLead')}
         </button>
       </PageHeader>
 

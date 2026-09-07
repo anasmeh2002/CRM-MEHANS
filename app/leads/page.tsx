@@ -16,6 +16,7 @@ import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { Lead, LeadStatus, LeadSource, TeamMember } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useLanguage } from '@/components/language-provider';
 
 const statusConfig: Record<LeadStatus, { label: string; variant: 'gold' | 'info' | 'success' | 'warning' | 'error' | 'neutral' }> = {
   new: { label: 'New', variant: 'info' },
@@ -66,6 +67,7 @@ function mapLeadForDisplay(l: Lead): Lead {
 }
 
 export default function LeadsPage() {
+  const { t } = useLanguage();
   const { data: rawLeads, loading, error, refetch, setData } = useSupabaseQuery(fetchLeads);
   const leads = useMemo<Lead[]>(() => (rawLeads ?? []).map(mapLeadForDisplay), [rawLeads]);
 
@@ -241,9 +243,9 @@ export default function LeadsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Leads" description={`${leads.length} leads in your pipeline`}>
+      <PageHeader title={t('leads.title')} description={t('leads.description')}>
         <button onClick={() => setShowCreate(true)} className="btn btn-gold btn-md">
-          <Plus className="h-4 w-4" strokeWidth={1.5} /> New Lead
+          <Plus className="h-4 w-4" strokeWidth={1.5} /> {t('leads.newLead')}
         </button>
       </PageHeader>
 

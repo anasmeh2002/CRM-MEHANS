@@ -27,6 +27,7 @@ import type { Lead, Property, Deal } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { askAI } from '@/lib/ai';
+import { useLanguage } from '@/components/language-provider';
 
 const suggestions = [
   'Analyze my pipeline health',
@@ -36,6 +37,7 @@ const suggestions = [
 ];
 
 export default function AIAssistantPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const { data: leadsData, loading: leadsLoading, error: leadsError } = useSupabaseQuery<Lead[]>(fetchLeads);
   const { data: propertiesData } = useSupabaseQuery<Property[]>(fetchProperties);
@@ -99,7 +101,7 @@ export default function AIAssistantPage() {
 
   return (
     <AppShell>
-      <PageHeader title="AI Assistant" description="Your intelligent real estate copilot">
+      <PageHeader title={t('page.aiAssistant')} description={t('page.aiAssistantDescription')}>
         <Badge variant="gold"><Sparkles className="h-3 w-3" strokeWidth={1.5} /> MEHANS AI</Badge>
       </PageHeader>
 

@@ -28,6 +28,7 @@ import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import { useRefresh } from '@/components/refresh-provider';
 import type { TeamMember, Deal, Lead } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/components/language-provider';
 
 const monthlyDeals = [
   { month: 'Jan', deals: 8, won: 3 },
@@ -69,6 +70,7 @@ const tooltipStyle = {
 };
 
 export default function AnalyticsPage() {
+  const { t } = useLanguage();
   const { refreshKey } = useRefresh();
   const { data: teamData, loading: teamLoading, error: teamError } = useSupabaseQuery<TeamMember[]>(fetchTeamMembers, [], refreshKey);
   const { data: dealsData, loading: dealsLoading, error: dealsError } = useSupabaseQuery<Deal[]>(fetchDeals, [], refreshKey);
@@ -90,7 +92,7 @@ export default function AnalyticsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Analytics" description="Deep insights into your business performance">
+      <PageHeader title={t('page.analytics')} description={t('page.analyticsDescription')}>
         <Badge variant="gold">Last 8 months</Badge>
       </PageHeader>
 

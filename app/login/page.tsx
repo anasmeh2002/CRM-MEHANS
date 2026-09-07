@@ -6,8 +6,10 @@ import { ArrowRight, Loader2, LockKeyhole, Mail, UserRound } from 'lucide-react'
 import { toast } from 'sonner';
 import { MehansLogo } from '@/components/logo';
 import { supabase } from '@/lib/supabase';
+import { useLanguage } from '@/components/language-provider';
 
 export default function LoginPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
@@ -84,8 +86,8 @@ export default function LoginPage() {
         <div className="mb-8 flex justify-center"><MehansLogo height={48} /></div>
         <div className="mb-8 text-center">
           <p className="eyebrow text-gold">MEHANS REAL ESTATE</p>
-          <h1 className="mt-3 font-serif text-3xl font-medium text-text-primary">{mode === 'sign-in' ? 'Welcome back' : 'Create your account'}</h1>
-          <p className="mt-2 text-sm text-text-muted">{mode === 'sign-in' ? 'Sign in to your workspace.' : 'Start managing your team in one place.'}</p>
+          <h1 className="mt-3 font-serif text-3xl font-medium text-text-primary">{mode === 'sign-in' ? t('auth.welcome') : t('auth.createAccount')}</h1>
+          <p className="mt-2 text-sm text-text-muted">{mode === 'sign-in' ? t('auth.signInToContinue') : t('auth.createAccount')}</p>
         </div>
         <button type="button" onClick={signInWithGoogle} disabled={busy} className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-bg-elevated py-3 text-sm font-medium text-text-primary transition-colors hover:border-gold-border disabled:opacity-60">
           {googleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="text-base font-bold">G</span>}
@@ -121,7 +123,7 @@ export default function LoginPage() {
           </button>
         </form>
         <button onClick={() => { setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in'); setPassword(''); }} className="mt-6 w-full text-center text-xs text-text-muted transition-colors hover:text-gold">
-          {mode === 'sign-in' ? 'Need an account? Create one' : 'Already have an account? Sign in'}
+          {mode === 'sign-in' ? t('auth.noAccount') : t('auth.haveAccount')}
         </button>
       </div>
     </main>

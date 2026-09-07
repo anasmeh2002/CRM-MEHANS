@@ -11,6 +11,7 @@ import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { Deal, DealStage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useLanguage } from '@/components/language-provider';
 
 const columns: { stage: DealStage; label: string; color: string }[] = [
   { stage: 'new_lead', label: 'New Lead', color: '#4A90D9' },
@@ -34,6 +35,7 @@ function mapDealForDisplay(deal: Deal): Deal {
 }
 
 export default function PipelinePage() {
+  const { t } = useLanguage();
   const { data, loading, error, setData } = useSupabaseQuery(fetchDeals);
   const deals = (data ?? []).map(mapDealForDisplay);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -66,7 +68,7 @@ export default function PipelinePage() {
 
   return (
     <AppShell>
-      <PageHeader title="Pipeline" description="Drag and drop deals across stages">
+      <PageHeader title={t('page.pipeline')} description={t('page.pipelineDescription')}>
         <button onClick={() => toast.success('New deal form opened')} className="btn btn-gold btn-md">
           <Plus className="h-4 w-4" strokeWidth={1.5} /> New Deal
         </button>

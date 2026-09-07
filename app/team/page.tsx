@@ -12,6 +12,7 @@ import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { TeamMember } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useLanguage } from '@/components/language-provider';
 
 const statusConfig: Record<string, { label: string; color: string; dot: string }> = {
   active: { label: 'Active', color: 'text-success', dot: 'bg-success' },
@@ -20,6 +21,7 @@ const statusConfig: Record<string, { label: string; color: string; dot: string }
 };
 
 export default function TeamPage() {
+  const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const { data, loading, error } = useSupabaseQuery<TeamMember[]>(fetchTeamMembers, []);
 
@@ -31,9 +33,9 @@ export default function TeamPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Team" description={`${teamMembers.length} members on your team`}>
+      <PageHeader title={t('page.team')} description={t('page.teamDescription')}>
         <button onClick={() => toast.success('Invite member form opened')} className="btn btn-gold btn-md">
-          <Plus className="h-4 w-4" strokeWidth={1.5} /> Invite Member
+          <Plus className="h-4 w-4" strokeWidth={1.5} /> {t('settings.invite')}
         </button>
       </PageHeader>
 

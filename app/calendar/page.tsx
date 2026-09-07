@@ -233,7 +233,7 @@ export default function CalendarPage() {
               className="btn btn-md border border-success/40 bg-success-bg text-success hover:bg-success/10"
             >
               {syncing ? <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={1.5} /> : <CalendarCheck className="h-4 w-4" strokeWidth={1.5} />}
-              {syncing ? 'Syncing...' : '{t('calendar.connected')}'}
+              {syncing ? t('calendar.syncing') : t('calendar.connected')}
             </button>
           ) : (
             <button
@@ -280,7 +280,7 @@ export default function CalendarPage() {
                 <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
               </button>
               <button onClick={() => setCurrentDate(new Date())} className="rounded-lg px-3 py-1.5 text-xs font-medium text-gold transition-colors hover:bg-gold-bg">
-                Today
+                {t('calendar.today')}
               </button>
               <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} className="rounded-lg p-2 text-text-muted transition-colors hover:bg-bg-elevated hover:text-text-primary">
                 <ChevronRight className="h-4 w-4" strokeWidth={1.5} />

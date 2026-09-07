@@ -13,6 +13,7 @@ import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { Meeting } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useLanguage } from '@/components/language-provider';
 
 const meetingTypeIcons: Record<string, React.ElementType> = {
   call: Phone,
@@ -59,6 +60,7 @@ function MeetingSkeleton() {
 }
 
 export default function MeetingsPage() {
+  const { t } = useLanguage();
   const { openModal } = useGlobalModal();
   const { data, loading, error, refetch } = useSupabaseQuery<Meeting[]>(fetchMeetings);
 
@@ -124,9 +126,9 @@ export default function MeetingsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Meetings" description={`${upcoming.length} upcoming meetings`}>
+      <PageHeader title={t('page.meetings')} description={t('page.meetingsDescription')}>
         <button onClick={() => openModal('meeting')} className="btn btn-gold btn-md">
-          <Plus className="h-4 w-4" strokeWidth={1.5} /> Schedule Meeting
+          <Plus className="h-4 w-4" strokeWidth={1.5} /> {t('calendar.newMeeting')}
         </button>
       </PageHeader>
 

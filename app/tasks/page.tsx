@@ -12,6 +12,7 @@ import { fetchTasks, updateTask } from '@/lib/data';
 import type { Task, TaskStatus, Priority } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useLanguage } from '@/components/language-provider';
 
 const statusConfig: Record<TaskStatus, { label: string; icon: React.ElementType; color: string }> = {
   todo: { label: 'To Do', icon: Circle, color: 'text-text-muted' },
@@ -61,6 +62,7 @@ function TaskSkeleton() {
 }
 
 export default function TasksPage() {
+  const { t } = useLanguage();
   const { openModal } = useGlobalModal();
   const { data, loading, error, refetch } = useSupabaseQuery<Task[]>(fetchTasks);
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
@@ -98,9 +100,9 @@ export default function TasksPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Tasks" description={`${tasks.filter((t) => t.status !== 'done').length} open tasks`}>
+      <PageHeader title={t('page.tasks')} description={t('page.tasksDescription')}>
         <button onClick={() => openModal('task')} className="btn btn-gold btn-md">
-          <Plus className="h-4 w-4" strokeWidth={1.5} /> New Task
+          <Plus className="h-4 w-4" strokeWidth={1.5} /> {t('navbar.newTask')}
         </button>
       </PageHeader>
 

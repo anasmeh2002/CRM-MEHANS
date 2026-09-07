@@ -11,8 +11,10 @@ import { formatCurrency } from '@/lib/format';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { Contact } from '@/lib/types';
 import { toast } from 'sonner';
+import { useLanguage } from '@/components/language-provider';
 
 export default function CompaniesPage() {
+  const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const { data, loading, error } = useSupabaseQuery<Contact[]>(fetchContacts, []);
 
@@ -25,7 +27,7 @@ export default function CompaniesPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Companies" description={`${contacts.length} companies in your portfolio`}>
+      <PageHeader title={t('page.companies')} description={t('page.companiesDescription')}>
         <button onClick={() => toast.success('New company form opened')} className="btn btn-gold btn-md">
           <Plus className="h-4 w-4" strokeWidth={1.5} /> New Company
         </button>

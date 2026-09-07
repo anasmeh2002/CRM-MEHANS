@@ -15,6 +15,7 @@ import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { Deal, DealStage, Lead, Property, TeamMember } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useLanguage } from '@/components/language-provider';
 
 const stageConfig: Record<DealStage, { label: string; color: string }> = {
   new_lead: { label: 'New Lead', color: '#4A90D9' },
@@ -60,6 +61,7 @@ function mapDealForDisplay(deal: Deal): Deal {
 }
 
 export default function DealsPage() {
+  const { t } = useLanguage();
   const {
     data: dealsData,
     loading: dealsLoading,
@@ -184,9 +186,9 @@ export default function DealsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Deals" description={`${deals.length} deals · $${(totalValue / 1000000).toFixed(1)}M total value`}>
+      <PageHeader title={t('page.deals')} description={t('page.dealsDescription')}>
         <button onClick={() => setShowCreate(true)} className="btn btn-gold btn-md">
-          <Plus className="h-4 w-4" strokeWidth={1.5} /> New Deal
+          <Plus className="h-4 w-4" strokeWidth={1.5} /> {t('navbar.newDeal')}
         </button>
       </PageHeader>
 

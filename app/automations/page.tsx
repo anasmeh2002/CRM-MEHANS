@@ -7,6 +7,7 @@ import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, Card, Badge } from '@/components/shared';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useLanguage } from '@/components/language-provider';
 import {
   fetchAutomations, toggleAutomation, createAutomation, deleteAutomation,
   fetchExecutions, type Automation, type AutomationExecution,
@@ -54,6 +55,7 @@ function formatTimeAgo(iso: string | null): string {
 }
 
 export default function AutomationsPage() {
+  const { t } = useLanguage();
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [executions, setExecutions] = useState<AutomationExecution[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,7 +104,7 @@ export default function AutomationsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Automations" description={`${activeCount} active automations · ${totalRuns} total runs`}>
+      <PageHeader title={t('page.automations')} description={t('page.automationsDescription')}>
         <button onClick={() => setShowCreate(!showCreate)} className="btn btn-gold btn-md">
           <Plus className="h-4 w-4" strokeWidth={1.5} /> New Automation
         </button>
