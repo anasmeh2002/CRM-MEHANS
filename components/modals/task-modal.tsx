@@ -68,7 +68,7 @@ export function TaskModal({ open, onClose }: { open: boolean; onClose: () => voi
     >
       <div className="space-y-5">
         <Field label="Title" required>
-          <TextInput value={form.title} onChange={(v) => set('title', v)} placeholder="Follow up with James Wilson" />
+          <TextInput value={form.title} onChange={(v) => set('title', v)} placeholder="e.g. Follow up with lead" />
         </Field>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Priority">

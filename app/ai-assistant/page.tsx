@@ -28,11 +28,10 @@ import { toast } from 'sonner';
 import { askAI } from '@/lib/ai';
 
 const suggestions = [
-  'Qualify lead: Sophia Chen',
-  'Generate follow-up email for James Wilson',
-  'Create WhatsApp message for Michael Brown',
   'Analyze my pipeline health',
-  'Suggest next best action for Emma Davis',
+  'What needs my attention today?',
+  'Suggest next best actions for my top leads',
+  'Generate a follow-up email for my highest-value lead',
 ];
 
 export default function AIAssistantPage() {
@@ -51,7 +50,7 @@ export default function AIAssistantPage() {
 
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([
-    { role: 'ai', content: 'Hello Aarav! I\'m your MEHANS AI assistant. I can help you qualify leads, generate emails and WhatsApp messages, analyze your pipeline, and suggest next best actions. How can I help you today?' },
+    { role: 'ai', content: 'I\'m your MEHANS AI assistant. I can help you qualify leads, generate emails and WhatsApp messages, analyze your pipeline, and suggest next best actions. How can I help you today?' },
   ]);
   const [activeTab, setActiveTab] = useState<'chat' | 'insights' | 'generate'>('chat');
   const [generating, setGenerating] = useState(false);
@@ -131,7 +130,7 @@ export default function AIAssistantPage() {
                         <Sparkles className="h-4 w-4" strokeWidth={1.5} />
                       </div>
                     ) : (
-                      <Avatar name="Aarav Mehta" size="sm" color="#D4AF37" />
+                      <Avatar name="You" size="sm" color="#D4AF37" />
                     )}
                     <div
                       className={cn(
@@ -219,12 +218,12 @@ export default function AIAssistantPage() {
                 <button onClick={() => generateContent('Write a concise personalized follow-up email for a high-value real estate lead. Include a subject line and clear next step.')} className="rounded-xl border border-border bg-bg-elevated p-4 text-left transition-colors hover:border-gold-border">
                   <Mail className="h-6 w-6 text-gold" strokeWidth={1.5} />
                   <p className="mt-2 text-sm font-medium text-text-primary">Follow-up Email</p>
-                  <p className="text-xs text-text-secondary">Generate a personalized follow-up email for James Wilson</p>
+                  <p className="text-xs text-text-secondary">Generate a personalized follow-up email for your top lead</p>
                 </button>
                 <button onClick={() => generateContent('Write a concise, warm WhatsApp follow-up message for a real estate lead. Keep it under 80 words.')} className="rounded-xl border border-border bg-bg-elevated p-4 text-left transition-colors hover:border-gold-border">
                   <MessageCircle className="h-6 w-6 text-gold" strokeWidth={1.5} />
                   <p className="mt-2 text-sm font-medium text-text-primary">WhatsApp Message</p>
-                  <p className="text-xs text-text-secondary">Generate a WhatsApp message for Michael Brown</p>
+                  <p className="text-xs text-text-secondary">Generate a WhatsApp message for your most active lead</p>
                 </button>
                 <button onClick={() => generateContent('Create a lead qualification summary with score rationale, risks, and recommended next action.')} className="rounded-xl border border-border bg-bg-elevated p-4 text-left transition-colors hover:border-gold-border">
                   <Target className="h-6 w-6 text-gold" strokeWidth={1.5} />
@@ -297,22 +296,42 @@ export default function AIAssistantPage() {
               <h3 className="text-sm font-medium text-text-primary">Suggested Actions</h3>
             </div>
             <div className="space-y-2">
-              {[
-                { action: 'Call Emma Davis (negotiation)', priority: 'urgent' },
-                { action: 'Email James Wilson (new lead)', priority: 'high' },
-                { action: 'WhatsApp Sophia Chen', priority: 'medium' },
-                { action: 'Schedule visit for Michael Brown', priority: 'high' },
-              ].map((item, i) => (
-                <button
-                  key={i}
-                  onClick={() => toast.success(`Action: ${item.action}`)}
-                  className="flex w-full items-center gap-2 rounded-xl border border-border bg-bg-elevated p-2.5 text-left transition-colors hover:border-gold-border"
-                >
-                  <span className={cn('h-2 w-2 shrink-0 rounded-full', item.priority === 'urgent' ? 'bg-error' : item.priority === 'high' ? 'bg-gold' : 'bg-info')} />
-                  <span className="flex-1 text-xs text-text-primary">{item.action}</span>
-                  <ArrowUpRight className="h-3.5 w-3.5 text-text-muted" strokeWidth={1.5} />
-                </button>
-              ))}
+              {leadsLoading ? (
+                <div className="flex items-center justify-center gap-2 py-6 text-xs text-text-muted">
+                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} /> Loading...
+                </div>
+              ) : leadsError ? (
+                <p className="py-4 text-center text-xs text-text-muted">Unable to load actions.</p>
+              ) : leads.length === 0 ? (
+                <p className="py-4 text-center text-xs text-text-muted">Add leads to get suggested actions.</p>
+              ) : (() => {
+                const hotLeads = leads.filter((l) => l.score >= 50).sort((a, b) => b.score - a.score).slice(0, 4);
+                if (hotLeads.length === 0) {
+                  return <p className="py-4 text-center text-xs text-text-muted">No high-priority leads yet.</p>;
+                }
+                const priorityMap: Record<string, 'urgent' | 'high' | 'medium'> = { negotiation: 'urgent', contacted: 'high', new: 'medium', qualified: 'high', won: 'medium', lost: 'medium' };
+                return hotLeads.map((lead, i) => {
+                  const priority = priorityMap[lead.status] ?? 'medium';
+                  const action = lead.status === 'negotiation' ? `Call ${lead.name} (negotiation)`
+                    : lead.status === 'new' ? `Email ${lead.name} (new lead)`
+                    : lead.status === 'contacted' ? `WhatsApp ${lead.name}`
+                    : `Follow up with ${lead.name}`;
+                  return (
+                    <button
+                      key={lead.id}
+                      onClick={() => {
+                        if (lead.phone) router.push(`/whatsapp?phone=${encodeURIComponent(lead.phone)}`);
+                        else router.push('/leads');
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl border border-border bg-bg-elevated p-2.5 text-left transition-colors hover:border-gold-border"
+                    >
+                      <span className={cn('h-2 w-2 shrink-0 rounded-full', priority === 'urgent' ? 'bg-error' : priority === 'high' ? 'bg-gold' : 'bg-info')} />
+                      <span className="flex-1 text-xs text-text-primary">{action}</span>
+                      <ArrowUpRight className="h-3.5 w-3.5 text-text-muted" strokeWidth={1.5} />
+                    </button>
+                  );
+                });
+              })()}
             </div>
           </Card>
         </div>

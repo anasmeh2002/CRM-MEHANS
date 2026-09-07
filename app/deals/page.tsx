@@ -303,7 +303,7 @@ export default function DealsPage() {
       >
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <Field label="Deal Title"><TextInput value={form.title} onChange={(v) => setForm({ ...form, title: v })} placeholder="Skyline Penthouse — James Wilson" /></Field>
+            <Field label="Deal Title"><TextInput value={form.title} onChange={(v) => setForm({ ...form, title: v })} placeholder="e.g. Apartment Sale — Downtown" /></Field>
           </div>
           <Field label="Lead">
             <Select value={form.leadId} onChange={(v) => setForm({ ...form, leadId: v })} options={leads.map((l) => ({ value: l.id, label: l.name }))} />
@@ -312,7 +312,7 @@ export default function DealsPage() {
             <Select value={form.propertyId} onChange={(v) => setForm({ ...form, propertyId: v })} options={properties.map((p) => ({ value: p.id, label: p.title }))} />
           </Field>
           <Field label="Deal Value ($)" required>
-            <TextInput type="number" value={form.value} onChange={(v) => setForm({ ...form, value: v })} placeholder="4200000" />
+            <TextInput type="number" value={form.value} onChange={(v) => setForm({ ...form, value: v })} placeholder="0" />
           </Field>
           <Field label="Stage">
             <Select value={form.stage} onChange={(v) => setForm({ ...form, stage: v as DealStage })} options={Object.entries(stageConfig).map(([k, v]) => ({ value: k, label: v.label }))} />

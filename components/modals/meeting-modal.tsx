@@ -120,7 +120,7 @@ export function MeetingModal({ open, onClose }: { open: boolean; onClose: () => 
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <Field label="Title" required>
-            <TextInput value={form.title} onChange={(v) => set('title', v)} placeholder="Penthouse Viewing — James Wilson" />
+            <TextInput value={form.title} onChange={(v) => set('title', v)} placeholder="e.g. Property Viewing" />
           </Field>
         </div>
         <Field label="Date" required>
@@ -142,7 +142,7 @@ export function MeetingModal({ open, onClose }: { open: boolean; onClose: () => 
           <Select value={form.calendarSync} onChange={(v) => set('calendarSync', v)} options={calendarSyncs.map((c) => ({ value: c, label: c }))} />
         </Field>
         <Field label="Attendee Name">
-          <TextInput value={form.attendeeName} onChange={(v) => set('attendeeName', v)} placeholder="James Wilson" />
+          <TextInput value={form.attendeeName} onChange={(v) => set('attendeeName', v)} placeholder="Attendee name" />
         </Field>
         <Field label="Connect Lead">
           <Select value={form.leadId} onChange={(v) => set('leadId', v)} options={leads.map((l) => ({ value: l.id, label: `${l.first_name} ${l.last_name}`.trim() }))} placeholder="Select lead..." />

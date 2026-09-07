@@ -18,7 +18,8 @@ import {
   fetchRevenueData, fetchPipelineData, fetchLeadSourceData, fetchFunnelData,
   fetchDashboardStats, type DateRange,
 } from '@/lib/data';
-import { aiInsights, formatCurrency } from '@/lib/format';
+import { formatCurrency } from '@/lib/format';
+import { getAIInsights } from '@/lib/ai';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import { useRefresh } from '@/components/refresh-provider';
 import { cn } from '@/lib/utils';
@@ -59,6 +60,8 @@ export default function DashboardPage() {
   const [dateRange, setDateRange] = useState<DateRange>('month');
   const [dateFilterOpen, setDateFilterOpen] = useState(false);
   const [aiInsightsVisible, setAiInsightsVisible] = useState(true);
+  const [aiInsights, setAiInsights] = useState<{ id: string; type: string; title: string; description: string; action: string }[]>([]);
+  const [insightsLoading, setInsightsLoading] = useState(false);
   const dateFilterRef = useRef<HTMLDivElement>(null);
   const aiInsightsRef = useRef<HTMLDivElement>(null);
 
@@ -112,19 +115,36 @@ export default function DashboardPage() {
   }, []);
 
   const handleInsightAction = (action: string) => {
-    if (action === 'Contact lead') {
+    if (action.toLowerCase().includes('contact') || action.toLowerCase().includes('lead')) {
       const lead = leads.find((l) => l.phone || l.whatsapp);
       if (lead?.phone) {
         router.push(`/whatsapp?phone=${encodeURIComponent(lead.phone)}`);
       } else {
         router.push('/leads');
       }
-    } else if (action === 'View analytics') {
+    } else if (action.toLowerCase().includes('analytic') || action.toLowerCase().includes('pipeline')) {
       router.push('/pipeline');
-    } else if (action === 'Adjust schedules') {
+    } else if (action.toLowerCase().includes('schedule') || action.toLowerCase().includes('calendar') || action.toLowerCase().includes('task')) {
       router.push('/calendar');
+    } else {
+      router.push('/leads');
     }
   };
+
+  useEffect(() => {
+    if (!loading && leads.length > 0 && aiInsights.length === 0 && !insightsLoading) {
+      setInsightsLoading(true);
+      const crmContext = JSON.stringify({
+        leads: leads.slice(0, 20).map((l) => ({ name: l.name, status: l.status, score: l.score, budget: l.budget, lastActivity: l.updatedAt })),
+        deals: deals.slice(0, 20).map((d) => ({ title: d.title, stage: d.stage, value: d.value })),
+        tasks: activities.filter((a) => a.type === 'task_completed').length,
+      });
+      getAIInsights(crmContext)
+        .then((result) => setInsights(result.map((insight, i) => ({ ...insight, id: `ai-${i}` }))))
+        .catch(() => {})
+        .finally(() => setInsightsLoading(false));
+    }
+  }, [loading, leads, deals, activities, aiInsights.length, insightsLoading]);
 
   const scrollToAIInsights = () => {
     aiInsightsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -143,7 +163,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Overview" description="Welcome back, Aarav. Here's what's happening today.">
+      <PageHeader title="Overview" description="Here's what's happening in your agency today.">
         {/* Date range dropdown */}
         <div ref={dateFilterRef} className="relative">
           <button
@@ -188,12 +208,12 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-          <StatCard label="Revenue" value={formatCurrency(revenue)} change="+35.5%" icon={DollarSign} delay={0} />
-          <StatCard label="Pipeline" value={formatCurrency(pipelineValue)} change="+8.2%" icon={TrendingUp} delay={0.04} />
-          <StatCard label="Conversion" value={`${conversionRate.toFixed(1)}%`} change="+1.2%" icon={Target} delay={0.08} />
-          <StatCard label="Appointments" value={String(appointmentsCount)} change={`+${appointmentsCount}`} icon={Calendar} delay={0.12} />
-          <StatCard label="Tasks" value={String(tasksCount)} change="-2" icon={CheckSquare} trend="down" delay={0.16} />
-          <StatCard label="Properties" value={String(propertiesCount)} change={`+${propertiesCount}`} icon={Home} delay={0.2} />
+          <StatCard label="Revenue" value={formatCurrency(revenue)} icon={DollarSign} delay={0} />
+          <StatCard label="Pipeline" value={formatCurrency(pipelineValue)} icon={TrendingUp} delay={0.04} />
+          <StatCard label="Conversion" value={`${conversionRate.toFixed(1)}%`} icon={Target} delay={0.08} />
+          <StatCard label="Appointments" value={String(appointmentsCount)} icon={Calendar} delay={0.12} />
+          <StatCard label="Tasks" value={String(tasksCount)} icon={CheckSquare} delay={0.16} />
+          <StatCard label="Properties" value={String(propertiesCount)} icon={Home} delay={0.2} />
         </div>
       )}
 
@@ -332,6 +352,14 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="space-y-3">
+                {insightsLoading && (
+                  <div className="flex items-center justify-center gap-2 py-6 text-xs text-text-muted">
+                    <Sparkles className="h-4 w-4 animate-pulse" /> Analyzing your CRM data...
+                  </div>
+                )}
+                {!insightsLoading && aiInsights.length === 0 && (
+                  <p className="py-6 text-center text-xs text-text-muted">Add leads and deals to get AI insights.</p>
+                )}
                 {aiInsights.slice(0, 3).map((insight) => {
                   const Icon = insightIcons[insight.type] || Sparkles;
                   return (

@@ -25,7 +25,7 @@ const propertyStatuses: { value: PropertyStatus; label: string }[] = [
   { value: 'off-market', label: 'Off Market' },
 ];
 
-const agents = ['Aarav Mehta', 'Priya Sharma', 'Rohan Kapoor', 'Sneha Reddy', 'Vikram Singh', 'Ananya Iyer'];
+const agents: string[] = [];
 const amenitySuggestions = ['Pool', 'Gym', 'Garden', 'Garage', 'Smart Home', 'Sea View', 'Rooftop', 'Elevator', 'Security', 'Concierge', 'AC', 'Heating'];
 
 export function PropertyModal({ open, onClose }: { open: boolean; onClose: () => void }) {

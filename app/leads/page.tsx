@@ -462,7 +462,7 @@ export default function LeadsPage() {
       >
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Full Name" required>
-            <TextInput value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="John Doe" />
+            <TextInput value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="Lead name" />
           </Field>
           <Field label="Email" required>
             <TextInput type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="john@example.com" />

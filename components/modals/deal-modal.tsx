@@ -82,7 +82,7 @@ export function DealModal({ open, onClose }: { open: boolean; onClose: () => voi
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <Field label="Deal Title" required>
-            <TextInput value={form.title} onChange={(v) => set('title', v)} placeholder="Skyline Penthouse — James Wilson" />
+            <TextInput value={form.title} onChange={(v) => set('title', v)} placeholder="e.g. Apartment Sale — Downtown" />
           </Field>
         </div>
         <Field label="Connect Lead">

@@ -96,7 +96,7 @@ You can help with:
 RULES:
 1. When the user asks to CREATE or UPDATE something, respond with a JSON action block on its own, wrapped in <action>...</action> tags. Format:
 <action>
-{"type":"create_lead","label":"Create Lead","description":"Create a new lead","data":{"first_name":"Ahmed","phone":"06XXXXXXXX","property_interest":"apartment","budget":1500000,"source":"manual","status":"new"}}
+{"type":"create_lead","label":"Create Lead","description":"Create a new lead","data":{"first_name":"","phone":"","property_interest":"","budget":0,"source":"manual","status":"new"}}
 </action>
 2. For create_task: data should have title, priority (low|medium|high|urgent), due_date (YYYY-MM-DD), description.
 3. For create_meeting: data should have title, starts_at (ISO), duration_minutes, meeting_type, attendee_name, location.
@@ -253,10 +253,10 @@ export function AICopilot() {
       { label: 'What needs my attention today?', icon: AlertTriangle },
       { label: 'Find leads that haven\'t been contacted in 3 days', icon: Search },
     ];
-    if (pageCtx.label === 'Leads') base.push({ label: 'Create a lead for Ahmed, phone 06XXXXXXXX, interested in an apartment in Rabat', icon: User });
-    if (pageCtx.label === 'Properties') base.push({ label: 'Show me properties under 1.5M DH in Rabat', icon: Home });
-    if (pageCtx.label === 'Tasks') base.push({ label: 'Create a follow-up task for Ahmed tomorrow at 10', icon: CheckSquare });
-    if (pageCtx.label === 'Calendar' || pageCtx.label === 'Meetings') base.push({ label: 'Schedule a meeting with Ahmed tomorrow at 11', icon: Calendar });
+    if (pageCtx.label === 'Leads') base.push({ label: 'Create a new lead', icon: User });
+    if (pageCtx.label === 'Properties') base.push({ label: 'Show me available properties', icon: Home });
+    if (pageCtx.label === 'Tasks') base.push({ label: 'Create a follow-up task for tomorrow at 10', icon: CheckSquare });
+    if (pageCtx.label === 'Calendar' || pageCtx.label === 'Meetings') base.push({ label: 'Schedule a meeting for tomorrow at 11', icon: Calendar });
     return base;
   }, [pageCtx.label]);
 
