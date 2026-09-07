@@ -47,20 +47,14 @@ async function resolveAgencyId(userToken: string): Promise<string | null> {
 }
 
 async function getGoogleTokens(agencyId: string | null): Promise<CalendarTokens | null> {
+  if (!agencyId) return null;
   const sb = serverSupabase();
-  let query = sb
+  const { data, error } = await sb
     .from('integrations')
     .select('connected, config, agency_id')
-    .eq('service', 'Google Calendar');
-
-  // Filter by agency_id when set; otherwise fall back to the shared NULL-agency row.
-  if (agencyId !== null) {
-    query = query.eq('agency_id', agencyId);
-  } else {
-    query = query.is('agency_id', null);
-  }
-
-  const { data, error } = await query.maybeSingle();
+    .eq('service', 'Google Calendar')
+    .eq('agency_id', agencyId)
+    .maybeSingle();
 
   if (error || !data || !data.connected) return null;
   const config = data.config as Record<string, unknown>;

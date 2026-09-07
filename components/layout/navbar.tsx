@@ -19,7 +19,7 @@ import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import {
   fetchNotifications, markNotificationRead, markAllNotificationsRead,
   globalSearch, type SearchResult, type NotificationRow,
-  fetchSettings, type OrgSettings,
+  fetchAgency, type AgencyProfile,
 } from '@/lib/data';
 
 const quickActions = [
@@ -53,7 +53,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { t } = useLanguage();
 
   const { data: notifList, refetch: refetchNotifs } = useSupabaseQuery<NotificationRow[]>(fetchNotifications);
-  const { data: settings } = useSupabaseQuery<OrgSettings | null>(fetchSettings);
+  const { data: agency } = useSupabaseQuery<AgencyProfile | null>(fetchAgency);
 
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -150,7 +150,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
     router.push(routeMap[result.type] ?? '/');
   };
 
-  const orgName = settings?.org_name ?? 'MEHANS Real Estate';
+  const orgName = agency?.name ?? 'MEHANS Real Estate';
 
   return (
     <div className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border glass px-5 lg:px-8">

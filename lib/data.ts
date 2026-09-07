@@ -15,6 +15,19 @@ export interface OrgSettings {
   theme: string;
 }
 
+export interface AgencyProfile {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  city: string | null;
+  country: string | null;
+  description: string | null;
+  address: string | null;
+}
+
 export interface NotificationRow {
   id: string;
   title: string;
@@ -36,6 +49,7 @@ export interface ApiKeyRow {
 
 export interface IntegrationRow {
   id: string;
+  agency_id: string | null;
   service: string;
   connected: boolean;
   config: Record<string, unknown>;
@@ -784,6 +798,27 @@ export async function updateSettings(updates: Partial<Omit<OrgSettings, 'id'>>):
   return data as OrgSettings | null;
 }
 
+// ─── Agency Profile ──────────────────────────────────────────────────────────
+
+export async function fetchAgency(): Promise<AgencyProfile | null> {
+  const { data, error } = await supabase
+    .from('agencies')
+    .select('*')
+    .maybeSingle();
+  if (error) throw error;
+  return data as AgencyProfile | null;
+}
+
+export async function updateAgency(updates: Partial<Omit<AgencyProfile, 'id'>>): Promise<AgencyProfile | null> {
+  const { data, error } = await supabase
+    .from('agencies')
+    .update(updates)
+    .select('*')
+    .maybeSingle();
+  if (error) throw error;
+  return data as AgencyProfile | null;
+}
+
 // ─── Notifications ──────────────────────────────────────────────────────────
 
 export async function fetchNotifications(): Promise<NotificationRow[]> {
@@ -894,7 +929,8 @@ export async function toggleIntegration(service: string, connected: boolean): Pr
   const { error } = await supabase
     .from('integrations')
     .update({ connected, updated_at: new Date().toISOString() })
-    .eq('service', service);
+    .eq('service', service)
+    .not('agency_id', 'is', null);
   if (error) throw error;
   return true;
 }

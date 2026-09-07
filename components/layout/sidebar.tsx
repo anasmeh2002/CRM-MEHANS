@@ -12,6 +12,8 @@ import {
 import { cn } from '@/lib/utils';
 import { MehansLogo, MehansLogoIcon } from '@/components/logo';
 import { useLanguage } from '@/components/language-provider';
+import { useSupabaseQuery } from '@/hooks/use-supabase-query';
+import { fetchAgency, type AgencyProfile } from '@/lib/data';
 
 const navItems = [
   { labelKey: 'nav.overview', href: '/', icon: LayoutDashboard },
@@ -32,6 +34,8 @@ const navItems = [
 export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggleCollapse: () => void }) {
   const pathname = usePathname();
   const { t } = useLanguage();
+  const { data: agency } = useSupabaseQuery<AgencyProfile | null>(fetchAgency);
+  const agencyName = agency?.name ?? 'MEHANS Real Estate';
 
   return (
     <aside
@@ -52,7 +56,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; o
             <div className="flex items-center gap-2.5">
               <MehansLogoIcon size={38} />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[12px] font-medium text-text-primary">MEHANS Real Estate</div>
+                <div className="truncate text-[12px] font-medium text-text-primary">{agencyName}</div>
                 <div className="text-[10px] text-text-muted">Enterprise Workspace</div>
               </div>
             </div>

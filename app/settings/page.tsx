@@ -12,14 +12,14 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import {
-  fetchSettings, updateSettings,
+  fetchAgency, updateAgency,
   fetchProfiles, updateProfileRole, deactivateProfile, createProfile,
   fetchRolePermissions, updateRolePermission,
   fetchIntegrations, toggleIntegration,
   fetchApiKeys, createApiKey, revokeApiKey,
 } from '@/lib/data';
 import { fetchN8nConfig, saveN8nConfig, testN8nConnection } from '@/lib/automations';
-import type { OrgSettings, RolePermissionRow, IntegrationRow, ApiKeyRow } from '@/lib/data';
+import type { AgencyProfile, RolePermissionRow, IntegrationRow, ApiKeyRow } from '@/lib/data';
 import type { TeamMember } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/components/language-provider';
@@ -94,26 +94,32 @@ export default function SettingsPage() {
 // ─── Organization ──────────────────────────────────────────────────────────
 
 function OrganizationTab() {
-  const { data: settings, loading, refetch } = useSupabaseQuery<OrgSettings | null>(fetchSettings);
-  const [form, setForm] = useState<OrgSettings | null>(null);
+  const { data: agency, loading, refetch } = useSupabaseQuery<AgencyProfile | null>(fetchAgency);
+  const [form, setForm] = useState<AgencyProfile | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (settings) setForm(settings);
-  }, [settings]);
+    if (agency) setForm(agency);
+  }, [agency]);
 
   const handleSave = async () => {
     if (!form) return;
     setSaving(true);
     try {
-      await updateSettings({
-        org_name: form.org_name,
+      await updateAgency({
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
         website: form.website,
-        industry: form.industry,
-        timezone: form.timezone,
+        city: form.city,
+        country: form.country,
+        address: form.address,
+        description: form.description,
+        logo_url: form.logo_url,
       });
       toast.success('Organization settings saved');
       refetch();
+      window.dispatchEvent(new CustomEvent('agency-updated'));
     } catch {
       toast.error('Failed to save settings');
     } finally {
@@ -125,23 +131,52 @@ function OrganizationTab() {
 
   return (
     <Card>
-      <h3 className="mb-5 font-serif text-lg font-medium text-text-primary">Organization Details</h3>
+      <h3 className="mb-5 font-serif text-lg font-medium text-text-primary">Company Information</h3>
       <div className="mb-5 flex items-center gap-4 rounded-xl border border-border bg-bg-elevated p-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gold text-2xl font-bold text-[#0D0D0F]">
-          {form.org_name.charAt(0).toUpperCase()}
-        </div>
+        {form.logo_url ? (
+          <img src={form.logo_url} alt="Logo" className="h-16 w-16 rounded-2xl object-cover" />
+        ) : (
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gold text-2xl font-bold text-[#0D0D0F]">
+            {(form.name ?? 'A').charAt(0).toUpperCase()}
+          </div>
+        )}
         <div>
-          <p className="text-sm font-medium text-text-primary">{form.org_name}</p>
-          <p className="text-xs text-text-muted">{form.industry}</p>
+          <p className="text-sm font-medium text-text-primary">{form.name || 'Unnamed Agency'}</p>
+          <p className="text-xs text-text-muted">{form.city ? `${form.city}${form.country ? ', ' + form.country : ''}` : 'Location not set'}</p>
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">Organization Name</label>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">Agency Name</label>
           <input
             className="input w-full"
-            value={form.org_name}
-            onChange={(e) => setForm({ ...form, org_name: e.target.value })}
+            value={form.name ?? ''}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">Logo URL</label>
+          <input
+            className="input w-full"
+            placeholder="https://..."
+            value={form.logo_url ?? ''}
+            onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">Phone</label>
+          <input
+            className="input w-full"
+            value={form.phone ?? ''}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">Email</label>
+          <input
+            className="input w-full"
+            value={form.email ?? ''}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
         </div>
         <div>
@@ -153,19 +188,35 @@ function OrganizationTab() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">Industry</label>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">Address</label>
           <input
             className="input w-full"
-            value={form.industry ?? ''}
-            onChange={(e) => setForm({ ...form, industry: e.target.value })}
+            value={form.address ?? ''}
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">Timezone</label>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">City</label>
           <input
             className="input w-full"
-            value={form.timezone ?? ''}
-            onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+            value={form.city ?? ''}
+            onChange={(e) => setForm({ ...form, city: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">Country</label>
+          <input
+            className="input w-full"
+            value={form.country ?? ''}
+            onChange={(e) => setForm({ ...form, country: e.target.value })}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">Description (optional)</label>
+          <textarea
+            className="input w-full min-h-[80px] resize-y"
+            value={form.description ?? ''}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
           />
         </div>
       </div>
