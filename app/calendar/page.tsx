@@ -216,7 +216,7 @@ export default function CalendarPage() {
       <PageHeader title={t('calendar.title')} description={t('calendar.description')}>
         <div className="flex items-center gap-2">
           {calendarConnected ? (
-            <button
+          <button
               onClick={async () => {
                 setSyncing(true);
                 try {
@@ -238,12 +238,13 @@ export default function CalendarPage() {
           ) : (
             <button
               onClick={async () => {
-                const headers: Record<string, string> = {};
-                if (session?.access_token) {
-                  headers['Authorization'] = `Bearer ${session.access_token}`;
+                if (!session?.access_token) {
+                  toast.error('Please wait a moment and try again.');
+                  return;
                 }
-                // Fetch the auth URL from the server with the user token,
-                // then redirect. This keeps the token out of the URL bar.
+                const headers: Record<string, string> = {
+                  Authorization: `Bearer ${session.access_token}`,
+                };
                 try {
                   const res = await fetch('/api/calendar/auth', { headers });
                   if (res.ok) {
@@ -253,10 +254,9 @@ export default function CalendarPage() {
                       return;
                     }
                   }
-                  // Fallback: direct redirect (tokenless, shared connection)
-                  window.location.href = '/api/calendar/auth';
+                  toast.error('Could not start Google Calendar connection. Try again.');
                 } catch {
-                  window.location.href = '/api/calendar/auth';
+                  toast.error('Could not start Google Calendar connection. Try again.');
                 }
               }}
               className="btn btn-outline btn-md"
@@ -270,7 +270,6 @@ export default function CalendarPage() {
           </button>
         </div>
       </PageHeader>
-
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2 p-3 sm:p-5" delay={0.1}>
           <div className="mb-5 flex items-center justify-between">
