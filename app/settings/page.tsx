@@ -263,6 +263,7 @@ function OrganizationTab() {
 // ─── Users ─────────────────────────────────────────────────────────────────
 
 function UsersTab() {
+  const { t } = useLanguage();
   const { data: users, loading, refetch } = useSupabaseQuery<TeamMember[]>(fetchProfiles);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteName, setInviteName] = useState('');
@@ -272,20 +273,20 @@ function UsersTab() {
 
   const handleInvite = async () => {
     if (!inviteName.trim() || !inviteEmail.trim()) {
-      toast.error('Name and email are required');
+      toast.error(t('settings.nameEmailRequired'));
       return;
     }
     setSaving(true);
     try {
       await createProfile({ name: inviteName, email: inviteEmail, role: inviteRole });
-      toast.success(`${inviteName} invited successfully`);
+      toast.success(t('settings.inviteSuccess', { name: inviteName }));
       setInviteName('');
       setInviteEmail('');
       setInviteRole('agent');
       setInviteOpen(false);
       refetch();
     } catch {
-      toast.error('Failed to invite user');
+      toast.error(t('settings.inviteFailed'));
     } finally {
       setSaving(false);
     }
@@ -294,20 +295,20 @@ function UsersTab() {
   const handleRoleChange = async (id: string, role: string) => {
     try {
       await updateProfileRole(id, role);
-      toast.success('Role updated');
+      toast.success(t('settings.roleUpdated'));
       refetch();
     } catch {
-      toast.error('Failed to update role');
+      toast.error(t('settings.roleUpdateFailed'));
     }
   };
 
   const handleDeactivate = async (id: string) => {
     try {
       await deactivateProfile(id);
-      toast.success('User deactivated');
+      toast.success(t('settings.userDeactivated'));
       refetch();
     } catch {
-      toast.error('Failed to deactivate user');
+      toast.error(t('settings.deactivateFailed'));
     }
   };
 
@@ -316,32 +317,32 @@ function UsersTab() {
   return (
     <Card>
       <div className="mb-5 flex items-center justify-between">
-        <h3 className="font-serif text-lg font-medium text-text-primary">Users</h3>
+        <h3 className="font-serif text-lg font-medium text-text-primary">{t('settings.users')}</h3>
         <button
           onClick={() => setInviteOpen(!inviteOpen)}
           className="flex items-center gap-1.5 rounded-xl bg-gold-bg px-3 py-2 text-sm font-medium text-gold transition-colors hover:bg-gold-bg"
         >
-          <Plus className="h-4 w-4" strokeWidth={1.5} /> Invite
+          <Plus className="h-4 w-4" strokeWidth={1.5} /> {t('settings.invite')}
         </button>
       </div>
 
       {inviteOpen && (
         <div className="mb-4 rounded-xl border border-border bg-bg-elevated p-4">
           <div className="grid gap-3 sm:grid-cols-3">
-            <input className="input w-full" placeholder="Full name" value={inviteName} onChange={(e) => setInviteName(e.target.value)} />
-            <input className="input w-full" placeholder="Email address" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
+            <input className="input w-full" placeholder={t('settings.fullName')} value={inviteName} onChange={(e) => setInviteName(e.target.value)} />
+            <input className="input w-full" placeholder={t('settings.emailAddress')} value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
             <select className="input w-full" value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
-              <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
-              <option value="agent">Agent</option>
-              <option value="viewer">Viewer</option>
+              <option value="admin">{t('settings.admin')}</option>
+              <option value="manager">{t('settings.manager')}</option>
+              <option value="agent">{t('settings.agent')}</option>
+              <option value="viewer">{t('settings.viewer')}</option>
             </select>
           </div>
           <div className="mt-3 flex gap-2">
             <button onClick={handleInvite} disabled={saving} className="btn btn-gold btn-sm">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send Invite'}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('settings.sendInvite')}
             </button>
-            <button onClick={() => setInviteOpen(false)} className="btn btn-ghost btn-sm">Cancel</button>
+            <button onClick={() => setInviteOpen(false)} className="btn btn-ghost btn-sm">{t('common.cancel')}</button>
           </div>
         </div>
       )}
@@ -359,10 +360,10 @@ function UsersTab() {
               onChange={(e) => handleRoleChange(user.id, e.target.value)}
               className="input w-auto text-xs"
             >
-              <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
-              <option value="agent">Agent</option>
-              <option value="viewer">Viewer</option>
+              <option value="admin">{t('settings.admin')}</option>
+              <option value="manager">{t('settings.manager')}</option>
+              <option value="agent">{t('settings.agent')}</option>
+              <option value="viewer">{t('settings.viewer')}</option>
             </select>
             <Badge variant={user.role === 'admin' ? 'gold' : 'neutral'}>{user.role}</Badge>
             <button
@@ -374,7 +375,7 @@ function UsersTab() {
           </div>
         ))}
         {(users ?? []).length === 0 && (
-          <p className="py-8 text-center text-sm text-text-muted">No users found. Invite team members to get started.</p>
+          <p className="py-8 text-center text-sm text-text-muted">{t('settings.noUsers')}</p>
         )}
       </div>
     </Card>
@@ -384,6 +385,7 @@ function UsersTab() {
 // ─── Permissions ────────────────────────────────────────────────────────────
 
 function PermissionsTab() {
+  const { t } = useLanguage();
   const { data: perms, loading, refetch } = useSupabaseQuery<RolePermissionRow[]>(fetchRolePermissions);
   const [updating, setUpdating] = useState<string | null>(null);
 
@@ -393,7 +395,7 @@ function PermissionsTab() {
       await updateRolePermission(perm.id, { [field]: !perm[field] } as any);
       refetch();
     } catch {
-      toast.error('Failed to update permission');
+      toast.error(t('settings.permissionUpdateFailed'));
     } finally {
       setUpdating(null);
     }
@@ -420,20 +422,20 @@ function PermissionsTab() {
                 </div>
                 <div>
                   <p className="text-sm font-medium capitalize text-text-primary">{role}</p>
-                  <p className="text-xs text-text-muted">{rolePerms.length} modules</p>
+                  <p className="text-xs text-text-muted">{rolePerms.length} {t('settings.modules')}</p>
                 </div>
               </div>
-              <Badge variant="neutral">{rolePerms.length} modules</Badge>
+              <Badge variant="neutral">{rolePerms.length} {t('settings.modules')}</Badge>
             </div>
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border text-text-muted">
-                    <th className="pb-2 pr-4 text-left font-medium">Module</th>
-                    <th className="pb-2 px-2 text-center font-medium">View</th>
-                    <th className="pb-2 px-2 text-center font-medium">Create</th>
-                    <th className="pb-2 px-2 text-center font-medium">Edit</th>
-                    <th className="pb-2 px-2 text-center font-medium">Delete</th>
+                    <th className="pb-2 pr-4 text-left font-medium">{t('settings.module')}</th>
+                    <th className="pb-2 px-2 text-center font-medium">{t('settings.view')}</th>
+                    <th className="pb-2 px-2 text-center font-medium">{t('settings.create')}</th>
+                    <th className="pb-2 px-2 text-center font-medium">{t('settings.edit')}</th>
+                    <th className="pb-2 px-2 text-center font-medium">{t('settings.delete')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -475,6 +477,7 @@ function PermissionsTab() {
 // ─── Integrations ────────────────────────────────────────────────────────────
 
 function IntegrationsTab() {
+  const { t } = useLanguage();
   const { data: integrations, loading, refetch } = useSupabaseQuery<IntegrationRow[]>(fetchIntegrations);
   const router = useRouter();
 
@@ -494,7 +497,7 @@ function IntegrationsTab() {
       toast.success(`${service} disconnected`);
       refetch();
     } catch {
-      toast.error('Failed to disconnect integration');
+      toast.error(t('settings.disconnectFailed'));
     }
   };
 
@@ -549,7 +552,7 @@ function IntegrationsTab() {
       })}
       {filtered.length === 0 && (
         <Card className="sm:col-span-2">
-          <p className="py-8 text-center text-sm text-text-muted">No integrations configured.</p>
+          <p className="py-8 text-center text-sm text-text-muted">{t('settings.noIntegrations')}</p>
         </Card>
       )}
     </div>
@@ -559,6 +562,7 @@ function IntegrationsTab() {
 // ─── API Keys ────────────────────────────────────────────────────────────────
 
 function ApiTab() {
+  const { t } = useLanguage();
   const { data: keys, loading, refetch } = useSupabaseQuery<ApiKeyRow[]>(fetchApiKeys);
   const [newKeyName, setNewKeyName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -566,7 +570,7 @@ function ApiTab() {
 
   const handleCreate = async () => {
     if (!newKeyName.trim()) {
-      toast.error('Please name your API key');
+      toast.error(t('settings.nameApiKey'));
       return;
     }
     setCreating(true);
@@ -575,11 +579,11 @@ function ApiTab() {
       if (result) {
         setNewKey(result.rawKey);
         setNewKeyName('');
-        toast.success('API key created');
+        toast.success(t('settings.apiKeyCreated'));
         refetch();
       }
     } catch {
-      toast.error('Failed to create API key');
+      toast.error(t('settings.apiKeyCreateFailed'));
     } finally {
       setCreating(false);
     }
@@ -588,16 +592,16 @@ function ApiTab() {
   const handleRevoke = async (id: string) => {
     try {
       await revokeApiKey(id);
-      toast.success('API key revoked');
+      toast.success(t('settings.apiKeyRevoked'));
       refetch();
     } catch {
-      toast.error('Failed to revoke key');
+      toast.error(t('settings.apiKeyRevokeFailed'));
     }
   };
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success('Copied to clipboard');
+    toast.success(t('settings.copied'));
   };
 
   if (loading) return <LoadingCard />;
@@ -609,22 +613,22 @@ function ApiTab() {
           <div className="flex items-start gap-3">
             <Check className="mt-0.5 h-5 w-5 text-gold" strokeWidth={1.5} />
             <div className="flex-1">
-              <p className="text-sm font-medium text-text-primary">API key created successfully</p>
-              <p className="mt-1 text-xs text-text-muted">Copy this key now. You will not be able to see it again.</p>
+              <p className="text-sm font-medium text-text-primary">{t('settings.apiKeyCreated')}</p>
+              <p className="mt-1 text-xs text-text-muted">{t('settings.copyKeyWarning')}</p>
               <div className="mt-2 flex items-center gap-2 rounded-lg border border-border bg-bg-elevated p-2.5">
                 <code className="flex-1 truncate font-mono text-xs text-text-primary">{newKey}</code>
                 <button onClick={() => handleCopy(newKey)} className="flex h-7 w-7 items-center justify-center rounded-md border border-border text-text-muted hover:text-gold">
                   <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
                 </button>
               </div>
-              <button onClick={() => setNewKey(null)} className="mt-2 text-xs font-medium text-gold hover:text-gold-soft">Dismiss</button>
+              <button onClick={() => setNewKey(null)} className="mt-2 text-xs font-medium text-gold hover:text-gold-soft">{t('settings.dismiss')}</button>
             </div>
           </div>
         </Card>
       )}
 
       <Card>
-        <h3 className="mb-5 font-serif text-lg font-medium text-text-primary">API Keys</h3>
+        <h3 className="mb-5 font-serif text-lg font-medium text-text-primary">{t('settings.apiKeys')}</h3>
         <div className="space-y-2">
           {(keys ?? []).map((key) => (
             <div key={key.id} className="flex items-center gap-3 rounded-xl border border-border bg-bg-elevated p-3.5">
@@ -634,30 +638,30 @@ function ApiTab() {
                 <p className="font-mono text-xs text-text-muted">{key.key_prefix}••••••••••••••••</p>
               </div>
               {key.revoked_at ? (
-                <Badge variant="neutral">Revoked</Badge>
+                <Badge variant="neutral">{t('settings.revoked')}</Badge>
               ) : (
                 <button
                   onClick={() => handleRevoke(key.id)}
                   className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:border-error hover:text-error"
                 >
-                  Revoke
+                  {t('settings.revoke')}
                 </button>
               )}
             </div>
           ))}
           {(keys ?? []).length === 0 && (
-            <p className="py-6 text-center text-sm text-text-muted">No API keys yet. Create one below.</p>
+            <p className="py-6 text-center text-sm text-text-muted">{t('settings.noApiKeys')}</p>
           )}
         </div>
         <div className="mt-4 flex gap-2">
           <input
             className="input flex-1"
-            placeholder="Key name (e.g. Production)"
+            placeholder={t('settings.keyName')}
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
           />
           <button onClick={handleCreate} disabled={creating} className="btn btn-gold btn-md">
-            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4" strokeWidth={1.5} /> Generate</>}
+            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4" strokeWidth={1.5} /> {t('settings.createKey')}</>}
           </button>
         </div>
       </Card>
@@ -686,6 +690,7 @@ function ApiTab() {
 // ─── Automations (n8n) ───────────────────────────────────────────────────────────
 
 function AutomationsTab() {
+  const { t } = useLanguage();
   const [webhookUrl, setWebhookUrl] = useState('');
   const [apiUrl, setApiUrl] = useState('');
   const [webhookSecret, setWebhookSecret] = useState('');
@@ -702,7 +707,7 @@ function AutomationsTab() {
         setWebhookSecret(cfg.webhookSecret);
         setConnected(cfg.connected);
       })
-      .catch(() => toast.error('Failed to load n8n config'))
+      .catch(() => toast.error(t('settings.n8nLoadFailed')))
       .finally(() => setLoading(false));
   }, []);
 
@@ -710,9 +715,9 @@ function AutomationsTab() {
     setSaving(true);
     try {
       await saveN8nConfig({ webhookUrl: webhookUrl, apiUrl: apiUrl, webhookSecret: webhookSecret, connected: connected || !!webhookUrl });
-      toast.success('n8n settings saved');
+      toast.success(t('settings.n8nSaved'));
     } catch {
-      toast.error('Failed to save n8n settings');
+      toast.error(t('settings.n8nSaveFailed'));
     } finally {
       setSaving(false);
     }
@@ -725,7 +730,7 @@ function AutomationsTab() {
       if (result.ok) toast.success(result.message);
       else toast.error(result.message);
     } catch {
-      toast.error('Test failed');
+      toast.error(t('settings.testFailed'));
     } finally {
       setTesting(false);
     }
@@ -781,10 +786,10 @@ function AutomationsTab() {
 
           <div className="flex gap-2">
             <button onClick={handleSave} disabled={saving} className="btn btn-gold btn-md">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Settings'}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('common.save')}
             </button>
             <button onClick={handleTest} disabled={testing || !webhookUrl} className="btn btn-ghost btn-md">
-              {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Test Connection'}
+              {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : t('settings.testConnection')}
             </button>
           </div>
         </div>
