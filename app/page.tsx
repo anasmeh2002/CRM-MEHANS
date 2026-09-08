@@ -46,12 +46,12 @@ const tooltipStyle = {
   borderRadius: '12px', fontSize: '12px', color: 'var(--text-primary)',
 };
 
-const dateRangeLabels: Record<DateRange, string> = {
-  today: 'Today',
-  week: 'This Week',
-  month: 'This Month',
-  quarter: 'This Quarter',
-  all: 'All Time',
+const dateRangeKeys: Record<DateRange, string> = {
+  today: 'dashboard.today',
+  week: 'dashboard.thisWeek',
+  month: 'dashboard.thisMonth',
+  quarter: 'dashboard.thisQuarter',
+  all: 'dashboard.allTime',
 };
 
 export default function DashboardPage() {
@@ -173,7 +173,7 @@ export default function DashboardPage() {
             className={cn('btn btn-outline btn-md', dateFilterOpen && 'border-gold-border')}
           >
             <CalendarDays className="h-4 w-4" strokeWidth={1.5} />
-            {dateRangeLabels[dateRange]}
+            {t(dateRangeKeys[dateRange])}
             <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', dateFilterOpen && 'rotate-180')} />
           </button>
           {dateFilterOpen && (
@@ -187,7 +187,7 @@ export default function DashboardPage() {
                     dateRange === option ? 'bg-gold-bg text-gold' : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
                   )}
                 >
-                  {dateRangeLabels[option]}
+                  {t(dateRangeKeys[option])}
                   {dateRange === option && <span className="h-2 w-2 rounded-full bg-gold" />}
                 </button>
               ))}
@@ -224,14 +224,14 @@ export default function DashboardPage() {
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h3 className="font-serif text-lg font-medium text-text-primary">{t('dashboard.revenueOverview')}</h3>
-              <p className="mt-1 text-[12px] text-text-muted">Monthly revenue vs target</p>
+              <p className="mt-1 text-[12px] text-text-muted">{t('dashboard.monthlyRevenueTarget')}</p>
             </div>
             <div className="flex items-center gap-4 text-[12px]">
               <span className="flex items-center gap-1.5 text-text-secondary">
-                <span className="h-2 w-2 rounded-full bg-gold" /> Revenue
+                <span className="h-2 w-2 rounded-full bg-gold" /> {t('dashboard.revenueLabel')}
               </span>
               <span className="flex items-center gap-1.5 text-text-secondary">
-                <span className="h-2 w-2 rounded-full bg-info" /> Target
+                <span className="h-2 w-2 rounded-full bg-info" /> {t('dashboard.targetLabel')}
               </span>
             </div>
           </div>
@@ -259,8 +259,8 @@ export default function DashboardPage() {
 
         <Card delay={0.15}>
           <div className="mb-6">
-            <h3 className="font-serif text-lg font-medium text-text-primary">Lead Sources</h3>
-            <p className="mt-1 text-[12px] text-text-muted">Where leads come from</p>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('dashboard.leadSources')}</h3>
+            <p className="mt-1 text-[12px] text-text-muted">{t('dashboard.leadSourcesDescription')}</p>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
@@ -287,7 +287,7 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2" delay={0.2}>
           <div className="mb-6">
             <h3 className="font-serif text-lg font-medium text-text-primary">{t('dashboard.pipelineValue')}</h3>
-            <p className="mt-1 text-[12px] text-text-muted">Total pipeline value over time ($M)</p>
+            <p className="mt-1 text-[12px] text-text-muted">{t('dashboard.pipelineOverTime')}</p>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={pipelineData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
@@ -449,8 +449,8 @@ export default function DashboardPage() {
 
       <Card className="mt-4" delay={0.4}>
         <div className="mb-5 flex items-center justify-between">
-          <h3 className="font-serif text-lg font-medium text-text-primary">Team Performance</h3>
-          <Badge variant="gold">This Quarter</Badge>
+          <h3 className="font-serif text-lg font-medium text-text-primary">{t('dashboard.teamPerformance')}</h3>
+          <Badge variant="gold">{t('dashboard.thisQuarterBadge')}</Badge>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {teamMembers.map((member, i) => (
@@ -467,11 +467,11 @@ export default function DashboardPage() {
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3">
                 <div>
-                  <p className="text-[11px] text-text-muted">Deals</p>
+                  <p className="text-[11px] text-text-muted">{t('dashboard.dealsMetric')}</p>
                   <p className="text-[13px] font-semibold text-text-primary">{member.deals}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-text-muted">Revenue</p>
+                  <p className="text-[11px] text-text-muted">{t('dashboard.revenueMetric')}</p>
                   <p className="text-[13px] font-semibold text-gold">{formatCurrency(member.revenue)}</p>
                 </div>
               </div>

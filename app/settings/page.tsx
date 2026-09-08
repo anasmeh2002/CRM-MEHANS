@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Building2, Users, Shield, Plug, Code,
-  Check, Plus, Trash2, Copy, Loader2, Zap, Workflow,
+  Check, Plus, Trash2, Copy, Loader2, Zap, Workflow, Upload, Image as ImageIcon,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, Card, Badge, Avatar } from '@/components/shared';
@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import {
-  fetchAgency, updateAgency,
+  fetchAgency, updateAgency, uploadAgencyLogo,
   fetchProfiles, updateProfileRole, deactivateProfile, createProfile,
   fetchRolePermissions, updateRolePermission,
   fetchIntegrations, toggleIntegration,
@@ -24,13 +24,13 @@ import type { TeamMember } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/components/language-provider';
 
-const tabs = [
-  { id: 'organization', label: 'Organization', icon: Building2 },
-  { id: 'users', label: 'Users', icon: Users },
-  { id: 'permissions', label: 'Permissions', icon: Shield },
-  { id: 'integrations', label: 'Integrations', icon: Plug },
-  { id: 'automations', label: 'Automations', icon: Workflow },
-  { id: 'api', label: 'API', icon: Code },
+const tabDefs = [
+  { id: 'organization', labelKey: 'settings.organization', icon: Building2 },
+  { id: 'users', labelKey: 'settings.users', icon: Users },
+  { id: 'permissions', labelKey: 'settings.permissions', icon: Shield },
+  { id: 'integrations', labelKey: 'settings.integrations', icon: Plug },
+  { id: 'automations', labelKey: 'page.automations', icon: Workflow },
+  { id: 'api', labelKey: 'settings.apiKeys', icon: Code },
 ];
 
 const integrationMeta: Record<string, { icon: string; description: string; color: string }> = {
@@ -50,7 +50,7 @@ export default function SettingsPage() {
       <PageHeader title={t('settings.title')} description={t('settings.description')} />
       <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
         <div className="flex gap-2 overflow-x-auto lg:flex-col">
-          {tabs.map((tab) => {
+          {tabDefs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
@@ -62,7 +62,7 @@ export default function SettingsPage() {
                 )}
               >
                 <Icon className="h-4 w-4" strokeWidth={1.5} />
-                {tab.label}
+                {t(tab.labelKey)}
               </button>
             );
           })}
@@ -94,13 +94,44 @@ export default function SettingsPage() {
 // ─── Organization ──────────────────────────────────────────────────────────
 
 function OrganizationTab() {
+  const { t } = useLanguage();
   const { data: agency, loading, refetch } = useSupabaseQuery<AgencyProfile | null>(fetchAgency);
   const [form, setForm] = useState<AgencyProfile | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (agency) setForm(agency);
   }, [agency]);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error(t('settings.logoInvalidFile'));
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error(t('settings.logoTooLarge'));
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const url = await uploadAgencyLogo(file);
+      if (!url) throw new Error('Upload failed');
+      setForm((prev) => prev ? { ...prev, logo_url: url } : prev);
+      await updateAgency({ logo_url: url });
+      toast.success(t('settings.logoUploaded'));
+      refetch();
+      window.dispatchEvent(new CustomEvent('agency-updated'));
+    } catch {
+      toast.error(t('settings.logoUploadFailed'));
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
 
   const handleSave = async () => {
     if (!form) return;
@@ -117,11 +148,11 @@ function OrganizationTab() {
         description: form.description,
         logo_url: form.logo_url,
       });
-      toast.success('Organization settings saved');
+      toast.success(t('settings.saved'));
       refetch();
       window.dispatchEvent(new CustomEvent('agency-updated'));
     } catch {
-      toast.error('Failed to save settings');
+      toast.error(t('settings.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -131,7 +162,7 @@ function OrganizationTab() {
 
   return (
     <Card>
-      <h3 className="mb-5 font-serif text-lg font-medium text-text-primary">Company Information</h3>
+      <h3 className="mb-5 font-serif text-lg font-medium text-text-primary">{t('settings.companyInfo')}</h3>
       <div className="mb-5 flex items-center gap-4 rounded-xl border border-border bg-bg-elevated p-4">
         {form.logo_url ? (
           <img src={form.logo_url} alt="Logo" className="h-16 w-16 rounded-2xl object-cover" />
@@ -140,14 +171,25 @@ function OrganizationTab() {
             {(form.name ?? 'A').charAt(0).toUpperCase()}
           </div>
         )}
+        <div className="flex-1">
+          <p className="text-sm font-medium text-text-primary">{form.name || t('settings.unnamedAgency')}</p>
+          <p className="text-xs text-text-muted">{form.city ? `${form.city}${form.country ? ', ' + form.country : ''}` : t('settings.locationNotSet')}</p>
+        </div>
         <div>
-          <p className="text-sm font-medium text-text-primary">{form.name || 'Unnamed Agency'}</p>
-          <p className="text-xs text-text-muted">{form.city ? `${form.city}${form.country ? ', ' + form.country : ''}` : 'Location not set'}</p>
+          <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+          <button
+            onClick={() => logoInputRef.current?.click()}
+            disabled={uploadingLogo}
+            className="btn btn-outline btn-sm"
+          >
+            {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" strokeWidth={1.5} />}
+            {t('settings.uploadLogo')}
+          </button>
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">Agency Name</label>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('settings.agencyName')}</label>
           <input
             className="input w-full"
             value={form.name ?? ''}
@@ -155,16 +197,7 @@ function OrganizationTab() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">Logo URL</label>
-          <input
-            className="input w-full"
-            placeholder="https://..."
-            value={form.logo_url ?? ''}
-            onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
-          />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">Phone</label>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('common.phone')}</label>
           <input
             className="input w-full"
             value={form.phone ?? ''}
@@ -172,7 +205,7 @@ function OrganizationTab() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">Email</label>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('common.email')}</label>
           <input
             className="input w-full"
             value={form.email ?? ''}
@@ -180,7 +213,7 @@ function OrganizationTab() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">Website</label>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('settings.website')}</label>
           <input
             className="input w-full"
             value={form.website ?? ''}
@@ -188,7 +221,7 @@ function OrganizationTab() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">Address</label>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('settings.address')}</label>
           <input
             className="input w-full"
             value={form.address ?? ''}
@@ -196,7 +229,7 @@ function OrganizationTab() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">City</label>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('settings.city')}</label>
           <input
             className="input w-full"
             value={form.city ?? ''}
@@ -204,7 +237,7 @@ function OrganizationTab() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">Country</label>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('settings.country')}</label>
           <input
             className="input w-full"
             value={form.country ?? ''}
@@ -212,7 +245,7 @@ function OrganizationTab() {
           />
         </div>
         <div className="sm:col-span-2">
-          <label className="mb-1.5 block text-xs font-medium text-text-muted">Description (optional)</label>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('settings.description')}</label>
           <textarea
             className="input w-full min-h-[80px] resize-y"
             value={form.description ?? ''}
@@ -221,7 +254,7 @@ function OrganizationTab() {
         </div>
       </div>
       <button onClick={handleSave} disabled={saving} className="btn btn-gold btn-md mt-5">
-        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
+        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('common.save')}
       </button>
     </Card>
   );

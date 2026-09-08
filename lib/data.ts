@@ -819,6 +819,17 @@ export async function updateAgency(updates: Partial<Omit<AgencyProfile, 'id'>>):
   return data as AgencyProfile | null;
 }
 
+export async function uploadAgencyLogo(file: File): Promise<string | null> {
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png';
+  const path = `logo-${Date.now()}.${ext}`;
+  const { error: uploadError } = await supabase.storage
+    .from('agency-logos')
+    .upload(path, file, { cacheControl: '3600', upsert: true });
+  if (uploadError) throw uploadError;
+  const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/agency-logos/${path}`;
+  return url;
+}
+
 // ─── Notifications ──────────────────────────────────────────────────────────
 
 export async function fetchNotifications(): Promise<NotificationRow[]> {
