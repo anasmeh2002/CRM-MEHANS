@@ -17,6 +17,8 @@ import type { Property, PropertyStatus, PropertyType, TeamMember } from '@/lib/t
 import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useLanguage } from '@/components/language-provider';
+import { useAgency } from '@/components/agency-provider';
+import { formatCurrency } from '@/lib/format';
 
 const statusConfig: Record<PropertyStatus, { label: string; variant: 'success' | 'gold' | 'error' | 'info' | 'neutral' }> = {
   draft: { label: 'Draft', variant: 'neutral' },
@@ -59,6 +61,7 @@ function mapProperty(p: any): Property {
 
 export default function PropertiesPage() {
   const { t } = useLanguage();
+  const { currency } = useAgency();
   const { data: rawProperties, loading, error, refetch } = useSupabaseQuery(fetchProperties);
 
   // Local copy of the mapped properties. Seeded from the query result and
@@ -273,7 +276,7 @@ export default function PropertiesPage() {
                 </div>
                 <div className="p-5">
                   <div className="flex items-center justify-between">
-                    <p className="font-serif text-xl font-medium text-gold">${(property.price / 1000000).toFixed(2)}M</p>
+                    <p className="font-serif text-xl font-medium text-gold">{formatCurrency(property.price, currency)}</p>
                     <Badge variant="neutral" className="capitalize">{property.type}</Badge>
                   </div>
                   <div className="mt-3 flex items-center gap-4 text-[12px] text-text-secondary">
@@ -318,7 +321,7 @@ export default function PropertiesPage() {
           <Field label="City">
             <TextInput value={form.city} onChange={(v) => setForm({ ...form, city: v })} placeholder="Miami, FL" />
           </Field>
-          <Field label="Price ($)">
+          <Field label={t('properties.price')}>
             <TextInput type="number" value={form.price} onChange={(v) => setForm({ ...form, price: v })} placeholder="4200000" />
           </Field>
           <Field label="Property Type">
@@ -390,7 +393,7 @@ export default function PropertiesPage() {
             </div>
             <Field label="Address"><TextInput value={editProp.address} onChange={(v) => setEditProp({ ...editProp, address: v })} /></Field>
             <Field label="City"><TextInput value={editProp.city} onChange={(v) => setEditProp({ ...editProp, city: v })} /></Field>
-            <Field label="Price ($)"><TextInput type="number" value={String(editProp.price)} onChange={(v) => setEditProp({ ...editProp, price: parseInt(v) || 0 })} /></Field>
+            <Field label={t('properties.price')}><TextInput type="number" value={String(editProp.price)} onChange={(v) => setEditProp({ ...editProp, price: parseInt(v) || 0 })} /></Field>
             <Field label="Type"><Select value={editProp.type} onChange={(v) => setEditProp({ ...editProp, type: v as PropertyType })} options={[
               { value: 'apartment', label: 'Apartment' }, { value: 'villa', label: 'Villa' },
               { value: 'penthouse', label: 'Penthouse' }, { value: 'townhouse', label: 'Townhouse' },
@@ -476,7 +479,7 @@ export default function PropertiesPage() {
                 )}
               </div>
               <div className="scrollbar-thin flex-1 overflow-y-auto p-6">
-                <p className="font-serif text-3xl font-medium text-gold">${(selected.price / 1000000).toFixed(2)}M</p>
+                <p className="font-serif text-3xl font-medium text-gold">{formatCurrency(selected.price, currency)}</p>
                 <div className="mt-5 grid grid-cols-3 gap-3">
                   {selected.bedrooms > 0 && (
                     <div className="rounded-xl border border-border bg-bg-elevated p-4 text-center">

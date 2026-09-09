@@ -25,6 +25,7 @@ import { useRefresh } from '@/components/refresh-provider';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/components/language-provider';
+import { useAgency } from '@/components/agency-provider';
 
 const activityIcons: Record<string, React.ElementType> = {
   deal_won: DollarSign, lead_created: Users, property_listed: Building,
@@ -58,6 +59,7 @@ export default function DashboardPage() {
   const { refreshKey } = useRefresh();
   const router = useRouter();
   const { t } = useLanguage();
+  const { currency } = useAgency();
 
   const [dateRange, setDateRange] = useState<DateRange>('month');
   const [dateFilterOpen, setDateFilterOpen] = useState(false);
@@ -222,8 +224,8 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-          <StatCard label={t('dashboard.revenue')} value={formatCurrency(revenue)} icon={DollarSign} delay={0} />
-          <StatCard label={t('dashboard.pipeline')} value={formatCurrency(pipelineValue)} icon={TrendingUp} delay={0.04} />
+          <StatCard label={t('dashboard.revenue')} value={formatCurrency(revenue, currency)} icon={DollarSign} delay={0} />
+          <StatCard label={t('dashboard.pipeline')} value={formatCurrency(pipelineValue, currency)} icon={TrendingUp} delay={0.04} />
           <StatCard label={t('dashboard.conversion')} value={`${conversionRate.toFixed(1)}%`} icon={Target} delay={0.08} />
           <StatCard label={t('dashboard.appointments')} value={String(appointmentsCount)} icon={Calendar} delay={0.12} />
           <StatCard label={t('dashboard.tasks')} value={String(tasksCount)} icon={CheckSquare} delay={0.16} />
@@ -285,7 +287,7 @@ export default function DashboardPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" vertical={false} />
               <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
               <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v / 1000000}M`} />
-              <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: 'var(--text-primary)' }} formatter={(v: number) => [`$${(v / 1000000).toFixed(1)}M`, '']} />
+              <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: 'var(--text-primary)' }} formatter={(v: number) => [formatCurrency(v / 1000000, currency) + 'M', '']} />
               <Area type="monotone" dataKey="target" stroke="var(--info)" strokeWidth={1.5} strokeDasharray="5 5" fill="url(#tgtGrad)" />
               <Area type="monotone" dataKey="revenue" stroke="var(--gold)" strokeWidth={2} fill="url(#revGrad)" />
             </AreaChart>
@@ -353,7 +355,7 @@ export default function DashboardPage() {
                   <div key={stage.stage}>
                     <div className="mb-1.5 flex items-center justify-between text-[12px]">
                       <span className="font-medium text-text-primary">{stage.stage}</span>
-                      <span className="text-text-muted">{stage.count} · {formatCurrency(stage.value)} · {conversion}%</span>
+                      <span className="text-text-muted">{stage.count} · {formatCurrency(stage.value, currency)} · {conversion}%</span>
                     </div>
                     <div className="h-7 overflow-hidden rounded-lg bg-bg-elevated">
                       <motion.div
@@ -507,7 +509,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-[11px] text-text-muted">{t('dashboard.revenueMetric')}</p>
-                  <p className="text-[13px] font-semibold text-gold">{formatCurrency(member.revenue)}</p>
+                  <p className="text-[13px] font-semibold text-gold">{formatCurrency(member.revenue, currency)}</p>
                 </div>
               </div>
             </motion.div>

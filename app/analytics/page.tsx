@@ -29,6 +29,7 @@ import { useRefresh } from '@/components/refresh-provider';
 import type { TeamMember, Deal, Lead } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/components/language-provider';
+import { useAgency } from '@/components/agency-provider';
 
 const monthlyDeals = [
   { month: 'Jan', deals: 8, won: 3 },
@@ -71,6 +72,7 @@ const tooltipStyle = {
 
 export default function AnalyticsPage() {
   const { t } = useLanguage();
+  const { currency } = useAgency();
   const { refreshKey } = useRefresh();
   const { data: teamData, loading: teamLoading, error: teamError } = useSupabaseQuery<TeamMember[]>(fetchTeamMembers, [], refreshKey);
   const { data: dealsData, loading: dealsLoading, error: dealsError } = useSupabaseQuery<Deal[]>(fetchDeals, [], refreshKey);
@@ -82,6 +84,8 @@ export default function AnalyticsPage() {
   const deals = dealsData ?? [];
   const leads = leadsData ?? [];
   const revenueData = revData ?? [];
+  const totalRevenue = deals.filter((deal) => deal.stage === 'won').reduce((sum, deal) => sum + deal.value, 0);
+  const averageDeal = deals.filter((deal) => deal.stage === 'won').length > 0 ? totalRevenue / deals.filter((deal) => deal.stage === 'won').length : 0;
   const leadSourceData = srcData ?? [];
 
   const loading = teamLoading || dealsLoading || leadsLoading;
@@ -97,9 +101,9 @@ export default function AnalyticsPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total Revenue" value="$18.4M" change="+42%" icon={DollarSign} delay={0} />
+        <StatCard label="Total Revenue" value={formatCurrency(totalRevenue, currency)} change="+42%" icon={DollarSign} delay={0} />
         <StatCard label="Deals Closed" value="63" change="+28%" icon={Award} delay={0.05} />
-        <StatCard label="Avg Deal Size" value="$2.9M" change="+12%" icon={TrendingUp} delay={0.1} />
+        <StatCard label="Avg Deal Size" value={formatCurrency(averageDeal, currency)} change="+12%" icon={TrendingUp} delay={0.1} />
         <StatCard label="Win Rate" value="7.5%" change="+1.2%" icon={Target} delay={0.15} />
       </div>
 
@@ -120,7 +124,7 @@ export default function AnalyticsPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1E" vertical={false} />
               <XAxis dataKey="month" stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} />
               <YAxis stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v / 1000000}M`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`$${(v / 1000000).toFixed(1)}M`, '']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [formatCurrency(v / 1000000, currency) + 'M', '']} />
               <Area type="monotone" dataKey="revenue" stroke="#D4AF37" strokeWidth={2} fill="url(#revGrad2)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -277,7 +281,7 @@ export default function AnalyticsPage() {
                   <div className="flex-1">
                     <div className="mb-1 flex items-center justify-between">
                       <span className="text-sm font-medium text-text-primary">{member.name}</span>
-                      <span className="text-xs font-medium text-gold">{formatCurrency(member.revenue)}</span>
+                      <span className="text-xs font-medium text-gold">{formatCurrency(member.revenue, currency)}</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-bg-elevated">
                       <motion.div

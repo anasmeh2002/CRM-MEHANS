@@ -12,6 +12,8 @@ import type { Deal, DealStage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useLanguage } from '@/components/language-provider';
+import { useAgency } from '@/components/agency-provider';
+import { formatCurrency } from '@/lib/format';
 
 const columns: { stage: DealStage; label: string; color: string }[] = [
   { stage: 'new_lead', label: 'New Lead', color: '#4A90D9' },
@@ -36,6 +38,7 @@ function mapDealForDisplay(deal: Deal): Deal {
 
 export default function PipelinePage() {
   const { t } = useLanguage();
+  const { currency } = useAgency();
   const { data, loading, error, setData } = useSupabaseQuery(fetchDeals);
   const deals = (data ?? []).map(mapDealForDisplay);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -137,7 +140,7 @@ export default function PipelinePage() {
                     <span className="text-sm font-medium text-text-primary">{col.label}</span>
                     <Badge variant="neutral">{colDeals.length}</Badge>
                   </div>
-                  <span className="text-xs font-medium text-gold">${(colValue / 1000000).toFixed(1)}M</span>
+                  <span className="text-xs font-medium text-gold">{formatCurrency(colValue, currency)}</span>
                 </div>
                 <div className="scrollbar-thin flex max-h-[calc(100vh-240px)] flex-col gap-2 overflow-y-auto p-2.5">
                   {colDeals.map((deal) => (
@@ -157,7 +160,7 @@ export default function PipelinePage() {
                         <GripVertical className="h-4 w-4 text-text-muted opacity-0 transition-opacity group-hover:opacity-100" strokeWidth={1.5} />
                       </div>
                       <div className="mt-2.5 flex items-center justify-between">
-                        <span className="font-serif text-lg font-medium text-gold">${(deal.value / 1000000).toFixed(1)}M</span>
+                        <span className="font-serif text-lg font-medium text-gold">{formatCurrency(deal.value, currency)}</span>
                         <span className="text-xs text-text-muted">{deal.probability}%</span>
                       </div>
                       <div className="mt-2 h-1 overflow-hidden rounded-full bg-bg-elevated">

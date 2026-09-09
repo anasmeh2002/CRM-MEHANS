@@ -12,9 +12,11 @@ import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { Contact } from '@/lib/types';
 import { toast } from 'sonner';
 import { useLanguage } from '@/components/language-provider';
+import { useAgency } from '@/components/agency-provider';
 
 export default function CompaniesPage() {
   const { t } = useLanguage();
+  const { currency } = useAgency();
   const [search, setSearch] = useState('');
   const { data, loading, error } = useSupabaseQuery<Contact[]>(fetchContacts, []);
 
@@ -118,7 +120,7 @@ export default function CompaniesPage() {
                     <p className="flex items-center gap-1 text-xs text-text-muted">
                       <TrendingUp className="h-3 w-3" strokeWidth={1.5} /> Value
                     </p>
-                    <p className="mt-0.5 text-sm font-semibold text-text-primary">{formatCurrency(contact.value)}</p>
+                    <p className="mt-0.5 text-sm font-semibold text-text-primary">{formatCurrency(contact.value, currency)}</p>
                   </div>
                   <div>
                     <p className="flex items-center gap-1 text-xs text-text-muted">

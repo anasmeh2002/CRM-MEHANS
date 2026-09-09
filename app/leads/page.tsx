@@ -17,6 +17,8 @@ import type { Lead, LeadStatus, LeadSource, TeamMember } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useLanguage } from '@/components/language-provider';
+import { useAgency } from '@/components/agency-provider';
+import { formatCurrency } from '@/lib/format';
 import { useGlobalModal } from '@/components/modal-provider';
 
 const statusConfig: Record<LeadStatus, { label: string; variant: 'gold' | 'info' | 'success' | 'warning' | 'error' | 'neutral' }> = {
@@ -77,6 +79,7 @@ function mapLeadForDisplay(l: Lead): Lead {
 
 export default function LeadsPage() {
   const { t } = useLanguage();
+  const { currency } = useAgency();
   const { openModal } = useGlobalModal();
   const { data: rawLeads, loading, error, refetch, setData } = useSupabaseQuery(fetchLeads);
   const leads = useMemo<Lead[]>(() => (rawLeads ?? []).map(mapLeadForDisplay), [rawLeads]);
@@ -400,7 +403,7 @@ export default function LeadsPage() {
                     {colVis.has('status') && <td className="px-4 py-3.5"><Badge variant={safeConfig(statusConfig, lead.status, { label: 'Unknown', variant: 'neutral' as const }).variant}>{safeConfig(statusConfig, lead.status, { label: 'Unknown', variant: 'neutral' as const }).label}</Badge></td>}
                     {colVis.has('score') && <td className="px-4 py-3.5"><ScoreBar score={lead.score} /></td>}
                     {colVis.has('source') && <td className="px-4 py-3.5"><span className="text-[13px] capitalize text-text-secondary">{lead.source.replace('-', ' ')}</span></td>}
-                    {colVis.has('budget') && <td className="px-4 py-3.5"><span className="text-[13px] font-medium text-text-primary">${(lead.budget / 1000000).toFixed(1)}M</span></td>}
+                    {colVis.has('budget') && <td className="px-4 py-3.5"><span className="text-[13px] font-medium text-text-primary">{formatCurrency(lead.budget, currency)}</span></td>}
                     {colVis.has('owner') && <td className="px-4 py-3.5"><span className="text-[13px] text-text-secondary">{lead.owner}</span></td>}
                     {colVis.has('tags') && (
                       <td className="px-4 py-3.5">
@@ -639,7 +642,7 @@ export default function LeadsPage() {
                   </div>
                   <div className="rounded-xl border border-border bg-bg-elevated p-4">
                     <p className="text-[11px] text-text-muted">Budget</p>
-                    <p className="mt-1 font-serif text-2xl font-medium text-text-primary">${(detailLead.budget / 1000000).toFixed(1)}M</p>
+                    <p className="mt-1 font-serif text-2xl font-medium text-text-primary">{formatCurrency(detailLead.budget, currency)}</p>
                   </div>
                 </div>
                 <div className="mb-5 grid grid-cols-2 gap-2">
@@ -668,7 +671,7 @@ export default function LeadsPage() {
                     <p className="text-[12px] font-semibold text-gold">AI Summary</p>
                   </div>
                   <p className="text-[12px] leading-relaxed text-text-secondary">
-                    {detailLead.name} is a {detailLead.score >= 80 ? 'high-value' : detailLead.score >= 50 ? 'moderate' : 'low'} priority lead with a budget of ${(detailLead.budget / 1000000).toFixed(1)}M. Sourced via {detailLead.source.replace('-', ' ')}. {detailLead.status === 'negotiation' ? 'Currently in active negotiation — recommend immediate follow-up.' : detailLead.status === 'won' ? 'Successfully closed. Consider referral outreach.' : 'Recommend scheduling a property visit to advance the pipeline.'}
+                    {detailLead.name} is a {detailLead.score >= 80 ? 'high-value' : detailLead.score >= 50 ? 'moderate' : 'low'} priority lead with a budget of ${formatCurrency(detailLead.budget, currency)}. Sourced via {detailLead.source.replace('-', ' ')}. {detailLead.status === 'negotiation' ? 'Currently in active negotiation — recommend immediate follow-up.' : detailLead.status === 'won' ? 'Successfully closed. Consider referral outreach.' : 'Recommend scheduling a property visit to advance the pipeline.'}
                   </p>
                 </div>
 

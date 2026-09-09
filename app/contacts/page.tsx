@@ -12,9 +12,11 @@ import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import { useGlobalModal } from '@/components/modal-provider';
 import type { Contact } from '@/lib/types';
 import { useLanguage } from '@/components/language-provider';
+import { useAgency } from '@/components/agency-provider';
 
 export default function ContactsPage() {
   const { t } = useLanguage();
+  const { currency } = useAgency();
   const [search, setSearch] = useState('');
   const { data: contacts, loading, error, refetch } = useSupabaseQuery(fetchContacts);
   const { openModal } = useGlobalModal();
@@ -134,7 +136,7 @@ export default function ContactsPage() {
                   <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
                     <div>
                       <p className="text-xs text-text-muted">Deal Value</p>
-                      <p className="text-sm font-semibold text-gold">{formatCurrency(value)}</p>
+                      <p className="text-sm font-semibold text-gold">{formatCurrency(value, currency)}</p>
                     </div>
                     <Badge variant="neutral">{lastContact}</Badge>
                   </div>

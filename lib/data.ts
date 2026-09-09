@@ -3,6 +3,7 @@ import { dispatchAutomationEvent } from './automations';
 import type {
   Lead, Contact, Property, Deal, Task, Meeting, Activity, TeamMember, PropertyImage, Note, Attachment,
 } from './types';
+import type { CurrencyCode } from './format';
 
 export interface OrgSettings {
   id: number;
@@ -26,6 +27,7 @@ export interface AgencyProfile {
   country: string | null;
   description: string | null;
   address: string | null;
+  currency: CurrencyCode;
 }
 
 export interface NotificationRow {
@@ -809,7 +811,12 @@ export async function fetchAgency(): Promise<AgencyProfile | null> {
     .select('*')
     .maybeSingle();
   if (error) throw error;
-  return data as AgencyProfile | null;
+  if (!data) return null;
+  if (data.logo_url && !data.logo_url.startsWith('http')) {
+    const { data: signed } = await supabase.storage.from('agency-logos').createSignedUrl(data.logo_url, 60 * 60);
+    return { ...data, logo_url: signed?.signedUrl ?? null } as AgencyProfile;
+  }
+  return data as AgencyProfile;
 }
 
 export async function updateAgency(updates: Partial<Omit<AgencyProfile, 'id'>>): Promise<AgencyProfile | null> {
@@ -823,14 +830,16 @@ export async function updateAgency(updates: Partial<Omit<AgencyProfile, 'id'>>):
 }
 
 export async function uploadAgencyLogo(file: File): Promise<string | null> {
+  const { data: agency, error: agencyError } = await supabase.from('agencies').select('id').maybeSingle();
+  if (agencyError) throw agencyError;
+  if (!agency) return null;
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png';
-  const path = `logo-${Date.now()}.${ext}`;
+  const path = `${agency.id}/logo-${Date.now()}.${ext}`;
   const { error: uploadError } = await supabase.storage
     .from('agency-logos')
     .upload(path, file, { cacheControl: '3600', upsert: true });
   if (uploadError) throw uploadError;
-  const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/agency-logos/${path}`;
-  return url;
+  return path;
 }
 
 // ─── Notifications ──────────────────────────────────────────────────────────

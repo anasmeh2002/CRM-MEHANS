@@ -23,6 +23,7 @@ import type { AgencyProfile, RolePermissionRow, IntegrationRow, ApiKeyRow } from
 import type { TeamMember } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/components/language-provider';
+import { CURRENCY_OPTIONS, type CurrencyCode } from '@/lib/format';
 
 const tabDefs = [
   { id: 'organization', labelKey: 'settings.organization', icon: Building2 },
@@ -146,6 +147,7 @@ function OrganizationTab() {
         address: form.address,
         description: form.description,
         logo_url: form.logo_url,
+        currency: form.currency,
       });
       toast.success(t('settings.saved'));
       refetch();
@@ -242,6 +244,16 @@ function OrganizationTab() {
             value={form.country ?? ''}
             onChange={(e) => setForm({ ...form, country: e.target.value })}
           />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('settings.currency')}</label>
+          <select
+            className="input w-full"
+            value={form.currency ?? 'MAD'}
+            onChange={(e) => setForm({ ...form, currency: e.target.value as CurrencyCode })}
+          >
+            {CURRENCY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
         </div>
         <div className="sm:col-span-2">
           <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('settings.description')}</label>

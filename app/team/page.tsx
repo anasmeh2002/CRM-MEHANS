@@ -13,6 +13,7 @@ import type { TeamMember } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useLanguage } from '@/components/language-provider';
+import { useAgency } from '@/components/agency-provider';
 
 const statusConfig: Record<string, { label: string; color: string; dot: string }> = {
   active: { label: 'Active', color: 'text-success', dot: 'bg-success' },
@@ -22,6 +23,7 @@ const statusConfig: Record<string, { label: string; color: string; dot: string }
 
 export default function TeamPage() {
   const { t } = useLanguage();
+  const { currency } = useAgency();
   const [search, setSearch] = useState('');
   const { data, loading, error } = useSupabaseQuery<TeamMember[]>(fetchTeamMembers, []);
 
@@ -41,11 +43,11 @@ export default function TeamPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Team Members" value={String(teamMembers.length)} icon={Award} delay={0} />
-        <StatCard label="Total Revenue" value={formatCurrency(totalRevenue)} change="+35%" icon={TrendingUp} delay={0.05} />
+        <StatCard label="Total Revenue" value={formatCurrency(totalRevenue, currency)} change="+35%" icon={TrendingUp} delay={0.05} />
         <StatCard label="Total Deals" value={String(totalDeals)} change="+22%" icon={Award} delay={0.1} />
         <StatCard
           label="Avg Revenue"
-          value={teamMembers.length > 0 ? formatCurrency(totalRevenue / teamMembers.length) : '$0'}
+          value={teamMembers.length > 0 ? formatCurrency(totalRevenue / teamMembers.length, currency) : formatCurrency(0, currency)}
           change="+12%"
           icon={TrendingUp}
           delay={0.15}
@@ -142,7 +144,7 @@ export default function TeamPage() {
                         <span className="text-sm font-medium text-text-primary">{member.deals}</span>
                       </td>
                       <td className="hidden px-5 py-4 sm:table-cell">
-                        <span className="text-sm font-semibold text-gold">{formatCurrency(member.revenue)}</span>
+                        <span className="text-sm font-semibold text-gold">{formatCurrency(member.revenue, currency)}</span>
                       </td>
                       <td className="hidden px-5 py-4 lg:table-cell">
                         <div className="flex items-center gap-2">

@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 import { AppShell } from '@/components/layout/app-shell';
 import { Avatar, PageHeader } from '@/components/shared';
 import { useLanguage } from '@/components/language-provider';
+import { useAgency } from '@/components/agency-provider';
+import { formatCurrency } from '@/lib/format';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import { useAuth } from '@/components/auth-provider';
 import {
@@ -81,6 +83,7 @@ function dedupMessages(msgs: WhatsAppMessage[]): WhatsAppMessage[] {
 export default function WhatsAppPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { currency } = useAgency();
   const userId = user?.id ?? '';
 
   const connectionQuery = useSupabaseQuery(fetchWhatsAppConnection);
@@ -326,7 +329,7 @@ export default function WhatsAppPage() {
       if (crmContext.properties.length > 0) {
         context += `RELEVANT PROPERTIES:\n`;
         crmContext.properties.forEach((p) => {
-          context += `- ${p.title} (${p.type}, ${p.city}): ${p.price} MAD, ${p.bedrooms} bed, ${p.bathrooms} bath, ${p.area}m²\n`;
+          context += `- ${p.title} (${p.type}, ${p.city}): ${formatCurrency(Number(p.price), currency)}, ${p.bedrooms} bed, ${p.bathrooms} bath, ${p.area}m²\n`;
         });
         context += `\n`;
       }

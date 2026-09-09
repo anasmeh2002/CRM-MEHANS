@@ -8,6 +8,7 @@ import { ModalProvider } from '@/components/modal-provider';
 import { AuthProvider } from '@/components/auth-provider';
 import { AuthGuard } from '@/components/auth-guard';
 import { LanguageProvider } from '@/components/language-provider';
+import { AgencyProvider } from '@/components/agency-provider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -40,11 +41,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthProvider>
             <LanguageProvider>
               <AuthGuard>
+                <AgencyProvider>
                 <RefreshProvider>
                   <ModalProvider>
                     {children}
                   </ModalProvider>
                 </RefreshProvider>
+                </AgencyProvider>
               </AuthGuard>
             </LanguageProvider>
           </AuthProvider>

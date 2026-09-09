@@ -16,6 +16,8 @@ import type { Deal, DealStage, Lead, Property, TeamMember } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useLanguage } from '@/components/language-provider';
+import { useAgency } from '@/components/agency-provider';
+import { formatCurrency } from '@/lib/format';
 
 const stageConfig: Record<DealStage, { label: string; color: string }> = {
   new_lead: { label: 'New Lead', color: '#4A90D9' },
@@ -62,6 +64,7 @@ function mapDealForDisplay(deal: Deal): Deal {
 
 export default function DealsPage() {
   const { t } = useLanguage();
+  const { currency } = useAgency();
   const {
     data: dealsData,
     loading: dealsLoading,
@@ -262,7 +265,7 @@ export default function DealsPage() {
                       <Badge variant="neutral" className="mb-2" style={{ color: config.color, borderColor: `${config.color}40` }}>{config.label}</Badge>
                       <p className="text-[13px] font-medium text-text-primary">{deal.title}</p>
                     </div>
-                    <p className="font-serif text-xl font-medium text-gold">${(deal.value / 1000000).toFixed(1)}M</p>
+                    <p className="font-serif text-xl font-medium text-gold">{formatCurrency(deal.value, currency)}</p>
                   </div>
                   <div className="mt-4 space-y-2 text-[12px] text-text-secondary">
                     <div className="flex items-center gap-2"><User className="h-3.5 w-3.5" strokeWidth={1.5} /> {deal.leadName}</div>
@@ -313,7 +316,7 @@ export default function DealsPage() {
           <Field label="Property">
             <Select value={form.propertyId} onChange={(v) => setForm({ ...form, propertyId: v })} options={properties.map((p) => ({ value: p.id, label: p.title }))} />
           </Field>
-          <Field label="Deal Value ($)" required>
+          <Field label={t('deals.value')} required>
             <TextInput type="number" value={form.value} onChange={(v) => setForm({ ...form, value: v })} placeholder="0" />
           </Field>
           <Field label="Stage">
@@ -351,7 +354,7 @@ export default function DealsPage() {
             <div className="sm:col-span-2"><Field label="Deal Title"><TextInput value={editDeal.title} onChange={(v) => setEditDeal({ ...editDeal, title: v })} /></Field></div>
             <Field label="Lead"><Select value={editDeal.lead_id ?? ''} onChange={(v) => setEditDeal({ ...editDeal, lead_id: v })} options={leads.map((l) => ({ value: l.id, label: l.name }))} /></Field>
             <Field label="Property"><Select value={editDeal.property_id ?? ''} onChange={(v) => setEditDeal({ ...editDeal, property_id: v })} options={properties.map((p) => ({ value: p.id, label: p.title }))} /></Field>
-            <Field label="Deal Value ($)"><TextInput type="number" value={String(editDeal.value)} onChange={(v) => setEditDeal({ ...editDeal, value: parseInt(v) || 0 })} /></Field>
+            <Field label={t('deals.value')}><TextInput type="number" value={String(editDeal.value)} onChange={(v) => setEditDeal({ ...editDeal, value: parseInt(v) || 0 })} /></Field>
             <Field label="Stage"><Select value={editDeal.stage} onChange={(v) => setEditDeal({ ...editDeal, stage: v as DealStage })} options={Object.entries(stageConfig).map(([k, v]) => ({ value: k, label: v.label }))} /></Field>
             <Field label="Probability (%)"><TextInput type="number" value={String(editDeal.probability)} onChange={(v) => setEditDeal({ ...editDeal, probability: parseInt(v) || 0 })} /></Field>
             <Field label="Deal Owner"><Select value={editDeal.owner_id ?? ''} onChange={(v) => setEditDeal({ ...editDeal, owner_id: v })} options={teamMembers.map((m) => ({ value: m.id, label: `${m.name} — ${m.role}` }))} /></Field>
@@ -383,7 +386,7 @@ export default function DealsPage() {
                 <div className="mb-5 grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-border bg-bg-elevated p-4">
                     <p className="text-[11px] text-text-muted">Deal Value</p>
-                    <p className="mt-1 font-serif text-2xl font-medium text-gold">${(selected.value / 1000000).toFixed(1)}M</p>
+                    <p className="mt-1 font-serif text-2xl font-medium text-gold">{formatCurrency(selected.value, currency)}</p>
                   </div>
                   <div className="rounded-xl border border-border bg-bg-elevated p-4">
                     <p className="text-[11px] text-text-muted">Probability</p>

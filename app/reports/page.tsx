@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { getAIReport } from '@/lib/ai';
 import { downloadCSV } from '@/lib/csv';
 import { useLanguage } from '@/components/language-provider';
+import { useAgency } from '@/components/agency-provider';
 
 const tooltipStyle = {
   background: '#0E0E10',
@@ -45,6 +46,7 @@ const reports = [
 
 export default function ReportsPage() {
   const { t } = useLanguage();
+  const { currency } = useAgency();
   const { refreshKey } = useRefresh();
   const { data: dealsData, loading: dealsLoading, error: dealsError } = useSupabaseQuery<Deal[]>(fetchDeals, [], refreshKey);
   const { data: leadsData, loading: leadsLoading, error: leadsError } = useSupabaseQuery<Lead[]>(fetchLeads, [], refreshKey);
@@ -151,7 +153,7 @@ export default function ReportsPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Total Revenue"
-          value={loading ? '—' : formatCurrency(totalRevenue)}
+          value={loading ? '—' : formatCurrency(totalRevenue, currency)}
           change="+42%"
           icon={DollarSign}
           delay={0}
@@ -172,7 +174,7 @@ export default function ReportsPage() {
         />
         <StatCard
           label="Avg Deal Size"
-          value={loading ? '—' : formatCurrency(avgDealSize)}
+          value={loading ? '—' : formatCurrency(avgDealSize, currency)}
           change="+12%"
           icon={TrendingUp}
           delay={0.15}
@@ -198,7 +200,7 @@ export default function ReportsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1E" vertical={false} />
                   <XAxis dataKey="month" stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} />
                   <YAxis stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v / 1000000}M`} />
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`$${(v / 1000000).toFixed(1)}M`, '']} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [formatCurrency(v / 1000000, currency) + 'M', '']} />
                   <Bar dataKey="revenue" fill="#D4AF37" radius={[6, 6, 0, 0]} barSize={18} />
                   <Bar dataKey="target" fill="#4A90D9" radius={[6, 6, 0, 0]} barSize={18} />
                 </BarChart>
@@ -219,7 +221,7 @@ export default function ReportsPage() {
                     <div key={stage.stage}>
                       <div className="mb-1.5 flex items-center justify-between text-xs">
                         <span className="font-medium text-text-primary">{stage.stage}</span>
-                        <span className="text-text-muted">{stage.count} · {formatCurrency(stage.value)} · {conversion}%</span>
+                        <span className="text-text-muted">{stage.count} · {formatCurrency(stage.value, currency)} · {conversion}%</span>
                       </div>
                       <div className="h-7 overflow-hidden rounded-lg bg-bg-elevated">
                         <motion.div
