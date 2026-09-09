@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from '@/components/auth-provider';
 
 type Fetcher<T> = () => Promise<T>;
 
 export function useSupabaseQuery<T>(fetcher: Fetcher<T>, deps: unknown[] = [], refreshKey?: number) {
+  const { user, loading: authLoading } = useAuth();
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,6 +15,12 @@ export function useSupabaseQuery<T>(fetcher: Fetcher<T>, deps: unknown[] = [], r
   const mountedRef = useRef(true);
 
   const refetch = useCallback(async () => {
+    if (authLoading || !user) {
+      setData(null);
+      setLoading(authLoading);
+      setError(null);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -27,7 +35,7 @@ export function useSupabaseQuery<T>(fetcher: Fetcher<T>, deps: unknown[] = [], r
       if (mountedRef.current) setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, [authLoading, user?.id, ...deps]);
 
   useEffect(() => {
     mountedRef.current = true;
