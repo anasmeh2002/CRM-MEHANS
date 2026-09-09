@@ -6,7 +6,7 @@ export type PropertyType = 'apartment' | 'villa' | 'penthouse' | 'townhouse' | '
 export type TaskStatus = 'todo' | 'in_progress' | 'done';
 export type DealStage = 'new_lead' | 'qualified' | 'visit_scheduled' | 'negotiation' | 'won' | 'lost';
 export type MeetingType = 'google_meet' | 'zoom' | 'in-person' | 'call' | 'visit';
-export type MeetingStatus = 'upcoming' | 'completed' | 'cancelled';
+export type MeetingStatus = 'pending' | 'confirmed' | 'upcoming' | 'completed' | 'cancelled' | 'rescheduled' | 'no-show';
 export type RecordType = 'lead' | 'contact' | 'property' | 'deal';
 
 export interface TeamMember {

@@ -5,30 +5,26 @@ import { toast } from 'sonner';
 import { Field, TextInput, TextArea, Select, LoadingButton, Modal } from '@/components/forms';
 import { createMeeting, fetchLeads, fetchContacts, fetchTeamMembers } from '@/lib/data';
 import { useRefresh } from '@/components/refresh-provider';
-import { useAuth } from '@/components/auth-provider';
-import { updateMeeting } from '@/lib/data';
 import type { MeetingType, Lead, Contact, TeamMember } from '@/lib/types';
+import type { MeetingPrefill } from '@/components/modal-provider';
 
 const meetingTypes: { value: MeetingType; label: string }[] = [
-  { value: 'google_meet', label: 'Google Meet' },
+  { value: 'google_meet', label: 'Video Call' },
   { value: 'zoom', label: 'Zoom' },
   { value: 'in-person', label: 'In Person' },
   { value: 'call', label: 'Phone Call' },
   { value: 'visit', label: 'Property Visit' },
 ];
 
-const calendarSyncs = ['Google Calendar', 'Outlook', 'Apple Calendar', 'None'];
-
-export function MeetingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function MeetingModal({ open, onClose, prefill }: { open: boolean; onClose: () => void; prefill?: MeetingPrefill | null }) {
   const { triggerRefresh } = useRefresh();
-  const { session } = useAuth();
   const [saving, setSaving] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [form, setForm] = useState({
     title: '', date: '', time: '10:00', duration: '30', type: 'in-person' as MeetingType,
-    location: '', attendeeName: '', leadId: '', contactId: '', agentId: '', calendarSync: 'Google Calendar', notes: '',
+    location: '', attendeeName: '', leadId: '', contactId: '', agentId: '', notes: '',
   });
   const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -37,8 +33,15 @@ export function MeetingModal({ open, onClose }: { open: boolean; onClose: () => 
       fetchLeads().then(setLeads).catch(() => {});
       fetchContacts().then(setContacts).catch(() => {});
       fetchTeamMembers().then(setMembers).catch(() => {});
+      setForm((previous) => ({
+        ...previous,
+        title: prefill?.title ?? previous.title,
+        attendeeName: prefill?.leadName ?? previous.attendeeName,
+        leadId: prefill?.leadId ?? previous.leadId,
+        contactId: prefill?.contactId ?? previous.contactId,
+      }));
     }
-  }, [open]);
+  }, [open, prefill]);
 
   const handleSave = async () => {
     if (!form.title.trim()) { toast.error('Title is required'); return; }
@@ -52,7 +55,6 @@ export function MeetingModal({ open, onClose }: { open: boolean; onClose: () => 
         duration_minutes: Number(form.duration) || 30,
         meeting_type: form.type,
         location: form.location || undefined,
-        calendar_sync: form.calendarSync,
         attendee_name: form.attendeeName || undefined,
         lead_id: form.leadId || undefined,
         contact_id: form.contactId || undefined,
@@ -61,44 +63,10 @@ export function MeetingModal({ open, onClose }: { open: boolean; onClose: () => 
         notes: form.notes || undefined,
       });
       if (result) {
-        // If Google Calendar sync is selected, push the event to Google
-        if (form.calendarSync === 'Google Calendar') {
-          try {
-            const googleRes = await fetch('/api/calendar/events', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-              body: JSON.stringify({
-                title: form.title,
-                starts_at: startsAt,
-                duration_minutes: Number(form.duration) || 30,
-                location: form.location || undefined,
-                attendee_name: form.attendeeName || undefined,
-                attendee_email: undefined,
-                notes: form.notes || undefined,
-                meeting_type: form.type,
-              }),
-            });
-            if (googleRes.ok) {
-              const googleData = await googleRes.json();
-              toast.success(`Meeting "${form.title}" scheduled and synced to Google Calendar`);
-              if (googleData.calendar_sync) {
-                await updateMeeting(result.id, { calendar_sync: googleData.calendar_sync });
-              }
-              if (googleData.hangout_link) {
-                toast.info(`Google Meet link: ${googleData.hangout_link}`, { duration: 6000 });
-              }
-            } else {
-              toast.success(`Meeting "${form.title}" scheduled (Google Calendar sync failed — you can retry)`);
-            }
-          } catch {
-            toast.success(`Meeting "${form.title}" scheduled (Google Calendar sync failed — you can retry)`);
-          }
-        } else {
-          toast.success(`Meeting "${form.title}" scheduled`);
-        }
+        toast.success(`Meeting "${form.title}" scheduled`);
         triggerRefresh();
         onClose();
-        setForm({ title: '', date: '', time: '10:00', duration: '30', type: 'in-person', location: '', attendeeName: '', leadId: '', contactId: '', agentId: '', calendarSync: 'Google Calendar', notes: '' });
+        setForm({ title: '', date: '', time: '10:00', duration: '30', type: 'in-person', location: '', attendeeName: '', leadId: '', contactId: '', agentId: '', notes: '' });
       } else {
         toast.error('Failed to save. Check your database connection and try again.');
       }
@@ -114,7 +82,7 @@ export function MeetingModal({ open, onClose }: { open: boolean; onClose: () => 
       open={open}
       onClose={onClose}
       title="Schedule Meeting"
-      description="Create a meeting and sync it to your calendar."
+      description="Create a meeting in the MEHANS Calendar."
       size="xl"
       footer={
         <>
@@ -143,9 +111,6 @@ export function MeetingModal({ open, onClose }: { open: boolean; onClose: () => 
         </Field>
         <Field label="Location">
           <TextInput value={form.location} onChange={(v) => set('location', v)} placeholder="Skyline Penthouse, Miami" />
-        </Field>
-        <Field label="Calendar Sync">
-          <Select value={form.calendarSync} onChange={(v) => set('calendarSync', v)} options={calendarSyncs.map((c) => ({ value: c, label: c }))} />
         </Field>
         <Field label="Attendee Name">
           <TextInput value={form.attendeeName} onChange={(v) => set('attendeeName', v)} placeholder="Attendee name" />

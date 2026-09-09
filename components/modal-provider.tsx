@@ -8,12 +8,13 @@ const ContactModal = dynamic(() => import('@/components/modals/contact-modal').t
 const PropertyModal = dynamic(() => import('@/components/modals/property-modal').then((m) => m.PropertyModal), { ssr: false });
 const DealModal = dynamic(() => import('@/components/modals/deal-modal').then((m) => m.DealModal), { ssr: false });
 const TaskModal = dynamic(() => import('@/components/modals/task-modal').then((m) => m.TaskModal), { ssr: false });
-const MeetingModal = dynamic(() => import('@/components/modals/meeting-modal').then((m) => m.MeetingModal), { ssr: false });
+const MeetingModal = dynamic(() => import('@/components/modals/meeting-modal').then((m) => m.MeetingModal), { ssr: false, loading: () => null });
 
 export type ModalType = 'lead' | 'contact' | 'property' | 'deal' | 'task' | 'meeting';
+export type MeetingPrefill = { leadId?: string; leadName?: string; contactId?: string; title?: string };
 
 interface ModalContextValue {
-  openModal: (type: ModalType) => void;
+  openModal: (type: ModalType, prefill?: MeetingPrefill) => void;
   closeModal: () => void;
 }
 
@@ -27,9 +28,17 @@ export function useGlobalModal() {
 
 export function ModalProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState<ModalType | null>(null);
+  const [meetingPrefill, setMeetingPrefill] = useState<MeetingPrefill | null>(null);
 
-  const openModal = (type: ModalType) => setActive(type);
-  const closeModal = () => setActive(null);
+  const openModal = (type: ModalType, prefill?: MeetingPrefill) => {
+    if (type === 'meeting' && prefill) setMeetingPrefill(prefill);
+    else setMeetingPrefill(null);
+    setActive(type);
+  };
+  const closeModal = () => {
+    setActive(null);
+    setMeetingPrefill(null);
+  };
 
   return (
     <ModalContext.Provider value={{ openModal, closeModal }}>
@@ -39,7 +48,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
       {active === 'property' && <PropertyModal open onClose={closeModal} />}
       {active === 'deal' && <DealModal open onClose={closeModal} />}
       {active === 'task' && <TaskModal open onClose={closeModal} />}
-      {active === 'meeting' && <MeetingModal open onClose={closeModal} />}
+      {active === 'meeting' && <MeetingModal open onClose={closeModal} prefill={meetingPrefill} />}
     </ModalContext.Provider>
   );
 }

@@ -15,7 +15,7 @@ import {
   fetchAgency, updateAgency, uploadAgencyLogo,
   fetchProfiles, updateProfileRole, deactivateProfile, createProfile,
   fetchRolePermissions, updateRolePermission,
-  fetchIntegrations, toggleIntegration,
+  fetchIntegrations,
   fetchApiKeys, createApiKey, revokeApiKey,
 } from '@/lib/data';
 import { fetchN8nConfig, saveN8nConfig, testN8nConnection } from '@/lib/automations';
@@ -34,7 +34,6 @@ const tabDefs = [
 ];
 
 const integrationMeta: Record<string, { icon: string; description: string; color: string }> = {
-  'Google Calendar': { icon: '📅', description: 'Sync meetings and events', color: '#4285F4' },
   'WhatsApp Business': { icon: '📱', description: 'Send messages to leads', color: '#25D366' },
 };
 
@@ -481,24 +480,10 @@ function IntegrationsTab() {
   const { data: integrations, loading, refetch } = useSupabaseQuery<IntegrationRow[]>(fetchIntegrations);
   const router = useRouter();
 
-  const workingServices = ['Google Calendar', 'WhatsApp Business'];
+  const workingServices = ['WhatsApp Business'];
 
   const handleConnect = (service: string) => {
-    if (service === 'Google Calendar') {
-      window.location.href = '/api/calendar/auth';
-    } else if (service === 'WhatsApp Business') {
-      router.push('/whatsapp');
-    }
-  };
-
-  const handleDisconnect = async (service: string) => {
-    try {
-      await toggleIntegration(service, false);
-      toast.success(`${service} disconnected`);
-      refetch();
-    } catch {
-      toast.error(t('settings.disconnectFailed'));
-    }
+    if (service === 'WhatsApp Business') router.push('/whatsapp');
   };
 
   if (loading) return <LoadingCard />;
@@ -522,21 +507,12 @@ function IntegrationsTab() {
               {int.connected ? (
                 <div className="flex items-center gap-2">
                   <Badge variant="success"><Check className="h-3 w-3" strokeWidth={1.5} /> Connected</Badge>
-                  {int.service === 'Google Calendar' ? (
-                    <button
-                      onClick={() => handleDisconnect(int.service)}
-                      className="rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:border-error hover:text-error"
-                    >
-                      Disconnect
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => router.push('/whatsapp')}
-                      className="rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-gold-border hover:text-gold"
-                    >
-                      Manage
-                    </button>
-                  )}
+                  <button
+                    onClick={() => router.push('/whatsapp')}
+                    className="rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-gold-border hover:text-gold"
+                  >
+                    Manage
+                  </button>
                 </div>
               ) : (
                 <button

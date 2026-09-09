@@ -499,7 +499,6 @@ export async function fetchMeetings(): Promise<Meeting[]> {
 }
 
 export async function createMeeting(input: Partial<Meeting>): Promise<Meeting | null> {
-  void dispatchAutomationEvent('meeting.created', { meeting: input });
   const payload: Record<string, unknown> = {
     title: input.title,
     starts_at: input.starts_at ?? new Date().toISOString(),
@@ -516,7 +515,9 @@ export async function createMeeting(input: Partial<Meeting>): Promise<Meeting | 
   };
   const { data, error } = await db().from('meetings').insert(payload).select('*, lead:leads(*), contact:contacts(*), assigned_agent:profiles!assigned_agent_id(*)').single();
   if (error) { console.error('[data] createMeeting failed', error); return null; }
-  return mapMeeting(data);
+  const meeting = mapMeeting(data);
+  void dispatchAutomationEvent('meeting.created', { meeting });
+  return meeting;
 }
 
 export async function updateMeeting(id: string, patch: Partial<Meeting>): Promise<Meeting | null> {
@@ -527,6 +528,7 @@ export async function updateMeeting(id: string, patch: Partial<Meeting>): Promis
   if (patch.meeting_type !== undefined) dbPatch.meeting_type = patch.meeting_type;
   if (patch.location !== undefined) dbPatch.location = patch.location;
   if (patch.attendee_name !== undefined) dbPatch.attendee_name = patch.attendee_name;
+  if (patch.attendee_email !== undefined) dbPatch.attendee_email = patch.attendee_email;
   if (patch.status !== undefined) dbPatch.status = patch.status;
   if (patch.notes !== undefined) dbPatch.notes = patch.notes;
   if (patch.calendar_sync !== undefined) dbPatch.calendar_sync = patch.calendar_sync;

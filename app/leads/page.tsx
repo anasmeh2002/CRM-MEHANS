@@ -4,7 +4,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Phone, Mail, MessageCircle, Star, X, TrendingUp, MoreHorizontal,
+  Plus, Phone, Mail, MessageCircle, Star, X, TrendingUp, MoreHorizontal, CalendarPlus,
   Users, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown,
   Columns3, Trash2, CheckSquare, Square, Sparkles,
 } from 'lucide-react';
@@ -17,6 +17,7 @@ import type { Lead, LeadStatus, LeadSource, TeamMember } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useLanguage } from '@/components/language-provider';
+import { useGlobalModal } from '@/components/modal-provider';
 
 const statusConfig: Record<LeadStatus, { label: string; variant: 'gold' | 'info' | 'success' | 'warning' | 'error' | 'neutral' }> = {
   new: { label: 'New', variant: 'info' },
@@ -68,6 +69,7 @@ function mapLeadForDisplay(l: Lead): Lead {
 
 export default function LeadsPage() {
   const { t } = useLanguage();
+  const { openModal } = useGlobalModal();
   const { data: rawLeads, loading, error, refetch, setData } = useSupabaseQuery(fetchLeads);
   const leads = useMemo<Lead[]>(() => (rawLeads ?? []).map(mapLeadForDisplay), [rawLeads]);
 
@@ -632,10 +634,11 @@ export default function LeadsPage() {
                     <p className="mt-1 font-serif text-2xl font-medium text-text-primary">${(detailLead.budget / 1000000).toFixed(1)}M</p>
                   </div>
                 </div>
-                <div className="mb-5 flex gap-2">
-                  <button className="btn btn-outline btn-sm flex-1"><Phone className="h-4 w-4" strokeWidth={1.5} /> Call</button>
-                  <button className="btn btn-outline btn-sm flex-1"><Mail className="h-4 w-4" strokeWidth={1.5} /> Email</button>
-                  <button className="btn btn-outline btn-sm flex-1"><MessageCircle className="h-4 w-4" strokeWidth={1.5} /> WhatsApp</button>
+                <div className="mb-5 grid grid-cols-2 gap-2">
+                  <button onClick={() => openModal('meeting', { leadId: detailLead.id, leadName: detailLead.name, title: `Meeting with ${detailLead.name}` })} className="btn btn-gold btn-sm col-span-2"><CalendarPlus className="h-4 w-4" strokeWidth={1.5} /> Schedule Meeting</button>
+                  <button className="btn btn-outline btn-sm"><Phone className="h-4 w-4" strokeWidth={1.5} /> Call</button>
+                  <button className="btn btn-outline btn-sm"><Mail className="h-4 w-4" strokeWidth={1.5} /> Email</button>
+                  <button className="btn btn-outline btn-sm col-span-2"><MessageCircle className="h-4 w-4" strokeWidth={1.5} /> WhatsApp</button>
                 </div>
                 <div className="mb-5 rounded-xl border border-border bg-bg-elevated p-4">
                   <p className="mb-1.5 text-[11px] font-medium text-text-muted">Notes</p>

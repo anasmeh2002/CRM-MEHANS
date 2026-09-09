@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus, Phone, Video, MapPin, Users, Clock, CalendarX, AlertCircle, RefreshCw, CalendarCheck, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Phone, Video, MapPin, Users, Clock, CalendarX, AlertCircle, X } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, Card, Badge, Skeleton, EmptyState } from '@/components/shared';
 import { useGlobalModal } from '@/components/modal-provider';
@@ -10,11 +10,9 @@ import { fetchMeetings } from '@/lib/data';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { Meeting } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
-import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/components/auth-provider';
+
 import { useLanguage } from '@/components/language-provider';
-import { useRefresh } from '@/components/refresh-provider';
+
 
 type CalendarView = 'month' | 'week' | 'day';
 type CalendarMeeting = Meeting & { date: string; time: string; duration: number; type: string; attendee: string; location: string };
@@ -67,61 +65,12 @@ function MeetingChip({ meeting, compact = false }: { meeting: CalendarMeeting; c
 
 export default function CalendarPage() {
   const { openModal } = useGlobalModal();
-  const { session } = useAuth();
   const { t } = useLanguage();
-  const { refreshKey } = useRefresh();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [view, setView] = useState<CalendarView>('month');
-  const [syncing, setSyncing] = useState(false);
-  const [calendarConnected, setCalendarConnected] = useState(false);
+
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const { data, loading, error, refetch } = useSupabaseQuery(fetchMeetings, [session?.user?.id], refreshKey);
-
-  const checkConnection = useCallback(async () => {
-    if (!session?.user?.id) {
-      setCalendarConnected(false);
-      return;
-    }
-    const { data: integration } = await supabase.from('integrations').select('connected').eq('service', 'Google Calendar').maybeSingle();
-    setCalendarConnected(Boolean(integration?.connected));
-  }, [session?.user?.id]);
-
-  useEffect(() => { void checkConnection(); }, [checkConnection]);
-
-  const syncGoogle = useCallback(async (showToast = false) => {
-    if (!session?.access_token || !calendarConnected) return;
-    setSyncing(true);
-    try {
-      const start = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-      const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0, 23, 59, 59);
-      const response = await fetch(`/api/calendar/events?timeMin=${encodeURIComponent(start.toISOString())}&timeMax=${encodeURIComponent(end.toISOString())}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!response.ok) throw new Error('sync failed');
-      await refetch();
-      if (showToast) toast.success(t('calendar.syncSuccess'));
-    } catch {
-      if (showToast) toast.error(t('calendar.syncFailed'));
-    } finally {
-      setSyncing(false);
-    }
-  }, [calendarConnected, currentDate, refetch, session?.access_token, t]);
-
-  useEffect(() => { void syncGoogle(); }, [syncGoogle]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('sync_success') === 'true') {
-      toast.success(t('calendar.googleConnected'));
-      setCalendarConnected(true);
-      window.history.replaceState({}, '', '/calendar');
-      void refetch();
-    }
-    if (params.get('sync_error')) {
-      toast.error(t('calendar.syncFailed'));
-      window.history.replaceState({}, '', '/calendar');
-    }
-  }, [refetch, t]);
+  const { data, loading, error, refetch } = useSupabaseQuery(fetchMeetings);
 
   const meetings = useMemo(() => (data ?? []).map(toDisplayMeeting).filter((meeting) => meeting.date), [data]);
   const todayKey = dateKey(new Date());
@@ -146,16 +95,6 @@ export default function CalendarPage() {
     setCurrentDate(next);
   };
 
-  const connectGoogle = async () => {
-    if (!session?.access_token) { toast.error(t('calendar.authWait')); return; }
-    try {
-      const response = await fetch('/api/calendar/auth', { headers: { Authorization: `Bearer ${session.access_token}` } });
-      const result = await response.json() as { url?: string };
-      if (!response.ok || !result.url) throw new Error('connection failed');
-      window.location.href = result.url;
-    } catch { toast.error(t('calendar.connectFailed')); }
-  };
-
   const renderDay = (day: Date, index?: number) => {
     const dayMeetings = meetingsForDay(day);
     const isCurrentMonth = day.getMonth() === currentDate.getMonth();
@@ -173,7 +112,6 @@ export default function CalendarPage() {
     <AppShell>
       <PageHeader title={t('calendar.title')} description={t('calendar.description')}>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {calendarConnected ? <button onClick={() => void syncGoogle(true)} disabled={syncing} className="btn btn-md border border-success/40 bg-success-bg text-success hover:bg-success/10"><RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} strokeWidth={1.5} />{syncing ? t('calendar.syncing') : t('calendar.connected')}</button> : <button onClick={() => void connectGoogle()} className="btn btn-outline btn-md"><RefreshCw className="h-4 w-4" strokeWidth={1.5} />{t('calendar.syncGoogle')}</button>}
           <button onClick={() => openModal('meeting')} className="btn btn-gold btn-md"><Plus className="h-4 w-4" strokeWidth={1.5} />{t('calendar.newMeeting')}</button>
         </div>
       </PageHeader>

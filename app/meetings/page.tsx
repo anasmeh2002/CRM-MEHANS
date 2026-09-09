@@ -3,7 +3,7 @@
 
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Phone, Video, MapPin, Users, Clock, CheckCircle2, XCircle, Bell, MessageCircle } from 'lucide-react';
+import { Plus, Phone, Video, MapPin, Users, Clock, CheckCircle2, XCircle, Bell, MessageCircle, CalendarClock } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, Card, Badge } from '@/components/shared';
 import { useGlobalModal } from '@/components/modal-provider';
@@ -71,7 +71,7 @@ export default function MeetingsPage() {
   }, [refetch]);
 
   const meetings = (data ?? []).map(mapMeeting);
-  const upcoming = meetings.filter((m) => m.status === 'upcoming').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const upcoming = meetings.filter((m) => ['pending', 'confirmed', 'upcoming', 'rescheduled'].includes(m.status)).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const completed = meetings.filter((m) => m.status === 'completed');
 
   const handleComplete = async (id: string, title: string) => {
@@ -82,6 +82,29 @@ export default function MeetingsPage() {
     } else {
       toast.error('Failed to update meeting status.');
     }
+  };
+
+  const handleConfirm = async (id: string, title: string) => {
+    const updated = await updateMeeting(id, { status: 'confirmed' });
+    if (updated) {
+      toast.success(`Meeting "${title}" confirmed`);
+      refetch();
+    } else toast.error('Failed to confirm meeting.');
+  };
+
+  const handleReschedule = async (meeting: typeof upcoming[number]) => {
+    const nextDate = window.prompt('Enter the new date and time (for example, 2026-09-12 14:30):');
+    if (!nextDate) return;
+    const parsed = new Date(nextDate.replace(' ', 'T'));
+    if (Number.isNaN(parsed.getTime())) {
+      toast.error('Enter a valid date and time.');
+      return;
+    }
+    const updated = await updateMeeting(meeting.id, { starts_at: parsed.toISOString(), status: 'rescheduled' });
+    if (updated) {
+      toast.success(`Meeting "${meeting.title}" rescheduled`);
+      refetch();
+    } else toast.error('Failed to reschedule meeting.');
   };
 
   const handleCancel = async (id: string, title: string) => {
@@ -182,6 +205,18 @@ export default function MeetingsPage() {
                           <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" strokeWidth={1.5} /> {meeting.attendee}</span>
                         </div>
                         <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
+                          {meeting.status !== 'confirmed' && <button
+                            onClick={() => handleConfirm(meeting.id, meeting.title)}
+                            className="flex items-center gap-1.5 rounded-lg border border-success/30 bg-success-bg px-2.5 py-1.5 text-[11px] font-medium text-success transition-colors hover:border-success/50"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.5} /> Confirm
+                          </button>}
+                          <button
+                            onClick={() => handleReschedule(meeting)}
+                            className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-2.5 py-1.5 text-[11px] font-medium text-text-secondary transition-colors hover:border-gold-border hover:text-gold"
+                          >
+                            <CalendarClock className="h-3.5 w-3.5" strokeWidth={1.5} /> Reschedule
+                          </button>
                           <button
                             onClick={() => handleReminder(meeting)}
                             className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-2.5 py-1.5 text-[11px] font-medium text-text-secondary transition-colors hover:border-gold-border hover:text-gold"
@@ -206,6 +241,9 @@ export default function MeetingsPage() {
                           >
                             <XCircle className="h-3.5 w-3.5" strokeWidth={1.5} /> Cancel
                           </button>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          <Badge variant={meeting.status === 'confirmed' ? 'success' : meeting.status === 'rescheduled' ? 'gold' : 'neutral'}>{meeting.status}</Badge>
                         </div>
                       </div>
                     </div>
@@ -253,7 +291,15 @@ export default function MeetingsPage() {
                         <p className="truncate text-sm font-medium text-text-primary">{meeting.title}</p>
                         <p className="text-xs text-text-muted">{meeting.time} · {meeting.duration}min</p>
                       </div>
-                      <Badge variant="success">Completed</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="success">Completed</Badge>
+                        <button
+                          onClick={() => handleWhatsAppAlert(meeting)}
+                          className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[11px] text-text-secondary hover:border-gold-border hover:text-gold"
+                        >
+                          <MessageCircle className="h-3 w-3" strokeWidth={1.5} /> Follow up
+                        </button>
+                      </div>
                     </div>
                   </Card>
                 </motion.div>
