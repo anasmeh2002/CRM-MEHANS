@@ -56,6 +56,14 @@ const tagSuggestions = ['Luxury', 'VIP', 'Cash Buyer', 'Investor', 'Hot', 'Pre-A
 
 const PAGE_SIZE = 8;
 
+function getNextBestActionKey(lead: Lead): string {
+  if (lead.status === 'negotiation') return 'leads.actionNegotiation';
+  if (lead.status === 'new') return 'leads.actionNew';
+  if (lead.status === 'visit_scheduled') return 'leads.actionVisit';
+  if (lead.status === 'qualified') return 'leads.actionQualified';
+  return 'leads.actionGeneric';
+}
+
 function mapLeadForDisplay(l: Lead): Lead {
   const name = l.name && l.name.trim() ? l.name : `${l.first_name ?? ''} ${l.last_name ?? ''}`.trim() || 'Unnamed';
   const avatarColor = l.avatarColor || '#D4AF37';
@@ -643,6 +651,14 @@ export default function LeadsPage() {
                 <div className="mb-5 rounded-xl border border-border bg-bg-elevated p-4">
                   <p className="mb-1.5 text-[11px] font-medium text-text-muted">Notes</p>
                   <p className="text-[13px] leading-relaxed text-text-primary">{detailLead.notes}</p>
+                </div>
+
+                <div className="mb-5 rounded-xl border border-info/30 bg-info-bg p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-info" strokeWidth={1.5} />
+                    <p className="text-[12px] font-semibold text-info">{t('leads.nextBestAction')}</p>
+                  </div>
+                  <p className="text-[12px] leading-relaxed text-text-secondary">{t(getNextBestActionKey(detailLead), { name: detailLead.name })}</p>
                 </div>
 
                 {/* AI Summary */}

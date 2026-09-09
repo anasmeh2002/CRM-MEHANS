@@ -16,7 +16,7 @@ import { PageHeader, StatCard, Card, Badge, Avatar, SkeletonCard } from '@/compo
 import {
   fetchActivities, fetchMeetings, fetchTeamMembers, fetchDeals, fetchLeads,
   fetchRevenueData, fetchPipelineData, fetchLeadSourceData, fetchFunnelData,
-  fetchDashboardStats, type DateRange,
+  fetchDashboardStats, fetchTasks, type DateRange,
 } from '@/lib/data';
 import { formatCurrency } from '@/lib/format';
 import { getAIInsights } from '@/lib/ai';
@@ -73,6 +73,7 @@ export default function DashboardPage() {
   const teamMembersQuery = useSupabaseQuery(fetchTeamMembers, [], refreshKey);
   const dealsQuery = useSupabaseQuery(fetchDeals, [], refreshKey);
   const leadsQuery = useSupabaseQuery(fetchLeads, [], refreshKey);
+  const tasksQuery = useSupabaseQuery(fetchTasks, [], refreshKey);
   const revenueQuery = useSupabaseQuery(fetchRevenueData, [], refreshKey);
   const pipelineQuery = useSupabaseQuery(fetchPipelineData, [], refreshKey);
   const leadSourceQuery = useSupabaseQuery(fetchLeadSourceData, [], refreshKey);
@@ -80,7 +81,7 @@ export default function DashboardPage() {
 
   const loading =
     statsQuery.loading || activitiesQuery.loading || meetingsQuery.loading || teamMembersQuery.loading ||
-    dealsQuery.loading || leadsQuery.loading || revenueQuery.loading ||
+    dealsQuery.loading || leadsQuery.loading || tasksQuery.loading || revenueQuery.loading ||
     pipelineQuery.loading || leadSourceQuery.loading || funnelQuery.loading;
 
   const stats = statsQuery.data;
@@ -89,6 +90,7 @@ export default function DashboardPage() {
   const teamMembers = teamMembersQuery.data ?? [];
   const deals = dealsQuery.data ?? [];
   const leads = leadsQuery.data ?? [];
+  const tasks = tasksQuery.data ?? [];
   const revenueData = revenueQuery.data ?? [];
   const pipelineData = pipelineQuery.data ?? [];
   const leadSourceData = leadSourceQuery.data ?? [];
@@ -104,6 +106,16 @@ export default function DashboardPage() {
   const tasksCount = stats?.tasksCount ?? activities.filter((a) => a.type === 'task_completed').length;
   const propertiesCount = stats?.propertiesCount ?? new Set(deals.map((d) => d.property_id).filter(Boolean)).size;
   const leadsCount = stats?.leadsCount ?? leads.length;
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const overdueTasks = tasks.filter((task) => task.status !== 'done' && task.dueDate !== 'N/A' && task.dueDate < todayKey);
+  const meetingsToday = meetings.filter((meeting) => meeting.date === todayKey && !['cancelled', 'completed'].includes(meeting.status));
+  const waitingLeads = leads.filter((lead) => !['won', 'lost'].includes(lead.status) && (!lead.lastActivity || (Date.now() - new Date(lead.lastActivity).getTime()) > 3 * 24 * 60 * 60 * 1000));
+  const priorities = [
+    ...overdueTasks.slice(0, 2).map((task) => ({ label: `Overdue task: ${task.title}`, route: '/tasks', tone: 'error' })),
+    ...meetingsToday.slice(0, 2).map((meeting) => ({ label: `Meeting today: ${meeting.title}`, route: '/calendar', tone: 'gold' })),
+    ...leads.filter((lead) => lead.score >= 70 && !['won', 'lost'].includes(lead.status)).slice(0, 2).map((lead) => ({ label: `Hot lead: ${lead.name}`, route: `/leads?lead=${encodeURIComponent(lead.id)}`, tone: 'success' })),
+    ...waitingLeads.slice(0, 2).map((lead) => ({ label: `Follow up with ${lead.name}`, route: lead.phone ? `/whatsapp?phone=${encodeURIComponent(lead.phone)}` : `/leads?lead=${encodeURIComponent(lead.id)}`, tone: 'info' })),
+  ].slice(0, 6);
 
   // Close date filter dropdown on outside click
   useEffect(() => {
@@ -218,6 +230,29 @@ export default function DashboardPage() {
           <StatCard label={t('dashboard.properties')} value={String(propertiesCount)} icon={Home} delay={0.2} />
         </div>
       )}
+
+      <Card className="mt-8" delay={0.08}>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('dashboard.priorities')}</h3>
+            <p className="mt-1 text-[12px] text-text-muted">{t('dashboard.prioritiesDescription')}</p>
+          </div>
+          <Badge variant="gold">{priorities.length}</Badge>
+        </div>
+        {priorities.length === 0 ? (
+          <p className="rounded-xl border border-border bg-bg-secondary p-4 text-sm text-text-muted">{t('dashboard.noPriorities')}</p>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {priorities.map((priority, index) => (
+              <button key={`${priority.route}-${index}`} onClick={() => router.push(priority.route)} className="flex items-center gap-3 rounded-xl border border-border bg-bg-secondary p-3 text-left transition-colors hover:border-gold-border">
+                <span className={cn('h-2 w-2 shrink-0 rounded-full', priority.tone === 'error' ? 'bg-error' : priority.tone === 'success' ? 'bg-success' : priority.tone === 'gold' ? 'bg-gold' : 'bg-info')} />
+                <span className="flex-1 text-xs text-text-primary">{priority.label}</span>
+                <ArrowUpRight className="h-3.5 w-3.5 text-text-muted" strokeWidth={1.5} />
+              </button>
+            ))}
+          </div>
+        )}
+      </Card>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2" delay={0.1}>

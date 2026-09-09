@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Send, Loader2, Check, AlertTriangle, User, Home, CheckSquare, Calendar, Search, TrendingUp, MessageCircle } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { askAI } from '@/lib/ai';
 import { fetchLeads, fetchProperties, fetchTasks, fetchMeetings, fetchDeals, createLead, createTask, createMeeting } from '@/lib/data';
+import { fetchCachedConversations, fetchCachedMessages } from '@/lib/whatsapp';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -32,10 +33,12 @@ const pageContextMap: Record<string, { label: string; icon: typeof User; fetchCo
 };
 
 async function fetchLeadsContext(): Promise<string> {
-  const leads = await fetchLeads();
-  return `Current page: Leads. ${leads.length} leads in CRM.\n` + leads.slice(0, 15).map(l =>
-    `- ${l.name} | status=${l.status} | source=${l.source} | budget=${l.budget} | score=${l.score} | phone=${l.phone ?? 'N/A'} | interest=${l.property_interest ?? 'N/A'} | owner=${l.owner}`
-  ).join('\n');
+  const [leads, properties, meetings, tasks] = await Promise.all([fetchLeads(), fetchProperties(), fetchMeetings(), fetchTasks()]);
+  return `Current page: Leads. ${leads.length} leads in CRM.\nLEADS:\n${leads.slice(0, 15).map(l =>
+    `- ${l.name} | id=${l.id} | status=${l.status} | source=${l.source} | budget=${l.budget} | score=${l.score} | phone=${l.phone ?? 'N/A'} | interest=${l.property_interest ?? 'N/A'} | notes=${l.notes ?? 'N/A'} | lastActivity=${l.lastActivity}`
+  ).join('\n')}\nAVAILABLE PROPERTIES:\n${properties.filter(p => p.status === 'available').slice(0, 20).map(p =>
+    `- ${p.title} | id=${p.id} | city=${p.city} | price=${p.price} | type=${p.type} | beds=${p.bedrooms} | baths=${p.bathrooms} | area=${p.area}m² | amenities=${p.amenities?.join(', ') ?? 'N/A'}`
+  ).join('\n')}\nMEETINGS:\n${meetings.slice(0, 15).map(m => `- ${m.title} | lead=${m.lead_id ?? 'N/A'} | date=${m.date} ${m.time} | status=${m.status}`).join('\n')}\nTASKS:\n${tasks.slice(0, 15).map(t => `- ${t.title} | status=${t.status} | due=${t.dueDate} | related=${t.related_id ?? 'N/A'}`).join('\n')}`;
 }
 
 async function fetchPropertiesContext(): Promise<string> {
@@ -75,23 +78,24 @@ async function fetchContactsContext(): Promise<string> {
 }
 
 async function fetchDashboardContext(): Promise<string> {
-  const [leads, properties, tasks, deals] = await Promise.all([fetchLeads(), fetchProperties(), fetchTasks(), fetchDeals()]);
+  const [leads, properties, tasks, deals, meetings] = await Promise.all([fetchLeads(), fetchProperties(), fetchTasks(), fetchDeals(), fetchMeetings()]);
   const overdueTasks = tasks.filter(t => t.status !== 'done' && t.dueDate !== 'N/A' && new Date(t.dueDate) < new Date());
   const hotLeads = leads.filter(l => l.score >= 70).slice(0, 5);
-  return `Current page: Dashboard.\nLeads: ${leads.length} (${hotLeads.length} hot)\nProperties: ${properties.length}\nTasks: ${tasks.length} (${overdueTasks.length} overdue)\nDeals: ${deals.length}\n\nHot leads:\n${hotLeads.map(l => `- ${l.name} (score=${l.score}, status=${l.status})`).join('\n')}\n\nOverdue tasks:\n${overdueTasks.slice(0, 5).map(t => `- ${t.title} (due=${t.dueDate})`).join('\n')}`;
+  return `Current page: Dashboard.\nLeads: ${leads.length} (${hotLeads.length} hot)\nProperties: ${properties.length} (${properties.filter(p => p.status === 'available').length} available)\nTasks: ${tasks.length} (${overdueTasks.length} overdue)\nMeetings: ${meetings.length}\nDeals: ${deals.length}\n\nHot leads:\n${hotLeads.map(l => `- ${l.name} (id=${l.id}, score=${l.score}, status=${l.status}, lastActivity=${l.lastActivity})`).join('\n')}\n\nOverdue tasks:\n${overdueTasks.slice(0, 5).map(t => `- ${t.title} (due=${t.dueDate}, related=${t.related_id ?? 'N/A'})`).join('\n')}`;
 }
 
 function buildSystemPrompt(pageLabel: string, crmContext: string): string {
-  return `You are the MEHANS CRM AI Copilot for a real estate agency. The user is currently on the "${pageLabel}" page.
+  return `You are the MEHANS AI Sales Operating System for a real-estate agency. You are an accountable sales employee, not a generic chatbot. The user is currently on the "${pageLabel}" page.
 
 CRM DATA (real, from Supabase):
 ${crmContext}
 
 You can help with:
-- Creating leads, tasks, meetings (propose them as actions)
-- Finding/searching leads and properties
-- Summarizing lead activity or pipeline health
-- Proactive suggestions (follow-ups, stale leads, opportunities)
+- Lead qualification: separate known facts from missing information and recommend the next question.
+- Property matching: use only AVAILABLE PROPERTIES and explain each match against the lead's known requirements.
+- WhatsApp sales support: draft a reply from the real conversation context; never send it.
+- Follow-up and priority: identify who is waiting for the agency, overdue work, meeting follow-up, and HOT/WARM/COLD reasons.
+- Creating tasks or meetings only after explicit confirmation.
 
 RULES:
 1. When the user asks to CREATE or UPDATE something, respond with a JSON action block on its own, wrapped in <action>...</action> tags. Format:
@@ -100,11 +104,12 @@ RULES:
 </action>
 2. For create_task: data should have title, priority (low|medium|high|urgent), due_date (YYYY-MM-DD), description.
 3. For create_meeting: data should have title, starts_at (ISO), duration_minutes, meeting_type, attendee_name, location.
-4. For find_leads or find_properties: respond with a summary of matching results from the CRM data.
-5. For general questions, answer concisely using the CRM data.
-6. For proactive suggestions, identify stale leads (not contacted in 3+ days), overdue tasks, or opportunities.
-7. Keep responses concise and actionable. No preamble.
-8. Never claim to have performed an action — always propose it for confirmation.`;
+4. For find_leads or find_properties: respond with a summary of matching results from the CRM data and include record ids when useful.
+5. For WhatsApp drafts, clearly label the draft and never claim it was sent.
+6. For missing values, say "Not recorded" and ask for the missing information; never infer or invent it.
+7. Base HOT/WARM/COLD only on recorded score, status, timing, tasks, meetings, and conversation signals.
+8. Keep responses concise and actionable. No preamble.
+9. Never claim to have performed an action — always propose it for confirmation.`;
 }
 
 function parseAction(text: string): { action: AIAction | null; display: string } {
@@ -149,6 +154,7 @@ async function executeAction(action: AIAction): Promise<string> {
 
 export function AICopilot() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<AIMessage[]>([]);
@@ -165,6 +171,13 @@ export function AICopilot() {
     const matchPath = Object.keys(pageContextMap).find(key => pathname.startsWith(key));
     return matchPath ? pageContextMap[matchPath] : { label: 'CRM', icon: Sparkles, fetchContext: async () => 'No specific page context available.' };
   }, [pathname]);
+
+  const selectedContext = useMemo(() => {
+    const leadId = searchParams.get('lead') ?? searchParams.get('lead_id');
+    const phone = searchParams.get('phone');
+    if (!leadId && !phone) return '';
+    return `Selected CRM context: ${leadId ? `lead id=${leadId}` : `WhatsApp phone=${phone}`}. Use this record as the primary focus.`;
+  }, [searchParams]);
 
   useEffect(() => {
     if (open && !crmContext) {
@@ -217,7 +230,7 @@ export function AICopilot() {
     setLoading(true);
     setPendingAction(null);
     try {
-      const systemPrompt = buildSystemPrompt(pageCtx.label, crmContext);
+      const systemPrompt = buildSystemPrompt(pageCtx.label, `${selectedContext}\n${crmContext}`);
       const response = await askAI([...messages, userMsg], systemPrompt);
       const { action, display } = parseAction(response);
       const assistantMsg: AIMessage = { role: 'assistant', content: display || response };
@@ -229,7 +242,7 @@ export function AICopilot() {
     } finally {
       setLoading(false);
     }
-  }, [loading, messages, pageCtx, crmContext]);
+  }, [loading, messages, pageCtx, crmContext, selectedContext]);
 
   const confirmAction = async () => {
     if (!pendingAction) return;

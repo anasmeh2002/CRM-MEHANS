@@ -119,6 +119,9 @@ const en: Dict = {
   'dashboard.revenueMetric': 'Revenue',
   'dashboard.noMeetings': 'No upcoming meetings',
   'dashboard.noActivity': 'No recent activity',
+  'dashboard.priorities': "Today's Priorities",
+  'dashboard.prioritiesDescription': 'Next best actions from your live CRM records',
+  'dashboard.noPriorities': 'No urgent follow-up items recorded today',
 
   // Leads
   'leads.title': 'Leads',
@@ -136,6 +139,12 @@ const en: Dict = {
   'leads.lastName': 'Last Name',
   'leads.empty': 'No leads yet',
   'leads.emptyHint': 'Create your first lead to get started',
+  'leads.nextBestAction': 'Next Best Action',
+  'leads.actionNegotiation': 'Contact {name} today about the active negotiation.',
+  'leads.actionNew': 'Qualify {name}: ask about timeline, budget, and preferred location.',
+  'leads.actionVisit': 'Follow up with {name} after the scheduled viewing.',
+  'leads.actionQualified': 'Send matching available properties to {name} and propose a viewing.',
+  'leads.actionGeneric': 'Follow up with {name} and confirm the next step.',
 
   // Properties
   'properties.title': 'Properties',
@@ -277,7 +286,7 @@ const en: Dict = {
   'page.analyticsDescription': 'Deep insights into your business performance',
   'page.reportsDescription': 'Generate and download business reports',
   'page.whatsappDescription': 'Manage conversations from your connected business number',
-  'page.aiAssistantDescription': 'Your intelligent real estate copilot',
+  'page.aiAssistantDescription': 'Your AI sales operating system for real estate',
   'page.automationsDescription': 'Automate repetitive work across your CRM',
   'page.tasksDescription': 'Stay on top of your team tasks',
   'page.meetingsDescription': 'Schedule and manage your meetings',
@@ -385,6 +394,9 @@ const fr: Dict = {
   'dashboard.revenueMetric': 'Revenus',
   'dashboard.noMeetings': 'Aucune réunion à venir',
   'dashboard.noActivity': 'Aucune activité récente',
+  'dashboard.priorities': 'Priorités du jour',
+  'dashboard.prioritiesDescription': 'Prochaines actions issues de vos données CRM',
+  'dashboard.noPriorities': 'Aucun suivi urgent enregistré aujourd’hui',
 
   // Leads
   'leads.title': 'Prospects',
@@ -402,6 +414,12 @@ const fr: Dict = {
   'leads.lastName': 'Nom',
   'leads.empty': 'Aucun prospect',
   'leads.emptyHint': 'Créez votre premier prospect pour commencer',
+  'leads.nextBestAction': 'Meilleure prochaine action',
+  'leads.actionNegotiation': 'Contactez {name} aujourd’hui au sujet de la négociation en cours.',
+  'leads.actionNew': 'Qualifiez {name} : demandez le délai, le budget et la zone recherchée.',
+  'leads.actionVisit': 'Relancez {name} après la visite planifiée.',
+  'leads.actionQualified': 'Envoyez à {name} les biens disponibles correspondants et proposez une visite.',
+  'leads.actionGeneric': 'Relancez {name} et confirmez la prochaine étape.',
 
   // Properties
   'properties.title': 'Propriétés',
@@ -548,7 +566,7 @@ const fr: Dict = {
   'page.analyticsDescription': 'Analyses approfondies de vos performances',
   'page.reportsDescription': 'Générer et télécharger des rapports',
   'page.whatsappDescription': 'Gérer les conversations de votre numéro professionnel',
-  'page.aiAssistantDescription': 'Votre copilote immobilier intelligent',
+  'page.aiAssistantDescription': 'Votre système de vente IA pour l’immobilier',
   'page.automationsDescription': 'Automatiser les tâches répétitives de votre CRM',
   'page.tasksDescription': 'Suivre les tâches de votre équipe',
   'page.meetingsDescription': 'Planifier et gérer vos réunions',
@@ -656,6 +674,9 @@ const ar: Dict = {
   'dashboard.revenueMetric': 'الإيرادات',
   'dashboard.noMeetings': 'لا توجد اجتماعات قادمة',
   'dashboard.noActivity': 'لا يوجد نشاط حديث',
+  'dashboard.priorities': 'أولويات اليوم',
+  'dashboard.prioritiesDescription': 'أفضل الإجراءات التالية من بيانات CRM الحقيقية',
+  'dashboard.noPriorities': 'لا توجد متابعات عاجلة مسجلة اليوم',
 
   // Leads
   'leads.title': 'العملاء المحتملون',
@@ -673,6 +694,12 @@ const ar: Dict = {
   'leads.lastName': 'اسم العائلة',
   'leads.empty': 'لا يوجد عملاء محتملون',
   'leads.emptyHint': 'أنشئ أول عميل محتمل للبدء',
+  'leads.nextBestAction': 'أفضل إجراء تالٍ',
+  'leads.actionNegotiation': 'تواصل مع {name} اليوم بشأن التفاوض الحالي.',
+  'leads.actionNew': 'تأهل من {name}: اسأل عن الجدول الزمني والميزانية والمنطقة المفضلة.',
+  'leads.actionVisit': 'تابع مع {name} بعد المعاينة المجدولة.',
+  'leads.actionQualified': 'أرسل إلى {name} العقارات المتاحة المطابقة واقترح معاينة.',
+  'leads.actionGeneric': 'تابع مع {name} وأكد الخطوة التالية.',
 
   // Properties
   'properties.title': 'العقارات',
@@ -819,7 +846,7 @@ const ar: Dict = {
   'page.analyticsDescription': 'رؤى عميقة حول أداء عملك',
   'page.reportsDescription': 'إنشاء وتنزيل تقارير الأعمال',
   'page.whatsappDescription': 'إدارة المحادثات من رقم عملك المتصل',
-  'page.aiAssistantDescription': 'مساعدك العقاري الذكي',
+  'page.aiAssistantDescription': 'نظام مبيعات عقاري مدعوم بالذكاء الاصطناعي',
   'page.automationsDescription': 'أتمتة المهام المتكررة في نظامك',
   'page.tasksDescription': 'تابع مهام فريقك',
   'page.meetingsDescription': 'جدولة وإدارة اجتماعاتك',

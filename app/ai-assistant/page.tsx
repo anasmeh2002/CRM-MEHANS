@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, Card, Badge, Avatar } from '@/components/shared';
-import { fetchLeads, fetchProperties, fetchDeals } from '@/lib/data';
+import { fetchLeads, fetchProperties, fetchDeals, fetchTasks, fetchMeetings } from '@/lib/data';
 import { getAIInsights } from '@/lib/ai';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { Lead, Property, Deal } from '@/lib/types';
@@ -30,10 +30,10 @@ import { askAI } from '@/lib/ai';
 import { useLanguage } from '@/components/language-provider';
 
 const suggestions = [
-  'Analyze my pipeline health',
-  'What needs my attention today?',
-  'Suggest next best actions for my top leads',
-  'Generate a follow-up email for my highest-value lead',
+  'Qualify my highest-priority lead. Show known facts, missing information, intent, objections, and next action.',
+  'Find real available properties matching my highest-priority lead and explain why each matches.',
+  'Which leads are waiting for us today? Recommend the next best action from real activity.',
+  'Draft a professional WhatsApp follow-up for the selected conversation. Do not send it.',
 ];
 
 export default function AIAssistantPage() {
@@ -42,14 +42,20 @@ export default function AIAssistantPage() {
   const { data: leadsData, loading: leadsLoading, error: leadsError } = useSupabaseQuery<Lead[]>(fetchLeads);
   const { data: propertiesData } = useSupabaseQuery<Property[]>(fetchProperties);
   const { data: dealsData } = useSupabaseQuery<Deal[]>(fetchDeals);
+  const { data: tasksData } = useSupabaseQuery(fetchTasks);
+  const { data: meetingsData } = useSupabaseQuery(fetchMeetings);
   const leads: Lead[] = leadsData ?? [];
   const properties: Property[] = propertiesData ?? [];
   const deals: Deal[] = dealsData ?? [];
+  const tasks = tasksData ?? [];
+  const meetings = meetingsData ?? [];
 
   const crmContext = JSON.stringify({
     leads: leads.slice(0, 20).map((l) => ({ name: l.name, status: l.status, source: l.source, budget: l.budget, score: l.score, tags: l.tags, owner: l.owner })),
     properties: properties.slice(0, 20).map((p) => ({ title: p.title, city: p.city, price: p.price, status: p.status, type: p.type, bedrooms: p.bedrooms, bathrooms: p.bathrooms, area: p.area })),
-    deals: deals.slice(0, 20).map((d) => ({ title: d.title, stage: d.stage, value: d.value, leadName: d.leadName, propertyName: d.propertyName, ownerName: d.ownerName })),
+    deals: deals.slice(0, 20).map((d) => ({ id: d.id, title: d.title, stage: d.stage, value: d.value, leadName: d.leadName, propertyName: d.propertyName, ownerName: d.ownerName })),
+    tasks: tasks.slice(0, 20).map((task) => ({ id: task.id, title: task.title, status: task.status, priority: task.priority, due: task.dueDate, relatedId: task.related_id })),
+    meetings: meetings.slice(0, 20).map((meeting) => ({ id: meeting.id, title: meeting.title, leadId: meeting.lead_id, date: meeting.date, time: meeting.time, status: meeting.status, propertyOrLocation: meeting.location })),
   });
 
   const [input, setInput] = useState('');
@@ -67,7 +73,7 @@ export default function AIAssistantPage() {
     setInput('');
     setGenerating(true);
     try {
-      const response = await askAI([{ role: 'user', content: text }], `You are the MEHANS CRM assistant. Here is current CRM data (leads, properties, deals): ${crmContext}`);
+      const response = await askAI([{ role: 'user', content: text }], `You are the MEHANS AI Sales Operating System for real estate. Use only the supplied CRM records. Never invent leads, properties, prices, appointments, messages, or deal facts. Say when information is missing. Qualify leads, match only available properties with reasons, identify the next best action, and draft WhatsApp replies without sending them. Important actions must be proposed for confirmation. Current CRM data: ${crmContext}`);
       setMessages((prev) => [...prev, { role: 'ai', content: response }]);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Unable to reach the AI service');
@@ -86,7 +92,7 @@ export default function AIAssistantPage() {
   const generateContent = async (instruction: string) => {
     setGenerating(true);
     try {
-      const content = await askAI([{ role: 'user', content: instruction }], `Generate useful CRM content using this CRM data (leads, properties, deals): ${crmContext}`);
+      const content = await askAI([{ role: 'user', content: instruction }], `You are a real-estate sales assistant. Use only this real CRM data. Never invent missing values. Draft content for human review and never claim to have sent anything. CRM data: ${crmContext}`);
       setGeneratedText(content);
       toast.success('AI content generated');
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Unable to generate content'); }
