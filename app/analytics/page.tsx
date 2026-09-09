@@ -6,8 +6,6 @@ import {
   Area,
   BarChart,
   Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -22,45 +20,16 @@ import {
 import { TrendingUp, DollarSign, Target, Award } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, StatCard, Card, Badge } from '@/components/shared';
-import { fetchTeamMembers, fetchDeals, fetchLeads, fetchRevenueData, fetchLeadSourceData } from '@/lib/data';
+import { fetchTeamMembers, fetchDeals, fetchLeads, fetchProperties } from '@/lib/data';
 import { formatCurrency } from '@/lib/format';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import { useRefresh } from '@/components/refresh-provider';
-import type { TeamMember, Deal, Lead } from '@/lib/types';
+import type { TeamMember, Deal, Lead, Property } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/components/language-provider';
 import { useAgency } from '@/components/agency-provider';
 
-const monthlyDeals = [
-  { month: 'month.jan', deals: 8, won: 3 },
-  { month: 'month.feb', deals: 12, won: 5 },
-  { month: 'month.mar', deals: 15, won: 7 },
-  { month: 'month.apr', deals: 10, won: 4 },
-  { month: 'month.may', deals: 18, won: 9 },
-  { month: 'month.jun', deals: 22, won: 11 },
-  { month: 'month.jul', deals: 20, won: 10 },
-  { month: 'month.aug', deals: 26, won: 14 },
-];
-
-const responseTime = [
-  { day: 'day.mon', time: 3.2 },
-  { day: 'day.tue', time: 4.5 },
-  { day: 'day.wed', time: 2.8 },
-  { day: 'day.thu', time: 5.1 },
-  { day: 'day.fri', time: 4.2 },
-  { day: 'day.sat', time: 6.8 },
-  { day: 'day.sun', time: 8.2 },
-];
-
-const propertyTypeData = [
-  { name: 'property.apartments', value: 35, color: '#4A90D9' },
-  { name: 'property.villas', value: 28, color: '#D4AF37' },
-  { name: 'property.penthouses', value: 18, color: '#5BAA6F' },
-  { name: 'property.townhouses', value: 12, color: '#9B6FBF' },
-  { name: 'property.commercial', value: 7, color: '#D4823A' },
-];
-
-const conversionData = [{ name: 'Conversion', value: 7.5, fill: '#D4AF37' }];
+const chartColors = ['#4A90D9', '#D4AF37', '#5BAA6F', '#D4823A', '#9B6FBF', '#8B8B85'];
 
 const tooltipStyle = {
   background: '#0E0E10',
@@ -78,19 +47,45 @@ export default function AnalyticsPage() {
   const { data: teamData, loading: teamLoading, error: teamError } = useSupabaseQuery<TeamMember[]>(fetchTeamMembers, [], refreshKey);
   const { data: dealsData, loading: dealsLoading, error: dealsError } = useSupabaseQuery<Deal[]>(fetchDeals, [], refreshKey);
   const { data: leadsData, loading: leadsLoading, error: leadsError } = useSupabaseQuery<Lead[]>(fetchLeads, [], refreshKey);
-  const { data: revData } = useSupabaseQuery(fetchRevenueData, [], refreshKey);
-  const { data: srcData } = useSupabaseQuery(fetchLeadSourceData, [], refreshKey);
+  const { data: propertiesData, loading: propertiesLoading, error: propertiesError } = useSupabaseQuery<Property[]>(fetchProperties, [], refreshKey);
 
   const teamMembers = teamData ?? [];
   const deals = dealsData ?? [];
   const leads = leadsData ?? [];
-  const revenueData = revData ?? [];
-  const totalRevenue = deals.filter((deal) => deal.stage === 'won').reduce((sum, deal) => sum + deal.value, 0);
-  const averageDeal = deals.filter((deal) => deal.stage === 'won').length > 0 ? totalRevenue / deals.filter((deal) => deal.stage === 'won').length : 0;
-  const leadSourceData = srcData ?? [];
+  const properties = propertiesData ?? [];
+  const wonDeals = deals.filter((deal) => ['won', 'closed_won'].includes(String(deal.stage)));
+  const lostDeals = deals.filter((deal) => ['lost', 'closed_lost'].includes(String(deal.stage)));
+  const closedDeals = wonDeals.length + lostDeals.length;
+  const totalRevenue = wonDeals.reduce((sum, deal) => sum + deal.value, 0);
+  const averageDeal = wonDeals.length > 0 ? totalRevenue / wonDeals.length : 0;
+  const winRate = closedDeals > 0 ? (wonDeals.length / closedDeals) * 100 : 0;
+  const monthKeys = Array.from({ length: 8 }, (_, index) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (7 - index), 1);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const monthlyDealData = monthKeys.map((month) => {
+    const monthDeals = deals.filter((deal) => String(deal.created_at ?? '').startsWith(month));
+    return { month: `month.${month.slice(5)}`, deals: monthDeals.length, won: monthDeals.filter((deal) => ['won', 'closed_won'].includes(String(deal.stage))).length };
+  });
+  const revenueData = monthKeys.map((month) => ({
+    month: `month.${month.slice(5)}`,
+    revenue: wonDeals.filter((deal) => String(deal.created_at ?? '').startsWith(month)).reduce((sum, deal) => sum + deal.value, 0),
+  }));
+  const leadSourceData = Object.entries(leads.reduce<Record<string, number>>((counts, lead) => {
+    const source = lead.source || 'manual';
+    counts[source] = (counts[source] ?? 0) + 1;
+    return counts;
+  }, {})).map(([name, value], index) => ({ name, value, color: chartColors[index % chartColors.length] }));
+  const propertyTypeData = Object.entries(properties.reduce<Record<string, number>>((counts, property) => {
+    const type = property.type || 'commercial';
+    counts[type] = (counts[type] ?? 0) + 1;
+    return counts;
+  }, {})).map(([name, value], index) => ({ name: `property.${name === 'apartment' ? 'apartments' : `${name}s`}`, value, color: chartColors[index % chartColors.length] }));
+  const conversionData = [{ name: 'Conversion', value: winRate, fill: '#D4AF37' }];
 
-  const loading = teamLoading || dealsLoading || leadsLoading;
-  const error = teamError ?? dealsError ?? leadsError;
+  const loading = teamLoading || dealsLoading || leadsLoading || propertiesLoading;
+  const error = teamError ?? dealsError ?? leadsError ?? propertiesError;
 
   const sortedTeam = [...teamMembers].sort((a, b) => b.revenue - a.revenue);
   const maxRev = sortedTeam.length > 0 ? sortedTeam[0].revenue : 0;
@@ -103,9 +98,9 @@ export default function AnalyticsPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label={t('analytics.totalRevenue')} value={formatCurrency(totalRevenue, currency)} change="+42%" icon={DollarSign} delay={0} />
-        <StatCard label={t('analytics.dealsClosed')} value="63" change="+28%" icon={Award} delay={0.05} />
+        <StatCard label={t('analytics.dealsClosed')} value={String(closedDeals)} icon={Award} delay={0.05} />
         <StatCard label={t('analytics.avgDealSize')} value={formatCurrency(averageDeal, currency)} change="+12%" icon={TrendingUp} delay={0.1} />
-        <StatCard label={t('analytics.winRate')} value="7.5%" change="+1.2%" icon={Target} delay={0.15} />
+        <StatCard label={t('analytics.winRate')} value={`${winRate.toFixed(1)}%`} icon={Target} delay={0.15} />
       </div>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
@@ -137,7 +132,7 @@ export default function AnalyticsPage() {
             <p className="mt-1 text-xs text-text-muted">{t('analytics.monthlyDealFlow')}</p>
           </div>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={monthlyDeals} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
+            <BarChart data={monthlyDealData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1E" vertical={false} />
               <XAxis dataKey="month" stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} tickFormatter={localizeMonth} />
               <YAxis stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} />
@@ -162,7 +157,7 @@ export default function AnalyticsPage() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${v}%`, '']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [String(v), t('analytics.records')]} />
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-4 grid grid-cols-2 gap-2">
@@ -170,7 +165,7 @@ export default function AnalyticsPage() {
               <div key={source.name} className="flex items-center gap-2 text-xs">
                 <span className="h-2 w-2 rounded-full" style={{ background: source.color }} />
                 <span className="text-text-secondary">{source.name}</span>
-                <span className="ml-auto font-medium text-text-primary">{source.value}%</span>
+                <span className="ms-auto font-medium text-text-primary">{source.value}</span>
               </div>
             ))}
           </div>
@@ -188,7 +183,7 @@ export default function AnalyticsPage() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${v}%`, '']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [String(v), t('analytics.records')]} />
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-4 grid grid-cols-2 gap-2">
@@ -196,7 +191,7 @@ export default function AnalyticsPage() {
               <div key={type.name} className="flex items-center gap-2 text-xs">
                 <span className="h-2 w-2 rounded-full" style={{ background: type.color }} />
                 <span className="text-text-secondary">{t(type.name)}</span>
-                <span className="ml-auto font-medium text-text-primary">{type.value}%</span>
+                <span className="ms-auto font-medium text-text-primary">{type.value}</span>
               </div>
             ))}
           </div>
@@ -213,39 +208,23 @@ export default function AnalyticsPage() {
             </RadialBarChart>
           </ResponsiveContainer>
           <div className="-mt-32 text-center">
-            <p className="font-serif text-3xl font-medium text-gold">7.5%</p>
+            <p className="font-serif text-3xl font-medium text-gold">{winRate.toFixed(1)}%</p>
             <p className="text-xs text-text-muted">{t('analytics.conversionRate')}</p>
           </div>
           <div className="mt-20 space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-text-muted">{t('analytics.industryAvg')}</span>
-              <span className="font-medium text-text-primary">5.2%</span>
+              <span className="text-text-muted">{t('analytics.closedDeals')}</span>
+              <span className="font-medium text-text-primary">{closedDeals}</span>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-text-muted">{t('analytics.yourRate')}</span>
-              <span className="font-medium text-success">7.5% (+2.3%)</span>
+              <span className="text-text-muted">{t('analytics.wonDeals')}</span>
+              <span className="font-medium text-success">{wonDeals.length}</span>
             </div>
           </div>
         </Card>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card delay={0.45}>
-          <div className="mb-6">
-            <h3 className="font-serif text-lg font-medium text-text-primary">{t('analytics.responseTime')}</h3>
-            <p className="mt-1 text-xs text-text-muted">{t('analytics.avgFirstResponse')}</p>
-          </div>
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={responseTime} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1E" vertical={false} />
-              <XAxis dataKey="day" stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(value: string) => t(value)} />
-              <YAxis stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${v}h`, '']} />
-              <Line type="monotone" dataKey="time" stroke="#D4AF37" strokeWidth={2} dot={{ fill: '#D4AF37', r: 4 }} activeDot={{ r: 6 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </Card>
-
+      <div className="mt-4 grid gap-4 lg:grid-cols-1">
         <Card delay={0.5}>
           <div className="mb-6">
             <h3 className="font-serif text-lg font-medium text-text-primary">{t('analytics.teamLeaderboard')}</h3>

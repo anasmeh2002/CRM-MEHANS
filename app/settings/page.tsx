@@ -34,12 +34,12 @@ const tabDefs = [
   { id: 'api', labelKey: 'settings.apiKeys', icon: Code },
 ];
 
-const integrationMeta: Record<string, { icon: string; description: string; color: string }> = {
-  'WhatsApp Business': { icon: '📱', description: 'Send messages to leads', color: '#25D366' },
+const integrationMeta: Record<string, { icon: string; descriptionKey: string; color: string }> = {
+  'WhatsApp Business': { icon: 'W', descriptionKey: 'settings.whatsappDescription', color: '#25D366' },
 };
 
 const modules = ['leads', 'properties', 'deals', 'tasks', 'meetings', 'contacts'];
-const roles = ['admin', 'manager', 'agent', 'viewer'];
+const roles = ['owner', 'admin', 'manager', 'agent'];
 
 export default function SettingsPage() {
   const { t } = useLanguage();
@@ -95,15 +95,22 @@ export default function SettingsPage() {
 
 function OrganizationTab() {
   const { t } = useLanguage();
-  const { data: agency, loading, refetch } = useSupabaseQuery<AgencyProfile | null>(fetchAgency);
+  const { data: agency, loading, error, refetch } = useSupabaseQuery<AgencyProfile | null>(fetchAgency);
   const [form, setForm] = useState<AgencyProfile | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (agency) setForm(agency);
-  }, [agency]);
+    if (agency) {
+      setForm(agency);
+    } else if (!loading && !error) {
+      setForm({
+        id: '', name: '', logo_url: null, email: null, phone: null, website: null,
+        city: null, country: null, description: null, address: null, currency: 'MAD',
+      });
+    }
+  }, [agency, loading, error]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -138,6 +145,10 @@ function OrganizationTab() {
     if (!form) return;
     setSaving(true);
     try {
+      if (!form.id) {
+        toast.error(t('settings.workspaceUnavailable'));
+        return;
+      }
       const updatedAgency = await updateAgency(form.id, {
         name: form.name,
         email: form.email,
@@ -162,7 +173,9 @@ function OrganizationTab() {
     }
   };
 
-  if (loading || !form) return <LoadingCard />;
+  if (loading) return <LoadingCard />;
+  if (error) return <ErrorCard onRetry={refetch} />;
+  if (!form) return <ErrorCard onRetry={refetch} />;
 
   return (
     <Card>
@@ -267,7 +280,7 @@ function OrganizationTab() {
           />
         </div>
       </div>
-      <button onClick={handleSave} disabled={saving} className="btn btn-gold btn-md mt-5">
+      <button onClick={handleSave} disabled={saving || !form.id} className="btn btn-gold btn-md mt-5">
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('common.save')}
       </button>
     </Card>
@@ -346,10 +359,10 @@ function UsersTab() {
             <input className="input w-full" placeholder={t('settings.fullName')} value={inviteName} onChange={(e) => setInviteName(e.target.value)} />
             <input className="input w-full" placeholder={t('settings.emailAddress')} value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
             <select className="input w-full" value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
+              <option value="owner">{t('settings.owner')}</option>
               <option value="admin">{t('settings.admin')}</option>
               <option value="manager">{t('settings.manager')}</option>
               <option value="agent">{t('settings.agent')}</option>
-              <option value="viewer">{t('settings.viewer')}</option>
             </select>
           </div>
           <div className="mt-3 flex gap-2">
@@ -374,12 +387,12 @@ function UsersTab() {
               onChange={(e) => handleRoleChange(user.id, e.target.value)}
               className="input w-auto text-xs"
             >
+              <option value="owner">{t('settings.owner')}</option>
               <option value="admin">{t('settings.admin')}</option>
               <option value="manager">{t('settings.manager')}</option>
               <option value="agent">{t('settings.agent')}</option>
-              <option value="viewer">{t('settings.viewer')}</option>
             </select>
-            <Badge variant={user.role === 'admin' ? 'gold' : 'neutral'}>{user.role}</Badge>
+            <Badge variant={user.role === 'admin' || user.role === 'owner' ? 'gold' : 'neutral'}>{t(`settings.${user.role}`)}</Badge>
             <button
               onClick={() => handleDeactivate(user.id)}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition-colors hover:border-error hover:text-error"
@@ -508,7 +521,7 @@ function IntegrationsTab() {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {filtered.map((int, i) => {
-        const meta = integrationMeta[int.service] ?? { icon: '🔌', description: 'Integration', color: '#888' };
+        const meta = integrationMeta[int.service] ?? { icon: 'I', descriptionKey: 'settings.integration', color: '#888' };
         return (
           <Card key={int.service} hover delay={i * 0.04}>
             <div className="flex items-start justify-between">
@@ -516,17 +529,17 @@ function IntegrationsTab() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-bg-elevated text-lg">{meta.icon}</div>
                 <div>
                   <p className="text-sm font-medium text-text-primary">{int.service}</p>
-                  <p className="text-xs text-text-secondary">{meta.description}</p>
+                  <p className="text-xs text-text-secondary">{t(meta.descriptionKey)}</p>
                 </div>
               </div>
               {int.connected ? (
                 <div className="flex items-center gap-2">
-                  <Badge variant="success"><Check className="h-3 w-3" strokeWidth={1.5} /> Connected</Badge>
+                  <Badge variant="success"><Check className="h-3 w-3" strokeWidth={1.5} /> {t('settings.connected')}</Badge>
                   <button
                     onClick={() => router.push('/whatsapp')}
                     className="rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-gold-border hover:text-gold"
                   >
-                    Manage
+                    {t('settings.manage')}
                   </button>
                 </div>
               ) : (
@@ -534,7 +547,7 @@ function IntegrationsTab() {
                   onClick={() => handleConnect(int.service)}
                   className="rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-gold-border hover:text-gold"
                 >
-                  Connect
+                  {t('settings.connect')}
                 </button>
               )}
             </div>
@@ -658,17 +671,17 @@ function ApiTab() {
       </Card>
 
       <Card>
-        <h3 className="mb-4 font-serif text-lg font-medium text-text-primary">Webhooks</h3>
+        <h3 className="mb-4 font-serif text-lg font-medium text-text-primary">{t('settings.webhooks')}</h3>
         <div className="rounded-xl border border-border bg-bg-elevated p-3.5">
-          <p className="text-sm font-medium text-text-primary">n8n Action Webhook (n8n → CRM)</p>
-          <p className="mt-1 text-[11px] text-text-muted">n8n sends actions to this endpoint. Requires x-webhook-secret header.</p>
+          <p className="text-sm font-medium text-text-primary">{t('settings.n8nActionWebhook')}</p>
+          <p className="mt-1 text-[11px] text-text-muted">{t('settings.n8nActionWebhookHint')}</p>
           <code className="mt-2 block truncate rounded-lg border border-border bg-bg-primary px-3 py-2 font-mono text-xs text-gold">
             {typeof window !== 'undefined' ? `${window.location.origin}/api/automations/webhook` : '/api/automations/webhook'}
           </code>
         </div>
         <div className="mt-3 rounded-xl border border-border bg-bg-elevated p-3.5">
-          <p className="text-sm font-medium text-text-primary">CRM Event Dispatch (CRM → n8n)</p>
-          <p className="mt-1 text-[11px] text-text-muted">CRM events are dispatched to your n8n webhook URL. Configure it in the Automations tab.</p>
+          <p className="text-sm font-medium text-text-primary">{t('settings.crmEventDispatch')}</p>
+          <p className="mt-1 text-[11px] text-text-muted">{t('settings.crmEventDispatchHint')}</p>
           <code className="mt-2 block truncate rounded-lg border border-border bg-bg-primary px-3 py-2 font-mono text-xs text-gold">
             {typeof window !== 'undefined' ? `${window.location.origin}/api/automations/events` : '/api/automations/events'}
           </code>
@@ -737,25 +750,25 @@ function AutomationsTab() {
             <Workflow className="h-5 w-5" strokeWidth={1.5} />
           </div>
           <div>
-            <h3 className="font-serif text-lg font-medium text-text-primary">n8n Automation Engine</h3>
-            <p className="text-xs text-text-muted">Connect your n8n instance to trigger CRM automations</p>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('settings.n8nEngine')}</h3>
+            <p className="text-xs text-text-muted">{t('settings.n8nEngineHint')}</p>
           </div>
           {connected && <Badge variant="success" className="ms-auto"><Check className="h-3 w-3" strokeWidth={1.5} /> Connected</Badge>}
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-text-muted">n8n Webhook URL</label>
+            <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('settings.n8nWebhookUrl')}</label>
             <input
               className="input w-full"
               placeholder="https://your-n8n.com/webhook/mehans-crm"
               value={webhookUrl}
               onChange={(e) => setWebhookUrl(e.target.value)}
             />
-            <p className="mt-1 text-[11px] text-text-muted">CRM events are sent to this URL. Keep it secret.</p>
+            <p className="mt-1 text-[11px] text-text-muted">{t('settings.n8nWebhookHint')}</p>
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-text-muted">n8n API URL (optional)</label>
+            <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('settings.n8nApiUrl')}</label>
             <input
               className="input w-full"
               placeholder="https://your-n8n.com/api/v1"
@@ -764,7 +777,7 @@ function AutomationsTab() {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-text-muted">Webhook Secret</label>
+            <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('settings.webhookSecret')}</label>
             <input
               type="password"
               className="input w-full"
@@ -772,7 +785,7 @@ function AutomationsTab() {
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
             />
-            <p className="mt-1 text-[11px] text-text-muted">Sent as x-webhook-secret header. n8n must validate this.</p>
+            <p className="mt-1 text-[11px] text-text-muted">{t('settings.webhookSecretHint')}</p>
           </div>
 
           <div className="flex gap-2">
@@ -789,31 +802,31 @@ function AutomationsTab() {
       <Card>
         <div className="mb-4 flex items-center gap-2.5">
           <Zap className="h-4 w-4 text-gold" strokeWidth={1.5} />
-          <h3 className="font-serif text-lg font-medium text-text-primary">Available Webhook Events</h3>
+          <h3 className="font-serif text-lg font-medium text-text-primary">{t('settings.availableWebhookEvents')}</h3>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {[
-            { event: 'whatsapp.new_message', label: 'New WhatsApp Message' },
-            { event: 'whatsapp.outgoing_message', label: 'Outgoing WhatsApp Message' },
-            { event: 'whatsapp.new_conversation', label: 'New WhatsApp Conversation' },
-            { event: 'whatsapp.connection_change', label: 'WhatsApp Connection Changed' },
-            { event: 'lead.created', label: 'Lead Created' },
-            { event: 'lead.inactive', label: 'Lead Inactive (48h)' },
-            { event: 'deal.won', label: 'Deal Won' },
-            { event: 'deal.lost', label: 'Deal Lost' },
-            { event: 'meeting.created', label: 'Appointment Created' },
-            { event: 'meeting.updated', label: 'Appointment Updated' },
-            { event: 'meeting.cancelled', label: 'Appointment Cancelled' },
-            { event: 'meeting.completed', label: 'Appointment Completed' },
+            { event: 'whatsapp.new_message', labelKey: 'settings.eventNewWhatsapp' },
+            { event: 'whatsapp.outgoing_message', labelKey: 'settings.eventOutgoingWhatsapp' },
+            { event: 'whatsapp.new_conversation', labelKey: 'settings.eventNewConversation' },
+            { event: 'whatsapp.connection_change', labelKey: 'settings.eventConnectionChange' },
+            { event: 'lead.created', labelKey: 'settings.eventLeadCreated' },
+            { event: 'lead.inactive', labelKey: 'settings.eventLeadInactive' },
+            { event: 'deal.won', labelKey: 'settings.eventDealWon' },
+            { event: 'deal.lost', labelKey: 'settings.eventDealLost' },
+            { event: 'meeting.created', labelKey: 'settings.eventMeetingCreated' },
+            { event: 'meeting.updated', labelKey: 'settings.eventMeetingUpdated' },
+            { event: 'meeting.cancelled', labelKey: 'settings.eventMeetingCancelled' },
+            { event: 'meeting.completed', labelKey: 'settings.eventMeetingCompleted' },
           ].map((evt) => (
             <div key={evt.event} className="flex items-center gap-2 rounded-lg border border-border bg-bg-elevated px-3 py-2">
               <code className="text-[11px] font-mono text-gold">{evt.event}</code>
-              <span className="ms-auto text-[11px] text-text-muted">{evt.label}</span>
+              <span className="ms-auto text-[11px] text-text-muted">{t(evt.labelKey)}</span>
             </div>
           ))}
         </div>
         <p className="mt-3 text-[11px] text-text-muted">
-          These events are sent to your n8n webhook URL. Use them as trigger nodes in your n8n workflows.
+          {t('settings.availableWebhookEventsHint')}
         </p>
       </Card>
     </div>
@@ -823,10 +836,23 @@ function AutomationsTab() {
 // ─── Loading ───────────────────────────────────────────────────────────────────
 
 function LoadingCard() {
+  const { t } = useLanguage();
   return (
     <Card>
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-gold" />
+        <Loader2 className="h-6 w-6 animate-spin text-gold" aria-label={t('common.loading')} />
+      </div>
+    </Card>
+  );
+}
+
+function ErrorCard({ onRetry }: { onRetry: () => void }) {
+  const { t } = useLanguage();
+  return (
+    <Card>
+      <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+        <p className="text-sm text-text-muted">{t('settings.workspaceLoadFailed')}</p>
+        <button onClick={onRetry} className="btn btn-ghost btn-sm">{t('common.tryAgain')}</button>
       </div>
     </Card>
   );

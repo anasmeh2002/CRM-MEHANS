@@ -59,12 +59,25 @@ export interface IntegrationRow {
 
 export interface RolePermissionRow {
   id: string;
+  agency_id: string;
   role: string;
   module: string;
   can_view: boolean;
   can_create: boolean;
   can_edit: boolean;
   can_delete: boolean;
+}
+
+export interface WorkspaceMemberRow {
+  id: string;
+  workspace_id: string;
+  user_id: string | null;
+  name: string;
+  email: string;
+  role: 'owner' | 'admin' | 'manager' | 'agent';
+  status: 'invited' | 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
 }
 
 function db() {
@@ -972,6 +985,7 @@ export async function fetchRolePermissions(): Promise<RolePermissionRow[]> {
   const { data, error } = await supabase
     .from('role_permissions')
     .select('*')
+    .not('agency_id', 'is', null)
     .order('role, module', { ascending: true });
   if (error) throw error;
   return (data ?? []) as RolePermissionRow[];
@@ -986,57 +1000,56 @@ export async function updateRolePermission(id: string, updates: Partial<Pick<Rol
   return true;
 }
 
-// ─── Team Members (for settings/users) ────────────────────────────────────────
+// ─── Workspace Members ─────────────────────────────────────────────────────────
+
+function mapWorkspaceMember(row: WorkspaceMemberRow): TeamMember {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    role: row.role,
+    avatar_color: '#D4AF37',
+    avatarColor: '#D4AF37',
+    status: row.status === 'inactive' ? 'offline' : row.status === 'invited' ? 'away' : 'active',
+    deals: 0,
+    revenue: 0,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
 
 export async function fetchProfiles(): Promise<TeamMember[]> {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('workspace_members')
     .select('*')
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return (data ?? []).map((p: any) => ({
-    ...p,
-    avatarColor: p.avatar_color ?? '#D4AF37',
-    name: p.name ?? (`${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || p.email || 'Unknown'),
-    status: p.status ?? 'active',
-    deals: p.deals ?? 0,
-    revenue: p.revenue ?? 0,
-  })) as TeamMember[];
+  return (data ?? []).map((row) => mapWorkspaceMember(row as WorkspaceMemberRow));
+}
+
+export async function createProfile(input: { name: string; email: string; role: string }): Promise<TeamMember | null> {
+  const { data: agency, error: agencyError } = await supabase.from('agencies').select('id').limit(1).maybeSingle();
+  if (agencyError) throw agencyError;
+  if (!agency) return null;
+  const { data, error } = await supabase
+    .from('workspace_members')
+    .insert({ workspace_id: agency.id, name: input.name.trim(), email: input.email.trim().toLowerCase(), role: input.role, status: 'invited' })
+    .select('*')
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapWorkspaceMember(data as WorkspaceMemberRow) : null;
 }
 
 export async function updateProfileRole(id: string, role: string): Promise<boolean> {
-  const { error } = await supabase
-    .from('profiles')
-    .update({ role, updated_at: new Date().toISOString() })
-    .eq('id', id);
+  const { error } = await supabase.rpc('set_workspace_member_role', { p_member: id, p_role: role });
   if (error) throw error;
   return true;
 }
 
 export async function deactivateProfile(id: string): Promise<boolean> {
-  const { error } = await supabase
-    .from('profiles')
-    .update({ status: 'inactive', updated_at: new Date().toISOString() })
-    .eq('id', id);
+  const { error } = await supabase.rpc('set_workspace_member_status', { p_member: id, p_status: 'inactive' });
   if (error) throw error;
   return true;
-}
-
-export async function createProfile(input: { name: string; email: string; role: string }): Promise<TeamMember | null> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .insert({
-      name: input.name,
-      email: input.email,
-      role: input.role,
-      avatar_color: '#D4AF37',
-      status: 'active',
-    })
-    .select('*')
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) return null;
-  return { ...data, avatarColor: data.avatar_color ?? '#D4AF37', name: data.name ?? 'Unknown', status: data.status ?? 'active', deals: data.deals ?? 0, revenue: data.revenue ?? 0 } as TeamMember;
 }
 
 // ─── Global Search ────────────────────────────────────────────────────────────
