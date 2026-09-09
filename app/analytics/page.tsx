@@ -32,32 +32,32 @@ import { useLanguage } from '@/components/language-provider';
 import { useAgency } from '@/components/agency-provider';
 
 const monthlyDeals = [
-  { month: 'Jan', deals: 8, won: 3 },
-  { month: 'Feb', deals: 12, won: 5 },
-  { month: 'Mar', deals: 15, won: 7 },
-  { month: 'Apr', deals: 10, won: 4 },
-  { month: 'May', deals: 18, won: 9 },
-  { month: 'Jun', deals: 22, won: 11 },
-  { month: 'Jul', deals: 20, won: 10 },
-  { month: 'Aug', deals: 26, won: 14 },
+  { month: 'month.jan', deals: 8, won: 3 },
+  { month: 'month.feb', deals: 12, won: 5 },
+  { month: 'month.mar', deals: 15, won: 7 },
+  { month: 'month.apr', deals: 10, won: 4 },
+  { month: 'month.may', deals: 18, won: 9 },
+  { month: 'month.jun', deals: 22, won: 11 },
+  { month: 'month.jul', deals: 20, won: 10 },
+  { month: 'month.aug', deals: 26, won: 14 },
 ];
 
 const responseTime = [
-  { day: 'Mon', time: 3.2 },
-  { day: 'Tue', time: 4.5 },
-  { day: 'Wed', time: 2.8 },
-  { day: 'Thu', time: 5.1 },
-  { day: 'Fri', time: 4.2 },
-  { day: 'Sat', time: 6.8 },
-  { day: 'Sun', time: 8.2 },
+  { day: 'day.mon', time: 3.2 },
+  { day: 'day.tue', time: 4.5 },
+  { day: 'day.wed', time: 2.8 },
+  { day: 'day.thu', time: 5.1 },
+  { day: 'day.fri', time: 4.2 },
+  { day: 'day.sat', time: 6.8 },
+  { day: 'day.sun', time: 8.2 },
 ];
 
 const propertyTypeData = [
-  { name: 'Apartments', value: 35, color: '#4A90D9' },
-  { name: 'Villas', value: 28, color: '#D4AF37' },
-  { name: 'Penthouses', value: 18, color: '#5BAA6F' },
-  { name: 'Townhouses', value: 12, color: '#9B6FBF' },
-  { name: 'Commercial', value: 7, color: '#D4823A' },
+  { name: 'property.apartments', value: 35, color: '#4A90D9' },
+  { name: 'property.villas', value: 28, color: '#D4AF37' },
+  { name: 'property.penthouses', value: 18, color: '#5BAA6F' },
+  { name: 'property.townhouses', value: 12, color: '#9B6FBF' },
+  { name: 'property.commercial', value: 7, color: '#D4823A' },
 ];
 
 const conversionData = [{ name: 'Conversion', value: 7.5, fill: '#D4AF37' }];
@@ -73,6 +73,7 @@ const tooltipStyle = {
 export default function AnalyticsPage() {
   const { t } = useLanguage();
   const { currency } = useAgency();
+  const localizeMonth = (value: string) => value.startsWith('month.') ? t(value) : t(`month.${value.toLowerCase().slice(0, 3)}`);
   const { refreshKey } = useRefresh();
   const { data: teamData, loading: teamLoading, error: teamError } = useSupabaseQuery<TeamMember[]>(fetchTeamMembers, [], refreshKey);
   const { data: dealsData, loading: dealsLoading, error: dealsError } = useSupabaseQuery<Deal[]>(fetchDeals, [], refreshKey);
@@ -97,21 +98,21 @@ export default function AnalyticsPage() {
   return (
     <AppShell>
       <PageHeader title={t('page.analytics')} description={t('page.analyticsDescription')}>
-        <Badge variant="gold">Last 8 months</Badge>
+        <Badge variant="gold">{t('analytics.last8Months')}</Badge>
       </PageHeader>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total Revenue" value={formatCurrency(totalRevenue, currency)} change="+42%" icon={DollarSign} delay={0} />
-        <StatCard label="Deals Closed" value="63" change="+28%" icon={Award} delay={0.05} />
-        <StatCard label="Avg Deal Size" value={formatCurrency(averageDeal, currency)} change="+12%" icon={TrendingUp} delay={0.1} />
-        <StatCard label="Win Rate" value="7.5%" change="+1.2%" icon={Target} delay={0.15} />
+        <StatCard label={t('analytics.totalRevenue')} value={formatCurrency(totalRevenue, currency)} change="+42%" icon={DollarSign} delay={0} />
+        <StatCard label={t('analytics.dealsClosed')} value="63" change="+28%" icon={Award} delay={0.05} />
+        <StatCard label={t('analytics.avgDealSize')} value={formatCurrency(averageDeal, currency)} change="+12%" icon={TrendingUp} delay={0.1} />
+        <StatCard label={t('analytics.winRate')} value="7.5%" change="+1.2%" icon={Target} delay={0.15} />
       </div>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
         <Card delay={0.2}>
           <div className="mb-6">
-            <h3 className="font-serif text-lg font-medium text-text-primary">Revenue Trend</h3>
-            <p className="mt-1 text-xs text-text-muted">Monthly revenue over time</p>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('analytics.revenueTrend')}</h3>
+            <p className="mt-1 text-xs text-text-muted">{t('analytics.monthlyRevenue')}</p>
           </div>
           <ResponsiveContainer width="100%" height={280}>
             <AreaChart data={revenueData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
@@ -122,9 +123,9 @@ export default function AnalyticsPage() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1E" vertical={false} />
-              <XAxis dataKey="month" stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} />
+              <XAxis dataKey="month" stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} tickFormatter={localizeMonth} />
               <YAxis stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v / 1000000}M`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [formatCurrency(v / 1000000, currency) + 'M', '']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [formatCurrency(v / 1000000, currency) + 'M', t('dashboard.revenueLabel')]} />
               <Area type="monotone" dataKey="revenue" stroke="#D4AF37" strokeWidth={2} fill="url(#revGrad2)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -132,17 +133,17 @@ export default function AnalyticsPage() {
 
         <Card delay={0.25}>
           <div className="mb-6">
-            <h3 className="font-serif text-lg font-medium text-text-primary">Deals: Created vs Won</h3>
-            <p className="mt-1 text-xs text-text-muted">Monthly deal flow</p>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('analytics.dealsCreatedVsWon')}</h3>
+            <p className="mt-1 text-xs text-text-muted">{t('analytics.monthlyDealFlow')}</p>
           </div>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={monthlyDeals} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1E" vertical={false} />
-              <XAxis dataKey="month" stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} />
+              <XAxis dataKey="month" stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} tickFormatter={localizeMonth} />
               <YAxis stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="deals" fill="#4A90D9" radius={[6, 6, 0, 0]} barSize={18} />
-              <Bar dataKey="won" fill="#D4AF37" radius={[6, 6, 0, 0]} barSize={18} />
+              <Bar name={t('analytics.dealsClosed')} dataKey="deals" fill="#4A90D9" radius={[6, 6, 0, 0]} barSize={18} />
+              <Bar name={t('analytics.winRate')} dataKey="won" fill="#D4AF37" radius={[6, 6, 0, 0]} barSize={18} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -151,8 +152,8 @@ export default function AnalyticsPage() {
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card delay={0.3}>
           <div className="mb-6">
-            <h3 className="font-serif text-lg font-medium text-text-primary">Lead Sources</h3>
-            <p className="mt-1 text-xs text-text-muted">Distribution by channel</p>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('analytics.leadSources')}</h3>
+            <p className="mt-1 text-xs text-text-muted">{t('analytics.distributionChannel')}</p>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
@@ -177,8 +178,8 @@ export default function AnalyticsPage() {
 
         <Card delay={0.35}>
           <div className="mb-6">
-            <h3 className="font-serif text-lg font-medium text-text-primary">Property Types</h3>
-            <p className="mt-1 text-xs text-text-muted">Listings by category</p>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('analytics.propertyTypes')}</h3>
+            <p className="mt-1 text-xs text-text-muted">{t('analytics.listingsByCategory')}</p>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
@@ -194,7 +195,7 @@ export default function AnalyticsPage() {
             {propertyTypeData.map((type) => (
               <div key={type.name} className="flex items-center gap-2 text-xs">
                 <span className="h-2 w-2 rounded-full" style={{ background: type.color }} />
-                <span className="text-text-secondary">{type.name}</span>
+                <span className="text-text-secondary">{t(type.name)}</span>
                 <span className="ml-auto font-medium text-text-primary">{type.value}%</span>
               </div>
             ))}
@@ -203,8 +204,8 @@ export default function AnalyticsPage() {
 
         <Card delay={0.4}>
           <div className="mb-6">
-            <h3 className="font-serif text-lg font-medium text-text-primary">Conversion Rate</h3>
-            <p className="mt-1 text-xs text-text-muted">Lead to close</p>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('analytics.conversionRate')}</h3>
+            <p className="mt-1 text-xs text-text-muted">{t('analytics.leadToClose')}</p>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <RadialBarChart cx="50%" cy="50%" innerRadius="60%" outerRadius="100%" data={conversionData} startAngle={90} endAngle={-270}>
@@ -213,15 +214,15 @@ export default function AnalyticsPage() {
           </ResponsiveContainer>
           <div className="-mt-32 text-center">
             <p className="font-serif text-3xl font-medium text-gold">7.5%</p>
-            <p className="text-xs text-text-muted">Conversion Rate</p>
+            <p className="text-xs text-text-muted">{t('analytics.conversionRate')}</p>
           </div>
           <div className="mt-20 space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-text-muted">Industry Avg</span>
+              <span className="text-text-muted">{t('analytics.industryAvg')}</span>
               <span className="font-medium text-text-primary">5.2%</span>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-text-muted">Your Rate</span>
+              <span className="text-text-muted">{t('analytics.yourRate')}</span>
               <span className="font-medium text-success">7.5% (+2.3%)</span>
             </div>
           </div>
@@ -231,13 +232,13 @@ export default function AnalyticsPage() {
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card delay={0.45}>
           <div className="mb-6">
-            <h3 className="font-serif text-lg font-medium text-text-primary">Response Time</h3>
-            <p className="mt-1 text-xs text-text-muted">Avg first response (hours) by day</p>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('analytics.responseTime')}</h3>
+            <p className="mt-1 text-xs text-text-muted">{t('analytics.avgFirstResponse')}</p>
           </div>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={responseTime} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1E" vertical={false} />
-              <XAxis dataKey="day" stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} />
+              <XAxis dataKey="day" stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(value: string) => t(value)} />
               <YAxis stroke="#6B6B66" fontSize={11} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${v}h`, '']} />
               <Line type="monotone" dataKey="time" stroke="#D4AF37" strokeWidth={2} dot={{ fill: '#D4AF37', r: 4 }} activeDot={{ r: 6 }} />
@@ -247,8 +248,8 @@ export default function AnalyticsPage() {
 
         <Card delay={0.5}>
           <div className="mb-6">
-            <h3 className="font-serif text-lg font-medium text-text-primary">Team Leaderboard</h3>
-            <p className="mt-1 text-xs text-text-muted">Revenue by agent this quarter</p>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('analytics.teamLeaderboard')}</h3>
+            <p className="mt-1 text-xs text-text-muted">{t('analytics.revenueByAgent')}</p>
           </div>
           {loading ? (
             <div className="space-y-3">
@@ -271,7 +272,7 @@ export default function AnalyticsPage() {
             </div>
           ) : sortedTeam.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-sm text-text-muted">No team members found.</p>
+              <p className="text-sm text-text-muted">{t('analytics.noTeamMembers')}</p>
             </div>
           ) : (
             <div className="space-y-3">

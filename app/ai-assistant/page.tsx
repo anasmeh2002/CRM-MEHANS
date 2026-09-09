@@ -29,16 +29,12 @@ import { toast } from 'sonner';
 import { askAI } from '@/lib/ai';
 import { useLanguage } from '@/components/language-provider';
 
-const suggestions = [
-  'Qualify my highest-priority lead. Show known facts, missing information, intent, objections, and next action.',
-  'Find real available properties matching my highest-priority lead and explain why each matches.',
-  'Which leads are waiting for us today? Recommend the next best action from real activity.',
-  'Draft a professional WhatsApp follow-up for the selected conversation. Do not send it.',
-];
+const suggestionKeys = ['ai.suggestion1', 'ai.suggestion2', 'ai.suggestion3', 'ai.suggestion4'];
 
 export default function AIAssistantPage() {
   const { t } = useLanguage();
   const router = useRouter();
+  const welcomeMessage = t('ai.welcomeMessage');
   const { data: leadsData, loading: leadsLoading, error: leadsError } = useSupabaseQuery<Lead[]>(fetchLeads);
   const { data: propertiesData } = useSupabaseQuery<Property[]>(fetchProperties);
   const { data: dealsData } = useSupabaseQuery<Deal[]>(fetchDeals);
@@ -60,11 +56,11 @@ export default function AIAssistantPage() {
 
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([
-    { role: 'ai', content: 'I\'m your MEHANS AI assistant. I can help you qualify leads, generate emails and WhatsApp messages, analyze your pipeline, and suggest next best actions. How can I help you today?' },
+    { role: 'ai', content: welcomeMessage },
   ]);
   const [activeTab, setActiveTab] = useState<'chat' | 'insights' | 'generate'>('chat');
   const [generating, setGenerating] = useState(false);
-  const [generatedText, setGeneratedText] = useState('Select a generation action to create content with your CRM data.');
+  const [generatedText, setGeneratedText] = useState(t('ai.selectGenerate')); 
   const [insights, setInsights] = useState<{ id: string; type: string; title: string; description: string; action: string }[]>([]);
 
   const sendMessage = async (text: string) => {
@@ -76,7 +72,7 @@ export default function AIAssistantPage() {
       const response = await askAI([{ role: 'user', content: text }], `You are the MEHANS AI Sales Operating System for real estate. Use only the supplied CRM records. Never invent leads, properties, prices, appointments, messages, or deal facts. Say when information is missing. Qualify leads, match only available properties with reasons, identify the next best action, and draft WhatsApp replies without sending them. Important actions must be proposed for confirmation. Current CRM data: ${crmContext}`);
       setMessages((prev) => [...prev, { role: 'ai', content: response }]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to reach the AI service');
+      toast.error(error instanceof Error ? error.message : t('ai.unableReachAI'));
     } finally { setGenerating(false); }
   };
 
@@ -85,7 +81,7 @@ export default function AIAssistantPage() {
     try {
       const nextInsights = await getAIInsights(crmContext);
       setInsights(nextInsights.map((insight, i) => ({ ...insight, id: `ai-${i}` })));
-    } catch (error) { toast.error(error instanceof Error ? error.message : 'Unable to load AI insights'); }
+    } catch (error) { toast.error(error instanceof Error ? error.message : t('ai.unableLoadInsights')); }
     finally { setGenerating(false); }
   };
 
@@ -94,8 +90,8 @@ export default function AIAssistantPage() {
     try {
       const content = await askAI([{ role: 'user', content: instruction }], `You are a real-estate sales assistant. Use only this real CRM data. Never invent missing values. Draft content for human review and never claim to have sent anything. CRM data: ${crmContext}`);
       setGeneratedText(content);
-      toast.success('AI content generated');
-    } catch (error) { toast.error(error instanceof Error ? error.message : 'Unable to generate content'); }
+      toast.success(t('ai.contentGenerated'));
+    } catch (error) { toast.error(error instanceof Error ? error.message : t('ai.unableGenerate')); }
     finally { setGenerating(false); }
   };
 
@@ -120,7 +116,7 @@ export default function AIAssistantPage() {
                 onClick={() => { setActiveTab(tab); if (tab === 'insights') void loadInsights(); }}
                 className={cn('rounded-lg px-4 py-2 text-sm font-medium capitalize transition-colors', activeTab === tab ? 'bg-gold-bg text-gold' : 'text-text-secondary hover:text-text-primary')}
               >
-                {tab === 'chat' ? 'Chat' : tab === 'insights' ? 'Insights' : 'Generate'}
+                {tab === 'chat' ? t('ai.chat') : tab === 'insights' ? t('ai.insights') : t('ai.generate')}
               </button>
             ))}
           </div>
@@ -167,13 +163,13 @@ export default function AIAssistantPage() {
               </div>
               <div className="border-t border-border p-4">
                 <div className="mb-3 flex flex-wrap gap-1.5">
-                  {suggestions.map((s) => (
+                  {suggestionKeys.map((key) => (
                     <button
-                      key={s}
-                      onClick={() => sendMessage(s)}
+                      key={key}
+                      onClick={() => sendMessage(t(key))}
                       className="rounded-lg border border-border bg-bg-elevated px-2.5 py-1.5 text-xs text-text-secondary transition-colors hover:border-gold-border hover:text-gold"
                     >
-                      {s}
+                      {t(key)}
                     </button>
                   ))}
                 </div>
@@ -182,7 +178,7 @@ export default function AIAssistantPage() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
-                    placeholder="Ask AI anything..."
+                    placeholder={t('ai.placeholder')}
                     className="flex-1 rounded-xl border border-border bg-bg-elevated px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-gold-border focus:outline-none"
                   />
                   <button
@@ -199,7 +195,7 @@ export default function AIAssistantPage() {
           {activeTab === 'insights' && (
             <div className="scrollbar-thin flex-1 overflow-y-auto p-6">
               <div className="space-y-3">
-                {insights.length === 0 && !generating ? <p className="py-8 text-center text-sm text-text-muted">Select Insights to analyze your current CRM data.</p> : insights.map((insight) => {
+                {insights.length === 0 && !generating ? <p className="py-8 text-center text-sm text-text-muted">{t('ai.selectInsights')}</p> : insights.map((insight) => {
                   const Icon = insightIcons[insight.type] || Lightbulb;
                   return (
                     <div key={insight.id} className="rounded-xl border border-border bg-bg-elevated p-4 transition-colors hover:border-border-strong">
@@ -210,7 +206,7 @@ export default function AIAssistantPage() {
                         <div className="flex-1">
                           <p className="text-sm font-medium text-text-primary">{insight.title}</p>
                           <p className="mt-1 text-xs leading-relaxed text-text-secondary">{insight.description}</p>
-                          <button onClick={() => toast.success(`Action: ${insight.action}`)} className="mt-2.5 text-xs font-medium text-gold transition-colors hover:text-gold-soft">
+                          <button onClick={() => toast.success(t('ai.actionPrefix', { action: insight.action }))} className="mt-2.5 text-xs font-medium text-gold transition-colors hover:text-gold-soft">
                             {insight.action} →
                           </button>
                         </div>
@@ -227,30 +223,30 @@ export default function AIAssistantPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <button onClick={() => generateContent('Write a concise personalized follow-up email for a high-value real estate lead. Include a subject line and clear next step.')} className="rounded-xl border border-border bg-bg-elevated p-4 text-left transition-colors hover:border-gold-border">
                   <Mail className="h-6 w-6 text-gold" strokeWidth={1.5} />
-                  <p className="mt-2 text-sm font-medium text-text-primary">Follow-up Email</p>
-                  <p className="text-xs text-text-secondary">Generate a personalized follow-up email for your top lead</p>
+                  <p className="mt-2 text-sm font-medium text-text-primary">{t('ai.followupEmail')}</p>
+                  <p className="text-xs text-text-secondary">{t('ai.followupEmailDesc')}</p>
                 </button>
                 <button onClick={() => generateContent('Write a concise, warm WhatsApp follow-up message for a real estate lead. Keep it under 80 words.')} className="rounded-xl border border-border bg-bg-elevated p-4 text-left transition-colors hover:border-gold-border">
                   <MessageCircle className="h-6 w-6 text-gold" strokeWidth={1.5} />
-                  <p className="mt-2 text-sm font-medium text-text-primary">WhatsApp Message</p>
-                  <p className="text-xs text-text-secondary">Generate a WhatsApp message for your most active lead</p>
+                  <p className="mt-2 text-sm font-medium text-text-primary">{t('ai.whatsappMessage')}</p>
+                  <p className="text-xs text-text-secondary">{t('ai.whatsappMessageDesc')}</p>
                 </button>
                 <button onClick={() => generateContent('Create a lead qualification summary with score rationale, risks, and recommended next action.')} className="rounded-xl border border-border bg-bg-elevated p-4 text-left transition-colors hover:border-gold-border">
                   <Target className="h-6 w-6 text-gold" strokeWidth={1.5} />
-                  <p className="mt-2 text-sm font-medium text-text-primary">Lead Summary</p>
-                  <p className="text-xs text-text-secondary">AI-powered lead qualification summary</p>
+                  <p className="mt-2 text-sm font-medium text-text-primary">{t('ai.leadSummary')}</p>
+                  <p className="text-xs text-text-secondary">{t('ai.leadSummaryDesc')}</p>
                 </button>
                 <button onClick={() => generateContent('Analyze the current CRM leads and provide three actionable sales insights.')} className="rounded-xl border border-border bg-bg-elevated p-4 text-left transition-colors hover:border-gold-border">
                   <TrendingUp className="h-6 w-6 text-gold" strokeWidth={1.5} />
-                  <p className="mt-2 text-sm font-medium text-text-primary">Sales Insights</p>
-                  <p className="text-xs text-text-secondary">Get actionable sales performance insights</p>
+                  <p className="mt-2 text-sm font-medium text-text-primary">{t('ai.salesInsights')}</p>
+                  <p className="text-xs text-text-secondary">{t('ai.salesInsightsDesc')}</p>
                 </button>
               </div>
               <div className="mt-4 rounded-xl border border-border bg-bg-elevated p-4">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs font-medium text-text-muted">Preview: Follow-up Email</span>
+                  <span className="text-xs font-medium text-text-muted">{t('ai.previewEmail')}</span>
                   <div className="flex gap-1">
-                    <button onClick={() => { navigator.clipboard?.writeText(generatedText); toast.success('Copied to clipboard'); }} className="rounded-lg p-1.5 text-text-muted transition-colors hover:text-text-primary"><Copy className="h-3.5 w-3.5" strokeWidth={1.5} /></button>
+                    <button onClick={() => { navigator.clipboard?.writeText(generatedText); toast.success(t('ai.copied')); }} className="rounded-lg p-1.5 text-text-muted transition-colors hover:text-text-primary"><Copy className="h-3.5 w-3.5" strokeWidth={1.5} /></button>
                     <button onClick={() => generateContent('Regenerate the previous follow-up content with a more polished and confident tone.')} className="rounded-lg p-1.5 text-text-muted transition-colors hover:text-text-primary"><RefreshCw className="h-3.5 w-3.5" strokeWidth={1.5} /></button>
                   </div>
                 </div>
@@ -266,21 +262,21 @@ export default function AIAssistantPage() {
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gold-bg text-gold">
                 <Sparkles className="h-4 w-4" strokeWidth={1.5} />
               </div>
-              <h3 className="text-sm font-medium text-text-primary">AI Lead Scoring</h3>
+              <h3 className="text-sm font-medium text-text-primary">{t('ai.leadScoring')}</h3>
             </div>
             <div className="space-y-2">
               {leadsLoading ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-xs text-text-muted">
                   <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
-                  Loading scores…
+                  {t('ai.loadingScores')}
                 </div>
               ) : leadsError ? (
                 <div className="rounded-xl border border-border bg-bg-elevated p-3 text-xs text-text-muted">
-                  Unable to load lead scores.
+                  {t('ai.unableLoadScores')}
                 </div>
               ) : leads.length === 0 ? (
                 <div className="rounded-xl border border-border bg-bg-elevated p-3 text-xs text-text-muted">
-                  No leads scored yet.
+                  {t('ai.noLeadsScored')}
                 </div>
               ) : (
                 leads.slice(0, 5).sort((a, b) => b.score - a.score).map((lead) => (
@@ -292,7 +288,7 @@ export default function AIAssistantPage() {
                     </div>
                     <div className="text-right">
                       <p className={cn('text-sm font-bold', lead.score >= 80 ? 'text-success' : lead.score >= 50 ? 'text-gold' : 'text-error')}>{lead.score}</p>
-                      <p className="text-[10px] text-text-muted">AI Score</p>
+                      <p className="text-[10px] text-text-muted">{t('ai.aiScore')}</p>
                     </div>
                   </div>
                 ))
@@ -303,29 +299,29 @@ export default function AIAssistantPage() {
           <Card delay={0.2}>
             <div className="mb-4 flex items-center gap-2.5">
               <Clock className="h-4 w-4 text-gold" strokeWidth={1.5} />
-              <h3 className="text-sm font-medium text-text-primary">Suggested Actions</h3>
+              <h3 className="text-sm font-medium text-text-primary">{t('ai.suggestedActions')}</h3>
             </div>
             <div className="space-y-2">
               {leadsLoading ? (
                 <div className="flex items-center justify-center gap-2 py-6 text-xs text-text-muted">
-                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} /> Loading...
+                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} /> {t('common.loading')}
                 </div>
               ) : leadsError ? (
-                <p className="py-4 text-center text-xs text-text-muted">Unable to load actions.</p>
+                <p className="py-4 text-center text-xs text-text-muted">{t('ai.unableLoadActions')}</p>
               ) : leads.length === 0 ? (
-                <p className="py-4 text-center text-xs text-text-muted">Add leads to get suggested actions.</p>
+                <p className="py-4 text-center text-xs text-text-muted">{t('ai.addLeadsActions')}</p>
               ) : (() => {
                 const hotLeads = leads.filter((l) => l.score >= 50).sort((a, b) => b.score - a.score).slice(0, 4);
                 if (hotLeads.length === 0) {
-                  return <p className="py-4 text-center text-xs text-text-muted">No high-priority leads yet.</p>;
+                  return <p className="py-4 text-center text-xs text-text-muted">{t('ai.noHighPriority')}</p>;
                 }
                 const priorityMap: Record<string, 'urgent' | 'high' | 'medium'> = { negotiation: 'urgent', new: 'medium', qualified: 'high', visit_scheduled: 'high', won: 'medium', lost: 'medium' };
                 return hotLeads.map((lead, i) => {
                   const priority = priorityMap[lead.status] ?? 'medium';
-                  const action = lead.status === 'negotiation' ? `Call ${lead.name} (negotiation)`
-                    : lead.status === 'new' ? `Email ${lead.name} (new lead)`
-                    : lead.status === 'visit_scheduled' ? `WhatsApp ${lead.name}`
-                    : `Follow up with ${lead.name}`;
+                  const action = lead.status === 'negotiation' ? t('ai.actionCall', { name: lead.name })
+                    : lead.status === 'new' ? t('ai.actionEmail', { name: lead.name })
+                    : lead.status === 'visit_scheduled' ? t('ai.actionWhatsapp', { name: lead.name })
+                    : t('ai.actionFollowUp', { name: lead.name });
                   return (
                     <button
                       key={lead.id}

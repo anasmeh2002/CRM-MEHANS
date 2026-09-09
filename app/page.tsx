@@ -58,8 +58,9 @@ const dateRangeKeys: Record<DateRange, string> = {
 export default function DashboardPage() {
   const { refreshKey } = useRefresh();
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const { currency } = useAgency();
+  const localizeMonth = (value: string) => value.startsWith('month.') ? t(value) : t(`month.${value.toLowerCase().slice(0, 3)}`);
 
   const [dateRange, setDateRange] = useState<DateRange>('month');
   const [dateFilterOpen, setDateFilterOpen] = useState(false);
@@ -113,10 +114,10 @@ export default function DashboardPage() {
   const meetingsToday = meetings.filter((meeting) => meeting.date === todayKey && !['cancelled', 'completed'].includes(meeting.status));
   const waitingLeads = leads.filter((lead) => !['won', 'lost'].includes(lead.status) && (!lead.lastActivity || (Date.now() - new Date(lead.lastActivity).getTime()) > 3 * 24 * 60 * 60 * 1000));
   const priorities = [
-    ...overdueTasks.slice(0, 2).map((task) => ({ label: `Overdue task: ${task.title}`, route: '/tasks', tone: 'error' })),
-    ...meetingsToday.slice(0, 2).map((meeting) => ({ label: `Meeting today: ${meeting.title}`, route: '/calendar', tone: 'gold' })),
-    ...leads.filter((lead) => lead.score >= 70 && !['won', 'lost'].includes(lead.status)).slice(0, 2).map((lead) => ({ label: `Hot lead: ${lead.name}`, route: `/leads?lead=${encodeURIComponent(lead.id)}`, tone: 'success' })),
-    ...waitingLeads.slice(0, 2).map((lead) => ({ label: `Follow up with ${lead.name}`, route: lead.phone ? `/whatsapp?phone=${encodeURIComponent(lead.phone)}` : `/leads?lead=${encodeURIComponent(lead.id)}`, tone: 'info' })),
+    ...overdueTasks.slice(0, 2).map((task) => ({ label: t('dashboard.priorityOverdueTask', { title: task.title }), route: '/tasks', tone: 'error' })),
+    ...meetingsToday.slice(0, 2).map((meeting) => ({ label: t('dashboard.priorityMeetingToday', { title: meeting.title }), route: '/calendar', tone: 'gold' })),
+    ...leads.filter((lead) => lead.score >= 70 && !['won', 'lost'].includes(lead.status)).slice(0, 2).map((lead) => ({ label: t('dashboard.priorityHotLead', { name: lead.name }), route: `/leads?lead=${encodeURIComponent(lead.id)}`, tone: 'success' })),
+    ...waitingLeads.slice(0, 2).map((lead) => ({ label: t('dashboard.priorityFollowUp', { name: lead.name }), route: lead.phone ? `/whatsapp?phone=${encodeURIComponent(lead.phone)}` : `/leads?lead=${encodeURIComponent(lead.id)}`, tone: 'info' })), 
   ].slice(0, 6);
 
   // Close date filter dropdown on outside click
@@ -285,7 +286,7 @@ export default function DashboardPage() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" vertical={false} />
-              <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
+              <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={localizeMonth} />
               <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v / 1000000}M`} />
               <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: 'var(--text-primary)' }} formatter={(v: number) => [formatCurrency(v / 1000000, currency) + 'M', '']} />
               <Area type="monotone" dataKey="target" stroke="var(--info)" strokeWidth={1.5} strokeDasharray="5 5" fill="url(#tgtGrad)" />
@@ -335,9 +336,9 @@ export default function DashboardPage() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" vertical={false} />
-              <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
+              <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={localizeMonth} />
               <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v}M`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`$${v}M`, '']} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [formatCurrency(v * 1000000, currency), t('dashboard.pipelineValue')]} />
               <Area type="monotone" dataKey="value" stroke="var(--gold)" strokeWidth={2} fill="url(#pipeGrad)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -445,7 +446,7 @@ export default function DashboardPage() {
                   <div className="flex-1">
                     <p className="text-[13px] font-medium text-text-primary">{activity.title}</p>
                     <p className="text-[12px] text-text-secondary">{activity.description}</p>
-                    <p className="mt-0.5 text-[11px] text-text-muted">{activity.user} · {new Date(activity.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                    <p className="mt-0.5 text-[11px] text-text-muted">{activity.user} · {new Date(activity.timestamp).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}</p>
                   </div>
                 </motion.div>
               );
@@ -467,7 +468,7 @@ export default function DashboardPage() {
                   className="flex items-center gap-3 rounded-xl border border-border p-3 transition-colors hover:border-border-strong"
                 >
                   <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border border-border bg-bg-elevated">
-                    <span className="text-[9px] font-medium text-text-muted">{new Date(meeting.date).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}</span>
+                    <span className="text-[9px] font-medium text-text-muted">{new Date(meeting.date).toLocaleDateString(locale, { month: 'short' }).toUpperCase()}</span>
                     <span className="text-sm font-bold text-text-primary">{new Date(meeting.date).getDate()}</span>
                   </div>
                   <div className="flex-1 min-w-0">
