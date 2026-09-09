@@ -809,6 +809,8 @@ export async function fetchAgency(): Promise<AgencyProfile | null> {
   const { data, error } = await supabase
     .from('agencies')
     .select('*')
+    .order('created_at', { ascending: true })
+    .limit(1)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
@@ -819,10 +821,11 @@ export async function fetchAgency(): Promise<AgencyProfile | null> {
   return data as AgencyProfile;
 }
 
-export async function updateAgency(updates: Partial<Omit<AgencyProfile, 'id'>>): Promise<AgencyProfile | null> {
+export async function updateAgency(agencyId: string, updates: Partial<Omit<AgencyProfile, 'id'>>): Promise<AgencyProfile | null> {
   const { data, error } = await supabase
     .from('agencies')
     .update(updates)
+    .eq('id', agencyId)
     .select('*')
     .maybeSingle();
   if (error) throw error;
@@ -830,7 +833,12 @@ export async function updateAgency(updates: Partial<Omit<AgencyProfile, 'id'>>):
 }
 
 export async function uploadAgencyLogo(file: File): Promise<string | null> {
-  const { data: agency, error: agencyError } = await supabase.from('agencies').select('id').maybeSingle();
+  const { data: agency, error: agencyError } = await supabase
+    .from('agencies')
+    .select('id')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
   if (agencyError) throw agencyError;
   if (!agency) return null;
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png';

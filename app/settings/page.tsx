@@ -121,7 +121,8 @@ function OrganizationTab() {
       const url = await uploadAgencyLogo(file);
       if (!url) throw new Error('Upload failed');
       setForm((prev) => prev ? { ...prev, logo_url: url } : prev);
-      await updateAgency({ logo_url: url });
+      const updatedAgency = await updateAgency(form?.id ?? '', { logo_url: url });
+      if (!updatedAgency) throw new Error('Agency was not updated');
       toast.success(t('settings.logoUploaded'));
       refetch();
       window.dispatchEvent(new CustomEvent('agency-updated'));
@@ -137,7 +138,7 @@ function OrganizationTab() {
     if (!form) return;
     setSaving(true);
     try {
-      await updateAgency({
+      const updatedAgency = await updateAgency(form.id, {
         name: form.name,
         email: form.email,
         phone: form.phone,
@@ -149,6 +150,8 @@ function OrganizationTab() {
         logo_url: form.logo_url,
         currency: form.currency,
       });
+      if (!updatedAgency) throw new Error('Agency was not updated');
+      setForm(updatedAgency);
       toast.success(t('settings.saved'));
       refetch();
       window.dispatchEvent(new CustomEvent('agency-updated'));
@@ -442,7 +445,7 @@ function PermissionsTab() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border text-text-muted">
-                    <th className="pb-2 pr-4 text-left font-medium">{t('settings.module')}</th>
+                    <th className="pb-2 pe-4 text-start font-medium">{t('settings.module')}</th>
                     <th className="pb-2 px-2 text-center font-medium">{t('settings.view')}</th>
                     <th className="pb-2 px-2 text-center font-medium">{t('settings.create')}</th>
                     <th className="pb-2 px-2 text-center font-medium">{t('settings.edit')}</th>
@@ -455,7 +458,7 @@ function PermissionsTab() {
                     if (!perm) return null;
                     return (
                       <tr key={mod} className="border-b border-border/50">
-                        <td className="py-2.5 pr-4 capitalize text-text-primary">{mod}</td>
+                        <td className="py-2.5 pe-4 capitalize text-text-primary">{mod}</td>
                         {(['can_view', 'can_create', 'can_edit', 'can_delete'] as const).map((field) => (
                           <td key={field} className="py-2.5 px-2 text-center">
                             <button
@@ -737,7 +740,7 @@ function AutomationsTab() {
             <h3 className="font-serif text-lg font-medium text-text-primary">n8n Automation Engine</h3>
             <p className="text-xs text-text-muted">Connect your n8n instance to trigger CRM automations</p>
           </div>
-          {connected && <Badge variant="success" className="ml-auto"><Check className="h-3 w-3" strokeWidth={1.5} /> Connected</Badge>}
+          {connected && <Badge variant="success" className="ms-auto"><Check className="h-3 w-3" strokeWidth={1.5} /> Connected</Badge>}
         </div>
 
         <div className="space-y-4">
@@ -805,7 +808,7 @@ function AutomationsTab() {
           ].map((evt) => (
             <div key={evt.event} className="flex items-center gap-2 rounded-lg border border-border bg-bg-elevated px-3 py-2">
               <code className="text-[11px] font-mono text-gold">{evt.event}</code>
-              <span className="ml-auto text-[11px] text-text-muted">{evt.label}</span>
+              <span className="ms-auto text-[11px] text-text-muted">{evt.label}</span>
             </div>
           ))}
         </div>

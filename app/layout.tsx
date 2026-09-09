@@ -52,7 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </LanguageProvider>
           </AuthProvider>
           <Toaster
-            position="bottom-right"
+            position="bottom-center"
             theme="dark"
             toastOptions={{
               style: {
