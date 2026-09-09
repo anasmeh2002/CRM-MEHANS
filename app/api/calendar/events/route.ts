@@ -1,292 +1,281 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-function serverSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-  const key = serviceKey || anonKey;
-  if (!url || !key) {
-    console.error('[calendar/events] Missing Supabase credentials. SUPABASE_SERVICE_ROLE_KEY:', !!serviceKey, 'NEXT_PUBLIC_SUPABASE_ANON_KEY:', !!anonKey, 'URL:', !!url);
-  }
-  return createClient(url, key);
-}
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 
-interface CalendarTokens {
+type GoogleConfig = {
   access_token: string;
-  refresh_token?: string;
-  expires_at: string | null;
-  scope?: string;
-  token_type?: string;
-  agency_id: string | null;
+  refresh_token?: string | null;
+  expires_at?: string | null;
+  calendar_id: string;
+  timezone?: string;
+};
+
+type CalendarContext = {
+  agencyId: string;
+  supabase: SupabaseClient;
+};
+
+function json(data: unknown, status = 200): NextResponse {
+  return NextResponse.json(data, { status });
 }
 
-/**
- * Resolve the agency_id for the user identified by the given Supabase access token.
- */
-async function resolveAgencyId(userToken: string): Promise<string | null> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-  if (!url || !anonKey || !userToken) return null;
+function getServerSupabase(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+}
 
-  const userClient = createClient(url, anonKey, {
-    global: { headers: { Authorization: `Bearer ${userToken}` } },
-  });
+async function getCalendarContext(request: NextRequest): Promise<CalendarContext | null> {
+  const authHeader = request.headers.get('authorization') || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  const supabase = getServerSupabase();
+  const anonUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!token || !supabase || !anonUrl || !anonKey) return null;
 
-  const { data: userData, error: userError } = await userClient.auth.getUser();
-  if (userError || !userData?.user) return null;
+  const authClient = createClient(anonUrl, anonKey);
+  const { data: userData, error: userError } = await authClient.auth.getUser(token);
+  if (userError || !userData.user) return null;
 
-  const { data: profile, error: profileError } = await userClient
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('agency_id')
     .eq('id', userData.user.id)
     .maybeSingle();
+  if (profileError || !profile?.agency_id) return null;
 
-  if (profileError || !profile) return null;
-  return profile.agency_id ?? null;
+  return { agencyId: profile.agency_id, supabase };
 }
 
-async function getGoogleTokens(agencyId: string | null): Promise<CalendarTokens | null> {
-  if (!agencyId) return null;
-  const sb = serverSupabase();
-  const { data, error } = await sb
+async function getGoogleConfig(context: CalendarContext): Promise<GoogleConfig | null> {
+  const { data, error } = await context.supabase
     .from('integrations')
-    .select('connected, config, agency_id')
+    .select('config, connected')
     .eq('service', 'Google Calendar')
-    .eq('agency_id', agencyId)
+    .eq('agency_id', context.agencyId)
     .maybeSingle();
-
-  if (error || !data || !data.connected) return null;
-  const config = data.config as Record<string, unknown>;
-  if (!config?.access_token) return null;
-
-  return {
-    access_token: config.access_token as string,
-    refresh_token: config.refresh_token as string | undefined,
-    expires_at: config.expires_at as string | null,
-    scope: config.scope as string | undefined,
-    token_type: config.token_type as string | undefined,
-    agency_id: (data as any).agency_id ?? null,
-  };
+  if (error || !data?.connected) return null;
+  const config = data.config as Partial<GoogleConfig> | null;
+  if (!config?.access_token || !config.calendar_id) return null;
+  return config as GoogleConfig;
 }
 
-async function refreshAccessToken(refreshToken: string, agencyId: string | null): Promise<CalendarTokens | null> {
+async function refreshConfig(context: CalendarContext, config: GoogleConfig): Promise<GoogleConfig | null> {
   const clientId = process.env.ID_client;
   const clientSecret = process.env.Code_secret_du_client;
-  if (!clientId || !clientSecret) return null;
+  if (!clientId || !clientSecret || !config.refresh_token) return null;
 
-  const res = await fetch('https://oauth2.googleapis.com/token', {
+  const response = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       client_id: clientId,
       client_secret: clientSecret,
-      refresh_token: refreshToken,
+      refresh_token: config.refresh_token,
       grant_type: 'refresh_token',
     }),
   });
+  if (!response.ok) return null;
+  const tokens = await response.json() as Record<string, unknown>;
+  if (typeof tokens.access_token !== 'string') return null;
 
-  if (!res.ok) return null;
-  const tokens = await res.json();
-  if (!tokens.access_token) {
-    console.error('[calendar/events] refresh returned no access_token:', JSON.stringify(tokens).slice(0, 500));
-    return null;
-  }
-
-  const sb = serverSupabase();
-  const newConfig = {
+  const nextConfig: GoogleConfig = {
+    ...config,
     access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token ?? refreshToken,
-    scope: tokens.scope,
-    token_type: tokens.token_type,
-    expires_at: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
-    connected_at: new Date().toISOString(),
+    refresh_token: typeof tokens.refresh_token === 'string' ? tokens.refresh_token : config.refresh_token,
+    expires_at: typeof tokens.expires_in === 'number' ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : config.expires_at,
   };
-  await sb.from('integrations').upsert(
-    { service: 'Google Calendar', connected: true, config: newConfig, agency_id: agencyId },
-    { onConflict: 'agency_id,service' },
-  );
-
-  return { ...newConfig, agency_id: agencyId } as unknown as CalendarTokens;
+  const { error } = await context.supabase
+    .from('integrations')
+    .update({ config: nextConfig, updated_at: new Date().toISOString() })
+    .eq('service', 'Google Calendar')
+    .eq('agency_id', context.agencyId);
+  if (error) return null;
+  return nextConfig;
 }
 
-async function getValidTokens(agencyId: string | null): Promise<CalendarTokens | null> {
-  const tokens = await getGoogleTokens(agencyId);
-  if (!tokens) return null;
+async function getValidConfig(context: CalendarContext): Promise<GoogleConfig | null> {
+  const config = await getGoogleConfig(context);
+  if (!config) return null;
+  if (config.expires_at && new Date(config.expires_at).getTime() <= Date.now() + 60_000) {
+    return refreshConfig(context, config);
+  }
+  return config;
+}
 
-  if (tokens.expires_at && new Date(tokens.expires_at) <= new Date(Date.now() + 60000)) {
-    if (tokens.refresh_token) {
-      return refreshAccessToken(tokens.refresh_token, agencyId);
+function googleEventKey(calendarId: string, eventId: string): string {
+  return `google:${calendarId}:${eventId}`;
+}
+
+function toMeetingPayload(event: Record<string, unknown>, agencyId: string, calendarId: string): Record<string, unknown> | null {
+  const id = typeof event.id === 'string' ? event.id : null;
+  if (!id) return null;
+  const start = event.start as { dateTime?: string; date?: string } | undefined;
+  const end = event.end as { dateTime?: string; date?: string } | undefined;
+  const startsAt = start?.dateTime || (start?.date ? `${start.date}T12:00:00.000Z` : null);
+  const endsAt = end?.dateTime || (end?.date ? `${end.date}T12:00:00.000Z` : null);
+  if (!startsAt) return null;
+  const duration = endsAt && start?.dateTime
+    ? Math.max(1, Math.round((new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60000))
+    : 1440;
+  const attendees = Array.isArray(event.attendees) ? event.attendees as Array<{ displayName?: string; email?: string }> : [];
+  const conference = event.conferenceData as { entryPoints?: Array<{ entryPointType?: string; uri?: string }> } | undefined;
+  const meetLink = conference?.entryPoints?.find((entry) => entry.entryPointType === 'video')?.uri;
+  return {
+    agency_id: agencyId,
+    title: typeof event.summary === 'string' && event.summary.trim() ? event.summary : 'Untitled event',
+    starts_at: startsAt,
+    duration_minutes: duration,
+    meeting_type: meetLink ? 'google_meet' : 'in-person',
+    location: typeof event.location === 'string' ? event.location : meetLink || null,
+    calendar_sync: googleEventKey(calendarId, id),
+    attendee_name: attendees[0]?.displayName || attendees[0]?.email || null,
+    attendee_email: attendees[0]?.email || null,
+    status: event.status === 'cancelled' ? 'cancelled' : 'upcoming',
+    notes: typeof event.description === 'string' ? event.description : null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function syncGoogleEvents(context: CalendarContext, config: GoogleConfig, timeMin: string, timeMax: string) {
+  const response = await fetch(`${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(config.calendar_id)}/events?${new URLSearchParams({ timeMin, timeMax, maxResults: '2500', singleEvents: 'true', showDeleted: 'true', orderBy: 'startTime' })}`, {
+    headers: { Authorization: `Bearer ${config.access_token}` },
+  });
+  if (!response.ok) throw new Error(`Google Calendar request failed (${response.status})`);
+  const result = await response.json() as { items?: Array<Record<string, unknown>> };
+  const events = result.items ?? [];
+
+  for (const event of events) {
+    const payload = toMeetingPayload(event, context.agencyId, config.calendar_id);
+    if (!payload) continue;
+    const { data: existing, error: lookupError } = await context.supabase
+      .from('meetings')
+      .select('id')
+      .eq('agency_id', context.agencyId)
+      .eq('calendar_sync', payload.calendar_sync)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
+
+    if (existing?.id) {
+      const { error } = await context.supabase.from('meetings').update(payload).eq('id', existing.id).eq('agency_id', context.agencyId);
+      if (error) throw error;
+    } else if (payload.status !== 'cancelled') {
+      const { error } = await context.supabase.from('meetings').insert(payload);
+      if (error) throw error;
     }
-    return null;
   }
 
-  return tokens;
+  return events;
 }
 
-// GET — fetch events from Google Calendar
+type ContextAndConfigResult =
+  | { error: NextResponse }
+  | { context: CalendarContext; config: GoogleConfig };
+
+async function getContextAndConfig(request: NextRequest): Promise<ContextAndConfigResult> {
+  const context = await getCalendarContext(request);
+  if (!context) return { error: json({ error: 'You must be signed in.' }, 401) };
+  const config = await getValidConfig(context);
+  if (!config) return { error: json({ error: 'Google Calendar is not connected.' }, 409) };
+  return { context, config };
+}
+
 export async function GET(request: NextRequest) {
-  // Resolve the requesting user's agency from their Supabase token.
-  const authHeader = request.headers.get('authorization') || '';
-  const userToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-  const agencyId = userToken ? await resolveAgencyId(userToken) : null;
-
-  const tokens = await getValidTokens(agencyId);
-  if (!tokens) {
-    return NextResponse.json({ error: 'Google Calendar not connected' }, { status: 401 });
-  }
-
+  const result = await getContextAndConfig(request);
+  if ('error' in result) return result.error;
+  const { context, config } = result;
   const { searchParams } = new URL(request.url);
-  const timeMin = searchParams.get('timeMin') || new Date(Date.now() - 30 * 86400000).toISOString();
-  const timeMax = searchParams.get('timeMax') || new Date(Date.now() + 90 * 86400000).toISOString();
-  const maxResults = searchParams.get('maxResults') || '250';
-
+  const timeMin = searchParams.get('timeMin') || new Date(Date.now() - 90 * 86400000).toISOString();
+  const timeMax = searchParams.get('timeMax') || new Date(Date.now() + 365 * 86400000).toISOString();
   try {
-    const res = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events?${new URLSearchParams({
-        timeMin,
-        timeMax,
-        maxResults,
-        singleEvents: 'true',
-        orderBy: 'startTime',
-      })}`,
-      { headers: { Authorization: `Bearer ${tokens.access_token}` } },
-    );
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.error('[calendar/events] Google API error:', res.status, err);
-      return NextResponse.json({ error: `Google API ${res.status}: ${err.slice(0, 300)}` }, { status: 502 });
-    }
-
-    const data = await res.json();
-    const events = (data.items ?? []).map((e: any) => ({
-      id: e.id,
-      title: e.summary || 'Untitled',
-      starts_at: e.start?.dateTime || e.start?.date || null,
-      ends_at: e.end?.dateTime || e.end?.date || null,
-      location: e.location || null,
-      meeting_type: 'google_meet',
-      attendee: e.attendees?.[0]?.displayName || e.attendees?.[0]?.email || 'TBD',
-      status: 'upcoming',
-      source: 'google',
-      html_link: e.htmlLink || null,
-      google_event_id: e.id,
-    }));
-
-    return NextResponse.json({ events });
-  } catch (err) {
-    console.error('[calendar/events] unexpected error:', err);
-    return NextResponse.json({ error: 'Unexpected error fetching events' }, { status: 500 });
+    const events = await syncGoogleEvents(context, config, timeMin, timeMax);
+    return json({ synced: events.length });
+  } catch (error) {
+    console.error('[calendar/events] sync failed', error);
+    return json({ error: 'Google Calendar sync failed.' }, 502);
   }
 }
 
-// POST — create event in Google Calendar
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get('authorization') || '';
-  const userToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-  const agencyId = userToken ? await resolveAgencyId(userToken) : null;
-
-  const tokens = await getValidTokens(agencyId);
-  if (!tokens) {
-    return NextResponse.json({ error: 'Google Calendar not connected' }, { status: 401 });
-  }
-
-  let body: any;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const { title, starts_at, duration_minutes, location, attendee_name, attendee_email, notes, meeting_type } = body;
-
-  if (!title || !starts_at) {
-    return NextResponse.json({ error: 'Title and start time are required' }, { status: 400 });
-  }
-
-  const start = new Date(starts_at);
-  const end = new Date(start.getTime() + (duration_minutes || 30) * 60000);
-
+  const result = await getContextAndConfig(request);
+  if ('error' in result) return result.error;
+  const { config } = result;
+  let body: Record<string, unknown>;
+  try { body = await request.json() as Record<string, unknown>; } catch { return json({ error: 'Invalid request.' }, 400); }
+  const title = typeof body.title === 'string' ? body.title.trim() : '';
+  const startsAt = typeof body.starts_at === 'string' ? new Date(body.starts_at) : null;
+  const duration = typeof body.duration_minutes === 'number' && body.duration_minutes > 0 ? body.duration_minutes : 30;
+  if (!title || !startsAt || Number.isNaN(startsAt.getTime())) return json({ error: 'Title and start time are required.' }, 400);
   const event: Record<string, unknown> = {
     summary: title,
-    start: { dateTime: start.toISOString(), timeZone: 'UTC' },
-    end: { dateTime: end.toISOString(), timeZone: 'UTC' },
+    start: { dateTime: startsAt.toISOString(), timeZone: config.timezone || 'UTC' },
+    end: { dateTime: new Date(startsAt.getTime() + duration * 60000).toISOString(), timeZone: config.timezone || 'UTC' },
   };
-
-  if (location) event.location = location;
-  if (notes) event.description = notes;
-
-  const attendees: { email: string; displayName?: string }[] = [];
-  if (attendee_email) attendees.push({ email: attendee_email, displayName: attendee_name });
-  if (attendees.length > 0) event.attendees = attendees;
-
-  if (meeting_type === 'google_meet') {
-    event.conferenceData = {
-      createRequest: { requestId: `crm-${Date.now()}`, conferenceSolutionKey: { type: 'hangoutsMeet' } },
-    };
-  }
-
+  if (typeof body.location === 'string' && body.location) event.location = body.location;
+  if (typeof body.notes === 'string' && body.notes) event.description = body.notes;
   try {
-    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    const response = await fetch(`${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(config.calendar_id)}/events`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${tokens.access_token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { Authorization: `Bearer ${config.access_token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(event),
     });
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.error('[calendar/events] create failed:', res.status, err);
-      return NextResponse.json({ error: `Google API ${res.status}: ${err.slice(0, 300)}` }, { status: 502 });
-    }
-
-    const created = await res.json();
-    return NextResponse.json({
-      google_event_id: created.id,
-      html_link: created.htmlLink,
-      hangout_link: created.hangoutLink || null,
-    });
-  } catch (err) {
-    console.error('[calendar/events] create unexpected error:', err);
-    return NextResponse.json({ error: 'Unexpected error creating event' }, { status: 500 });
+    if (!response.ok) return json({ error: 'Google Calendar event creation failed.' }, 502);
+    const created = await response.json() as { id?: string; htmlLink?: string; hangoutLink?: string };
+    return json({ google_event_id: created.id, calendar_sync: created.id ? googleEventKey(config.calendar_id, created.id) : null, html_link: created.htmlLink || null, hangout_link: created.hangoutLink || null });
+  } catch (error) {
+    console.error('[calendar/events] create failed', error);
+    return json({ error: 'Google Calendar event creation failed.' }, 502);
   }
 }
 
-// DELETE — delete event from Google Calendar
-export async function DELETE(request: NextRequest) {
-  const authHeader = request.headers.get('authorization') || '';
-  const userToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-  const agencyId = userToken ? await resolveAgencyId(userToken) : null;
-
-  const tokens = await getValidTokens(agencyId);
-  if (!tokens) {
-    return NextResponse.json({ error: 'Google Calendar not connected' }, { status: 401 });
-  }
-
+export async function PUT(request: NextRequest) {
+  const result = await getContextAndConfig(request);
+  if ('error' in result) return result.error;
+  const { config } = result;
   const { searchParams } = new URL(request.url);
   const eventId = searchParams.get('eventId');
-  if (!eventId) {
-    return NextResponse.json({ error: 'eventId is required' }, { status: 400 });
+  if (!eventId) return json({ error: 'Event ID is required.' }, 400);
+  let body: Record<string, unknown>;
+  try { body = await request.json() as Record<string, unknown>; } catch { return json({ error: 'Invalid request.' }, 400); }
+  const patch: Record<string, unknown> = {};
+  if (typeof body.title === 'string') patch.summary = body.title.trim();
+  if (typeof body.starts_at === 'string') {
+    const start = new Date(body.starts_at);
+    const duration = typeof body.duration_minutes === 'number' && body.duration_minutes > 0 ? body.duration_minutes : 30;
+    patch.start = { dateTime: start.toISOString(), timeZone: config.timezone || 'UTC' };
+    patch.end = { dateTime: new Date(start.getTime() + duration * 60000).toISOString(), timeZone: config.timezone || 'UTC' };
   }
-
+  if (typeof body.location === 'string') patch.location = body.location;
+  if (typeof body.notes === 'string') patch.description = body.notes;
   try {
-    const res = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
-      { method: 'DELETE', headers: { Authorization: `Bearer ${tokens.access_token}` } },
-    );
+    const response = await fetch(`${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(config.calendar_id)}/events/${encodeURIComponent(eventId)}`, {
+      method: 'PATCH', headers: { Authorization: `Bearer ${config.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+    });
+    if (!response.ok) return json({ error: 'Google Calendar event update failed.' }, 502);
+    return json({ success: true });
+  } catch (error) {
+    console.error('[calendar/events] update failed', error);
+    return json({ error: 'Google Calendar event update failed.' }, 502);
+  }
+}
 
-    if (!res.ok && res.status !== 410) {
-      const err = await res.text();
-      console.error('[calendar/events] delete failed:', res.status, err);
-      return NextResponse.json({ error: `Google API ${res.status}: ${err.slice(0, 300)}` }, { status: 502 });
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error('[calendar/events] delete unexpected error:', err);
-    return NextResponse.json({ error: 'Unexpected error deleting event' }, { status: 500 });
+export async function DELETE(request: NextRequest) {
+  const result = await getContextAndConfig(request);
+  if ('error' in result) return result.error;
+  const { config } = result;
+  const eventId = new URL(request.url).searchParams.get('eventId');
+  if (!eventId) return json({ error: 'Event ID is required.' }, 400);
+  try {
+    const response = await fetch(`${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(config.calendar_id)}/events/${encodeURIComponent(eventId)}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${config.access_token}` },
+    });
+    if (!response.ok && response.status !== 410) return json({ error: 'Google Calendar event deletion failed.' }, 502);
+    return json({ success: true });
+  } catch (error) {
+    console.error('[calendar/events] delete failed', error);
+    return json({ error: 'Google Calendar event deletion failed.' }, 502);
   }
 }

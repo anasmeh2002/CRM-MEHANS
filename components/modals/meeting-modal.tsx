@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { Field, TextInput, TextArea, Select, LoadingButton, Modal } from '@/components/forms';
 import { createMeeting, fetchLeads, fetchContacts, fetchTeamMembers } from '@/lib/data';
 import { useRefresh } from '@/components/refresh-provider';
+import { useAuth } from '@/components/auth-provider';
+import { updateMeeting } from '@/lib/data';
 import type { MeetingType, Lead, Contact, TeamMember } from '@/lib/types';
 
 const meetingTypes: { value: MeetingType; label: string }[] = [
@@ -19,6 +21,7 @@ const calendarSyncs = ['Google Calendar', 'Outlook', 'Apple Calendar', 'None'];
 
 export function MeetingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { triggerRefresh } = useRefresh();
+  const { session } = useAuth();
   const [saving, setSaving] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -63,7 +66,7 @@ export function MeetingModal({ open, onClose }: { open: boolean; onClose: () => 
           try {
             const googleRes = await fetch('/api/calendar/events', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
               body: JSON.stringify({
                 title: form.title,
                 starts_at: startsAt,
@@ -78,6 +81,9 @@ export function MeetingModal({ open, onClose }: { open: boolean; onClose: () => 
             if (googleRes.ok) {
               const googleData = await googleRes.json();
               toast.success(`Meeting "${form.title}" scheduled and synced to Google Calendar`);
+              if (googleData.calendar_sync) {
+                await updateMeeting(result.id, { calendar_sync: googleData.calendar_sync });
+              }
               if (googleData.hangout_link) {
                 toast.info(`Google Meet link: ${googleData.hangout_link}`, { duration: 6000 });
               }

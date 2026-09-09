@@ -1,76 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyCalendarOAuthState } from '@/lib/calendar-auth';
 
 function getBaseUrl(): string {
-  if (process.env.NODE_ENV === 'production') {
-    return 'https://crm.mehans.space';
-  }
+  if (process.env.NODE_ENV === 'production') return 'https://crm.mehans.space';
   return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 }
 
-function serverSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-  const key = serviceKey || anonKey;
-  if (!url || !key) {
-    console.error('[calendar/callback] Missing Supabase credentials. SUPABASE_SERVICE_ROLE_KEY:', !!serviceKey, 'NEXT_PUBLIC_SUPABASE_ANON_KEY:', !!anonKey, 'URL:', !!url);
-  }
-  return createClient(url, key);
-}
-
-/**
- * Resolve the agency_id for the user identified by the given Supabase access token.
- * Returns null if the token is invalid or the user has no agency.
- */
-async function resolveAgencyId(userToken: string): Promise<string | null> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-  if (!url || !anonKey || !userToken) return null;
-
-  // Use the user's own token to resolve their identity (respects RLS).
-  const userClient = createClient(url, anonKey, {
-    global: { headers: { Authorization: `Bearer ${userToken}` } },
-  });
-
-  const { data: userData, error: userError } = await userClient.auth.getUser();
-  if (userError || !userData?.user) return null;
-
-  // Look up the agency_id from the profiles table.
-  const { data: profile, error: profileError } = await userClient
-    .from('profiles')
-    .select('agency_id')
-    .eq('id', userData.user.id)
-    .maybeSingle();
-
-  if (profileError || !profile) return null;
-  return profile.agency_id ?? null;
+function getServerSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const error = searchParams.get('error');
-  const stateToken = searchParams.get('state') || '';
-
-  if (error) {
-    return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=${encodeURIComponent(error)}`);
-  }
-
-  if (!code) {
-    return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=no_code`);
-  }
-
+  const oauthError = searchParams.get('error');
+  const state = searchParams.get('state') || '';
   const clientId = process.env.ID_client;
   const clientSecret = process.env.Code_secret_du_client;
+  const stateUserId = clientSecret ? verifyCalendarOAuthState(state, clientSecret) : null;
 
-  if (!clientId || !clientSecret) {
-    return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=missing_credentials`);
-  }
+  if (oauthError) return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=google_denied`);
+  if (!code || !stateUserId) return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=invalid_oauth_state`);
+  if (!clientId || !clientSecret) return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=missing_credentials`);
 
-  const redirectUri = `${getBaseUrl()}/api/calendar/callback`;
+  const supabase = getServerSupabase();
+  if (!supabase) return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=server_unavailable`);
 
   try {
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('agency_id')
+      .eq('id', stateUserId)
+      .maybeSingle();
+    if (profileError || !profile?.agency_id) {
+      return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=agency_not_found`);
+    }
+
+    const redirectUri = `${getBaseUrl()}/api/calendar/callback`;
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -82,48 +52,46 @@ export async function GET(request: NextRequest) {
         grant_type: 'authorization_code',
       }),
     });
+    if (!tokenRes.ok) return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=token_exchange_failed`);
 
-    if (!tokenRes.ok) {
-      const errBody = await tokenRes.text();
-      console.error('[calendar/callback] token exchange failed:', errBody);
-      return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=${encodeURIComponent('token_exchange_failed:' + errBody.slice(0, 200))}`);
+    const tokens = await tokenRes.json() as Record<string, unknown>;
+    if (typeof tokens.access_token !== 'string') {
+      return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=missing_access_token`);
     }
 
-    const tokens = await tokenRes.json();
+    const calendarRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList/primary', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+    if (!calendarRes.ok) return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=calendar_lookup_failed`);
+    const calendar = await calendarRes.json() as { id?: string; timeZone?: string };
+    if (!calendar.id) return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=missing_calendar_id`);
 
-    // Resolve the agency_id from the state token so this connection is
-    // scoped to the authenticated user's agency, not shared globally.
-    let agencyId: string | null = null;
-    if (stateToken) {
-      agencyId = await resolveAgencyId(stateToken);
-    }
-
-    const sb = serverSupabase();
     const config = {
       access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      scope: tokens.scope,
-      token_type: tokens.token_type,
-      expires_at: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
+      refresh_token: typeof tokens.refresh_token === 'string' ? tokens.refresh_token : null,
+      scope: typeof tokens.scope === 'string' ? tokens.scope : null,
+      token_type: typeof tokens.token_type === 'string' ? tokens.token_type : null,
+      expires_at: typeof tokens.expires_in === 'number' ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null,
+      calendar_id: calendar.id,
+      timezone: calendar.timeZone || 'UTC',
+      connected_user_id: stateUserId,
       connected_at: new Date().toISOString(),
     };
 
-    const { error: upsertError } = await sb
+    const { error: upsertError } = await supabase
       .from('integrations')
       .upsert(
-        { service: 'Google Calendar', connected: true, config, agency_id: agencyId },
+        { service: 'Google Calendar', connected: true, config, agency_id: profile.agency_id },
         { onConflict: 'agency_id,service' },
       );
-
     if (upsertError) {
-      console.error('[calendar/callback] failed to store tokens:', upsertError.message);
-      return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=${encodeURIComponent('storage_failed:' + upsertError.message.slice(0, 200))}`);
+      console.error('[calendar/callback] failed to store integration', upsertError);
+      return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=storage_failed`);
     }
 
     return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_success=true`);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'unexpected';
-    console.error('[calendar/callback] unexpected error:', msg);
-    return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=${encodeURIComponent('unexpected:' + msg.slice(0, 200))}`);
+  } catch (error) {
+    console.error('[calendar/callback] unexpected error', error);
+    return NextResponse.redirect(`${getBaseUrl()}/calendar?sync_error=unexpected`);
   }
 }

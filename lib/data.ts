@@ -529,6 +529,7 @@ export async function updateMeeting(id: string, patch: Partial<Meeting>): Promis
   if (patch.attendee_name !== undefined) dbPatch.attendee_name = patch.attendee_name;
   if (patch.status !== undefined) dbPatch.status = patch.status;
   if (patch.notes !== undefined) dbPatch.notes = patch.notes;
+  if (patch.calendar_sync !== undefined) dbPatch.calendar_sync = patch.calendar_sync;
   const { data, error } = await db().from('meetings').update(dbPatch).eq('id', id).select('*, lead:leads(*), contact:contacts(*), assigned_agent:profiles!assigned_agent_id(*)').single();
   if (error) { console.error('[data] updateMeeting failed', error); return null; }
   if (patch.status === 'cancelled') void dispatchAutomationEvent('meeting.cancelled', { meeting_id: id });
@@ -930,7 +931,7 @@ export async function revokeApiKey(id: string): Promise<boolean> {
 export async function fetchIntegrations(): Promise<IntegrationRow[]> {
   const { data, error } = await supabase
     .from('integrations')
-    .select('*')
+    .select('id, agency_id, service, connected')
     .order('service', { ascending: true });
   if (error) throw error;
   return (data ?? []) as IntegrationRow[];
