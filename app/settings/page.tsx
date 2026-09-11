@@ -23,6 +23,7 @@ import type { AgencyProfile, RolePermissionRow, IntegrationRow, ApiKeyRow } from
 import type { TeamMember } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/components/language-provider';
+import { useAuth } from '@/components/auth-provider';
 import { CURRENCY_OPTIONS, type CurrencyCode } from '@/lib/format';
 
 const tabDefs = [
@@ -95,12 +96,15 @@ export default function SettingsPage() {
 
 function OrganizationTab() {
   const { t } = useLanguage();
+  const { session } = useAuth();
   const { data: agency, loading, error, refetch } = useSupabaseQuery<AgencyProfile | null>(fetchAgency);
   const [form, setForm] = useState<AgencyProfile | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
-
+useEffect(() => {
+  if (session?.access_token) refetch();
+}, [session?.access_token]);
   useEffect(() => {
     if (agency) {
       setForm(agency);
