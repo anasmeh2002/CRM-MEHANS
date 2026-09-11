@@ -97,9 +97,9 @@ export default function AnalyticsPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label={t('analytics.totalRevenue')} value={formatCurrency(totalRevenue, currency)} change="+42%" icon={DollarSign} delay={0} />
+        <StatCard label={t('analytics.totalRevenue')} value={formatCurrency(totalRevenue, currency)} icon={DollarSign} delay={0} />
         <StatCard label={t('analytics.dealsClosed')} value={String(closedDeals)} icon={Award} delay={0.05} />
-        <StatCard label={t('analytics.avgDealSize')} value={formatCurrency(averageDeal, currency)} change="+12%" icon={TrendingUp} delay={0.1} />
+        <StatCard label={t('analytics.avgDealSize')} value={formatCurrency(averageDeal, currency)} icon={TrendingUp} delay={0.1} />
         <StatCard label={t('analytics.winRate')} value={`${winRate.toFixed(1)}%`} icon={Target} delay={0.15} />
       </div>
 

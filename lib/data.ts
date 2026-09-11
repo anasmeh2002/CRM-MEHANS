@@ -689,7 +689,7 @@ export async function fetchDashboardStats(range: DateRange = 'month') {
 
 export async function fetchRevenueData() {
   const deals = await fetchDeals();
-  const wonDeals = deals.filter((d) => d.stage === 'won');
+  const wonDeals = deals.filter((d) => ['won', 'closed_won'].includes(String(d.stage)));
   const now = new Date();
   const months: { month: string; revenue: number; target: number }[] = [];
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -704,8 +704,7 @@ export async function fetchRevenueData() {
         return dealDate >= monthStart && dealDate < monthEnd;
       })
       .reduce((sum, deal) => sum + (deal.value ?? 0), 0);
-    const target = 1500000 + (7 - i) * 200000;
-    months.push({ month: monthNames[d.getMonth()], revenue: monthRevenue, target });
+    months.push({ month: monthNames[d.getMonth()], revenue: monthRevenue, target: 0 });
   }
   return months;
 }
@@ -746,14 +745,11 @@ export async function fetchLeadSourceData() {
   };
 
   const total = leads.length || 1;
-  return [
-    { name: 'Website', value: Math.round(((sourceMap.website ?? 0) / total) * 100), color: colors.website },
-    { name: 'Referral', value: Math.round(((sourceMap.referral ?? 0) / total) * 100), color: colors.referral },
-    { name: 'Social Media', value: Math.round(((sourceMap.social ?? 0) / total) * 100), color: colors.social },
-    { name: 'Portal', value: Math.round(((sourceMap.portal ?? 0) / total) * 100), color: colors.portal },
-    { name: 'Walk-in', value: Math.round(((sourceMap['walk-in'] ?? 0) / total) * 100), color: colors['walk-in'] },
-    { name: 'Cold Call', value: Math.round(((sourceMap['cold-call'] ?? 0) / total) * 100), color: colors['cold-call'] },
-  ].filter((s) => s.value > 0);
+  return Object.entries(sourceMap).map(([name, count]) => ({
+    name,
+    value: Math.round((count / total) * 100),
+    color: colors[name] ?? '#8A8A82',
+  })).filter((s) => s.value > 0);
 }
 
 export async function fetchFunnelData() {

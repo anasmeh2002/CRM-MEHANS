@@ -42,13 +42,12 @@ export default function TeamPage() {
       </PageHeader>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Team Members" value={String(teamMembers.length)} icon={Award} delay={0} />
-        <StatCard label="Total Revenue" value={formatCurrency(totalRevenue, currency)} change="+35%" icon={TrendingUp} delay={0.05} />
-        <StatCard label="Total Deals" value={String(totalDeals)} change="+22%" icon={Award} delay={0.1} />
+        <StatCard label={t('team.members')} value={String(teamMembers.length)} icon={Award} delay={0} />
+        <StatCard label={t('analytics.totalRevenue')} value={formatCurrency(totalRevenue, currency)} icon={TrendingUp} delay={0.05} />
+        <StatCard label={t('team.totalDeals')} value={String(totalDeals)} icon={Award} delay={0.1} />
         <StatCard
-          label="Avg Revenue"
+          label={t('team.avgRevenue')}
           value={teamMembers.length > 0 ? formatCurrency(totalRevenue / teamMembers.length, currency) : formatCurrency(0, currency)}
-          change="+12%"
           icon={TrendingUp}
           delay={0.15}
         />

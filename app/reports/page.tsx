@@ -152,30 +152,26 @@ export default function ReportsPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
-          label="Total Revenue"
+          label={t('analytics.totalRevenue')}
           value={loading ? '—' : formatCurrency(totalRevenue, currency)}
-          change="+42%"
           icon={DollarSign}
           delay={0}
         />
         <StatCard
-          label="Leads Generated"
+          label={t('analytics.leadsGenerated')}
           value={loading ? '—' : String(leads.length)}
-          change="+28%"
           icon={Users}
           delay={0.05}
         />
         <StatCard
-          label="Conversion Rate"
+          label={t('analytics.conversionRate')}
           value={loading ? '—' : `${conversionRate.toFixed(1)}%`}
-          change="+1.2%"
           icon={Target}
           delay={0.1}
         />
         <StatCard
-          label="Avg Deal Size"
+          label={t('analytics.avgDealSize')}
           value={loading ? '—' : formatCurrency(avgDealSize, currency)}
-          change="+12%"
           icon={TrendingUp}
           delay={0.15}
         />
