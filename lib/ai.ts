@@ -10,357 +10,36 @@ export async function askAI(
   system?: string,
   model?: string,
 ): Promise<string> {
-  if (!Array.isArray(messages) || messages.length === 0) {
-    throw new Error('AI message is required.');
-  }
-
-  const cleanMessages = messages
-    .filter(
-      (message) =>
-        message &&
-        (message.role === 'user' || message.role === 'assistant') &&
-        typeof message.content === 'string' &&
-        message.content.trim().length > 0,
-    )
-    .map((message) => ({
-      role: message.role,
-      content: message.content.trim(),
-    }));
-
-  if (cleanMessages.length === 0) {
-    throw new Error('AI message is required.');
-  }
-
-  const { data, error } = await supabase.functions.invoke(
-    'openrouter-ai',
-    {
-      body: {
-        messages: cleanMessages,
-        system,
-        model,
-      },
+  const { data, error } = await supabase.functions.invoke('openrouter-ai', {
+    body: {
+      messages,
+      system,
+      model,
     },
-  );
+  });
 
   if (error) {
-    throw new Error(
+    const message =
       error instanceof Error
         ? error.message
-        : 'Unable to reach the AI service.',
-    );
+        : 'Unable to reach the AI service';
+
+    throw new Error(message);
   }
 
   if (!data || typeof data.content !== 'string') {
-    throw new Error(
-      typeof data?.error === 'string'
-        ? data.error
-        : 'The AI service returned an invalid response.',
-    );
+    const msg =
+      data?.error || 'The AI service returned an invalid response';
+
+    throw new Error(msg);
   }
 
-  const content = data.content.trim();
-
-  if (!content) {
-    throw new Error('The AI service returned an empty response.');
-  }
-
-  return content;
+  return data.content;
 }
 
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                    */
-/* -------------------------------------------------------------------------- */
-
-function cleanText(value: unknown): string | undefined {
-  if (value === null || value === undefined) {
-    return undefined;
-  }
-
-  const text = String(value).trim();
-
-  return text.length > 0 ? text : undefined;
-}
-
-function firstDefined(...values: unknown[]): unknown {
-  for (const value of values) {
-    if (
-      value !== null &&
-      value !== undefined &&
-      value !== ''
-    ) {
-      return value;
-    }
-  }
-
-  return undefined;
-}
-
-function numberValue(...values: unknown[]): number | undefined {
-  const value = firstDefined(...values);
-
-  if (
-    typeof value === 'number' &&
-    Number.isFinite(value)
-  ) {
-    return value;
-  }
-
-  if (typeof value === 'string') {
-    const parsed = Number(
-      value.replace(/[^\d.-]/g, ''),
-    );
-
-    if (Number.isFinite(parsed)) {
-      return parsed;
-    }
-  }
-
-  return undefined;
-}
-
-function limitText(
-  value: unknown,
-  maxLength = 1000,
-): string | undefined {
-  const text = cleanText(value);
-
-  if (!text) {
-    return undefined;
-  }
-
-  if (text.length <= maxLength) {
-    return text;
-  }
-
-  return `${text.slice(0, maxLength)}...`;
-}
-
-function stripJsonMarkdown(value: string): string {
-  return value
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/```\s*$/i, '')
-    .trim();
-}
-
-/* -------------------------------------------------------------------------- */
-/* NORMALIZE LEAD                                                             */
-/* -------------------------------------------------------------------------- */
-
-function normalizeLead(
-  lead: Record<string, any>,
-) {
-  const budget = firstDefined(
-    lead.budget,
-    lead.budget_range,
-    lead.budget_min,
-    lead.budget_max,
-  );
-
-  const budgetMin = numberValue(
-    lead.budget_min,
-    lead.min_budget,
-  );
-
-  const budgetMax = numberValue(
-    lead.budget_max,
-    lead.max_budget,
-    lead.budget,
-  );
-
-  const propertyInterest = firstDefined(
-    lead.property_interest,
-    lead.interested_in,
-    lead.property_type,
-    lead.interest,
-  );
-
-  const score = numberValue(
-    lead.ai_score,
-    lead.score,
-  );
-
-  const name = firstDefined(
-    lead.name,
-    lead.full_name,
-    [lead.first_name, lead.last_name]
-      .filter(Boolean)
-      .join(' '),
-  );
-
-  return {
-    id: cleanText(lead.id),
-    name: cleanText(name),
-    email: cleanText(lead.email),
-    phone: cleanText(lead.phone),
-    whatsapp: cleanText(lead.whatsapp),
-
-    status: cleanText(lead.status),
-    source: cleanText(lead.source),
-
-    budget:
-      budget !== undefined
-        ? budget
-        : undefined,
-
-    budget_min: budgetMin,
-    budget_max: budgetMax,
-
-    property_interest:
-      cleanText(propertyInterest),
-
-    notes: limitText(
-      lead.notes,
-      2000,
-    ),
-
-    score,
-
-    created_at:
-      cleanText(lead.created_at),
-
-    updated_at:
-      cleanText(lead.updated_at),
-  };
-}
-
-/* -------------------------------------------------------------------------- */
-/* PROPERTY MATCHING                                                          */
-/* -------------------------------------------------------------------------- */
-
-function normalizeProperty(
-  property: Record<string, any>,
-) {
-  return {
-    id: cleanText(property.id),
-
-    title:
-      cleanText(property.title) ||
-      'Untitled property',
-
-    city:
-      cleanText(property.city),
-
-    price:
-      numberValue(property.price),
-
-    status:
-      cleanText(property.status),
-
-    type:
-      cleanText(property.type),
-
-    bedrooms:
-      numberValue(property.bedrooms),
-
-    bathrooms:
-      numberValue(property.bathrooms),
-
-    area:
-      numberValue(property.area),
-  };
-}
-
-/**
- * Creates a deterministic shortlist before sending properties to the AI.
- *
- * This prevents the model from inventing properties and keeps the prompt
- * reasonably small when the agency has many properties.
- */
-function scorePropertyMatch(
-  lead: Record<string, any>,
-  property: Record<string, any>,
-): number {
-  let score = 0;
-
-  const leadCity = cleanText(
-    lead.city ??
-      lead.location ??
-      lead.preferred_city ??
-      lead.preferred_location,
-  )?.toLowerCase();
-
-  const leadType = cleanText(
-    lead.property_interest ??
-      lead.interested_in ??
-      lead.property_type,
-  )?.toLowerCase();
-
-  const propertyCity =
-    cleanText(property.city)?.toLowerCase();
-
-  const propertyType =
-    cleanText(property.type)?.toLowerCase();
-
-  const budgetMin = numberValue(
-    lead.budget_min,
-    lead.min_budget,
-  );
-
-  const budgetMax = numberValue(
-    lead.budget_max,
-    lead.max_budget,
-    lead.budget,
-  );
-
-  const propertyPrice =
-    numberValue(property.price);
-
-  /* Location */
-
-  if (
-    leadCity &&
-    propertyCity &&
-    propertyCity.includes(leadCity)
-  ) {
-    score += 40;
-  }
-
-  /* Property type */
-
-  if (
-    leadType &&
-    propertyType &&
-    propertyType.includes(leadType)
-  ) {
-    score += 30;
-  }
-
-  /* Budget */
-
-  if (
-    propertyPrice !== undefined
-  ) {
-    if (
-      budgetMax !== undefined &&
-      propertyPrice <= budgetMax
-    ) {
-      score += 20;
-    }
-
-    if (
-      budgetMin !== undefined &&
-      propertyPrice >= budgetMin
-    ) {
-      score += 5;
-    }
-
-    if (
-      budgetMin !== undefined &&
-      budgetMax !== undefined &&
-      propertyPrice >= budgetMin &&
-      propertyPrice <= budgetMax
-    ) {
-      score += 25;
-    }
-  }
-
-  return score;
-}
-
-/* -------------------------------------------------------------------------- */
-/* AI INSIGHTS                                                                */
-/* -------------------------------------------------------------------------- */
+// ─────────────────────────────────────────────────────────────
+// AI INSIGHTS
+// ─────────────────────────────────────────────────────────────
 
 export async function getAIInsights(
   context: string,
@@ -373,204 +52,148 @@ export async function getAIInsights(
   }[]
 > {
   const system = `
-You are the MEHANS CRM Sales Intelligence engine.
+You are the MEHANS CRM sales analyst.
 
-Use ONLY the CRM data supplied by the application.
+Use ONLY the CRM data provided by the user.
 
-Never invent leads, customers, properties, prices, deals,
-appointments, tasks, conversations, revenue, or sales activity.
+Generate exactly 3 actionable sales insights.
 
-Identify useful patterns such as:
-- high-value opportunities
-- neglected leads
-- follow-up opportunities
-- pipeline risks
-- strong buying signals
-- property and lead mismatches
-- overdue work
+Each insight must have:
+{
+  "title": "short title",
+  "description": "one concise sentence",
+  "action": "one concrete next step",
+  "type": "opportunity" | "trend" | "alert"
+}
 
-Return ONLY a JSON array containing exactly 3 objects.
-
-Each object must contain:
-title
-description
-action
-type
-
-The type must be one of:
-opportunity
-trend
-alert
-
-If the CRM data does not support a conclusion,
-do not invent one.
-`.trim();
+Rules:
+- Never invent leads.
+- Never invent properties.
+- Never invent prices.
+- Never invent deals.
+- Never invent appointments.
+- Never invent sales numbers.
+- If something is unknown, say it is unknown.
+- Return ONLY a JSON array.
+- Do not use markdown.
+`;
 
   const raw = await askAI(
     [
       {
         role: 'user',
-        content:
-          `CRM DATA:\n${context}\n\n` +
-          `Generate 3 actionable CRM insights.`,
+        content: `CRM DATA:\n${context}\n\nGenerate the 3 insights now.`,
       },
     ],
     system,
   );
 
   try {
-    const parsed = JSON.parse(
-      stripJsonMarkdown(raw),
-    );
+    const cleaned = cleanJsonResponse(raw);
+    const parsed = JSON.parse(cleaned);
 
     if (Array.isArray(parsed)) {
-      return parsed.slice(0, 3).map(
-        (item: any) => ({
-          title:
-            cleanText(item?.title) ||
-            'CRM Insight',
-
-          description:
-            cleanText(
-              item?.description,
-            ) ||
-            'Review the available CRM data.',
-
-          action:
-            cleanText(item?.action) ||
-            'Review',
-
-          type:
-            [
-              'opportunity',
-              'trend',
-              'alert',
-            ].includes(item?.type)
-              ? item.type
-              : 'trend',
-        }),
-      );
+      return parsed.slice(0, 3).map((item: any) => ({
+        title: String(item?.title ?? 'Insight'),
+        description: String(item?.description ?? ''),
+        action: String(item?.action ?? 'Review'),
+        type: ['opportunity', 'trend', 'alert'].includes(item?.type)
+          ? item.type
+          : 'trend',
+      }));
     }
   } catch {
-    // Fallback below.
+    // Return fallback below.
   }
 
   return [
     {
       title: 'AI Insight',
-      description:
-        raw.slice(0, 280),
+      description: raw.slice(0, 280),
       action: 'Review',
       type: 'trend',
     },
   ];
 }
 
-/* -------------------------------------------------------------------------- */
-/* LEAD SUMMARY                                                               */
-/* -------------------------------------------------------------------------- */
+// ─────────────────────────────────────────────────────────────
+// LEAD SUMMARY
+// ─────────────────────────────────────────────────────────────
 
 export async function getLeadSummary(
   lead: Record<string, unknown>,
 ): Promise<string> {
-  const normalizedLead =
-    normalizeLead(
-      lead as Record<string, any>,
-    );
-
   const system = `
-You are the MEHANS CRM Lead Analyst.
+You are the MEHANS CRM assistant.
 
-Analyze ONE real-estate lead using ONLY the supplied CRM data.
+Summarize this real estate lead in 3-4 concise sentences.
 
 Cover:
-1. Lead quality
-2. Budget fit
-3. Buying or renting objective
-4. Risks or missing information
-5. Recommended next action
+- Lead quality
+- Budget
+- Property requirements
+- Risks or missing information
+- Recommended next action
 
-Never invent information.
-
-If information is unavailable, say Unknown.
-
-Keep the answer concise and practical.
-`.trim();
+Use ONLY the supplied lead data.
+Never invent missing information.
+`;
 
   return askAI(
     [
       {
         role: 'user',
-        content:
-          `LEAD DATA:\n${JSON.stringify(
-            normalizedLead,
-            null,
-            2,
-          )}`,
+        content: `LEAD DATA:\n${JSON.stringify(lead, null, 2)}`,
       },
     ],
     system,
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* AI REPORT                                                                  */
-/* -------------------------------------------------------------------------- */
+// ─────────────────────────────────────────────────────────────
+// AI REPORT
+// ─────────────────────────────────────────────────────────────
 
 export async function getAIReport(
   context: string,
   topic: string,
 ): Promise<string> {
-  const safeTopic =
-    cleanText(topic) ||
-    'CRM performance';
+  const safeTopic = String(topic || 'CRM performance');
 
   const system = `
-You are the MEHANS CRM Reporting Engine.
+You are the MEHANS CRM reporting engine.
 
-Use ONLY the CRM data supplied by the application.
-
-Create a structured report about:
-${safeTopic}
+Create a structured ${safeTopic} report using ONLY the supplied CRM data.
 
 Include:
-- Key observations
-- Relevant metrics available in the data
-- Risks or gaps
-- Three actionable recommendations
+- Key metrics
+- Important observations
+- Risks
+- 3 actionable recommendations
 
-Never invent numbers.
+Do not invent information.
 
-If a metric is unavailable, say Unknown.
-
-Keep the report under 500 words.
-Use clear headings.
-`.trim();
+Keep the report under 400 words.
+`;
 
   return askAI(
     [
       {
         role: 'user',
-        content:
-          `CRM DATA:\n${context}\n\n` +
-          `REPORT TOPIC:\n${safeTopic}`,
+        content: `CRM DATA:\n${context}\n\nCreate the report.`,
       },
     ],
     system,
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* LEAD ANALYSIS                                                              */
-/* -------------------------------------------------------------------------- */
+// ─────────────────────────────────────────────────────────────
+// LEAD ANALYSIS
+// ─────────────────────────────────────────────────────────────
 
 export interface LeadAnalysis {
   summary: string;
-  intent:
-    | 'High'
-    | 'Medium'
-    | 'Low'
-    | 'Unknown';
+  intent: 'High' | 'Medium' | 'Low' | 'Unknown';
   objective: string;
   budgetFit: string;
   propertyFit: string;
@@ -582,829 +205,690 @@ export interface LeadAnalysis {
   suggestedWhatsappReply: string;
 }
 
+type PropertyRecord = Record<string, any>;
+
+function cleanJsonResponse(value: string): string {
+  return value
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```\s*$/i, '')
+    .trim();
+}
+
+function toNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const cleaned = value.replace(/[^\d.-]/g, '');
+    const number = Number(cleaned);
+
+    if (Number.isFinite(number)) {
+      return number;
+    }
+  }
+
+  return null;
+}
+
+function normalizeText(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  return String(value).trim();
+}
+
+function getLeadBudget(lead: any): {
+  min: number | null;
+  max: number | null;
+} {
+  const directBudget = toNumber(lead?.budget);
+
+  const min =
+    toNumber(lead?.budget_min) ??
+    (directBudget !== null ? directBudget : null);
+
+  const max =
+    toNumber(lead?.budget_max) ??
+    (directBudget !== null ? directBudget : null);
+
+  return {
+    min,
+    max,
+  };
+}
+
+function getLeadInterest(lead: any): string {
+  return (
+    normalizeText(lead?.property_interest) ||
+    normalizeText(lead?.interested_in) ||
+    normalizeText(lead?.property_type) ||
+    'Unknown'
+  );
+}
+
+function getPropertyPrice(property: PropertyRecord): number | null {
+  return (
+    toNumber(property?.price) ??
+    toNumber(property?.selling_price) ??
+    toNumber(property?.sale_price) ??
+    null
+  );
+}
+
+function getPropertyCity(property: PropertyRecord): string {
+  return (
+    normalizeText(property?.city) ||
+    normalizeText(property?.location) ||
+    normalizeText(property?.address) ||
+    ''
+  );
+}
+
+function getPropertyType(property: PropertyRecord): string {
+  return (
+    normalizeText(property?.type) ||
+    normalizeText(property?.property_type) ||
+    ''
+  );
+}
+
+function isPropertyAvailable(property: PropertyRecord): boolean {
+  const status = normalizeText(property?.status).toLowerCase();
+
+  if (!status) {
+    return true;
+  }
+
+  return [
+    'available',
+    'active',
+    'published',
+    'for_sale',
+    'for rent',
+    'for_rent',
+    'new',
+  ].includes(status);
+}
+
+function propertyMatchesBudget(
+  property: PropertyRecord,
+  budget: { min: number | null; max: number | null },
+): boolean {
+  const price = getPropertyPrice(property);
+
+  if (price === null) {
+    return false;
+  }
+
+  if (budget.max !== null && price > budget.max) {
+    return false;
+  }
+
+  if (budget.min !== null && price < budget.min) {
+    return true;
+  }
+
+  return true;
+}
+
+function propertyMatchesType(
+  property: PropertyRecord,
+  interest: string,
+): boolean {
+  if (!interest || interest === 'Unknown') {
+    return true;
+  }
+
+  const propertyType = getPropertyType(property).toLowerCase();
+  const requested = interest.toLowerCase();
+
+  if (!propertyType) {
+    return false;
+  }
+
+  return (
+    propertyType.includes(requested) ||
+    requested.includes(propertyType)
+  );
+}
+
+function calculatePropertyMatchScore(
+  property: PropertyRecord,
+  lead: any,
+): number {
+  const budget = getLeadBudget(lead);
+  const interest = getLeadInterest(lead);
+
+  const leadCity =
+    normalizeText(lead?.city) ||
+    normalizeText(lead?.location) ||
+    normalizeText(lead?.preferred_city) ||
+    normalizeText(lead?.preferred_location);
+
+  const propertyCity = getPropertyCity(property);
+
+  let score = 0;
+
+  if (isPropertyAvailable(property)) {
+    score += 20;
+  }
+
+  if (propertyMatchesBudget(property, budget)) {
+    score += 30;
+  }
+
+  if (propertyMatchesType(property, interest)) {
+    score += 25;
+  }
+
+  if (
+    leadCity &&
+    propertyCity &&
+    propertyCity.toLowerCase() === leadCity.toLowerCase()
+  ) {
+    score += 25;
+  }
+
+  return score;
+}
+
 export async function analyzeLead(
   leadId: string,
 ): Promise<LeadAnalysis> {
-  if (!leadId || !leadId.trim()) {
-    throw new Error(
-      'Lead ID is required.',
-    );
-  }
+  // ───────────────────────────────────────────────────────────
+  // 1. LEAD
+  // ───────────────────────────────────────────────────────────
 
-  /* ---------------------------------------------------------------------- */
-  /* Lead                                                                   */
-  /* ---------------------------------------------------------------------- */
-
-  const {
-    data: lead,
-    error: leadError,
-  } = await supabase
+  const { data: lead, error: leadError } = await supabase
     .from('leads')
-    .select(
-      '*, contact:contacts(*)',
-    )
+    .select('*, contact:contacts(*)')
     .eq('id', leadId)
     .single();
 
   if (leadError || !lead) {
-    throw new Error(
-      'Lead not found.',
-    );
+    throw new Error('Lead not found');
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* Deal                                                                   */
-  /* ---------------------------------------------------------------------- */
+  // ───────────────────────────────────────────────────────────
+  // 2. DEAL
+  // ───────────────────────────────────────────────────────────
 
-  const { data: deals } =
-    await supabase
-      .from('deals')
-      .select(
-        '*, property:properties(*)',
-      )
-      .eq(
-        'lead_id',
-        leadId,
-      )
-      .order(
-        'created_at',
-        {
-          ascending: false,
-        },
-      );
+  const { data: deals } = await supabase
+    .from('deals')
+    .select('*, property:properties(*)')
+    .eq('lead_id', leadId)
+    .order('created_at', { ascending: false });
 
-  const deal =
-    deals?.[0] ?? null;
+  const deal = deals?.[0] ?? null;
 
-  /* ---------------------------------------------------------------------- */
-  /* Activities                                                             */
-  /* ---------------------------------------------------------------------- */
+  // ───────────────────────────────────────────────────────────
+  // 3. ACTIVITIES
+  // ───────────────────────────────────────────────────────────
 
-  const {
-    data: activities,
-  } = await supabase
+  const { data: activities } = await supabase
     .from('activities')
     .select('*')
-    .eq(
-      'lead_id',
-      leadId,
-    )
-    .order(
-      'created_at',
-      {
-        ascending: false,
-      },
-    )
-    .limit(15);
-
-  /* ---------------------------------------------------------------------- */
-  /* Tasks                                                                  */
-  /* ---------------------------------------------------------------------- */
-
-  const {
-    data: tasks,
-  } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq(
-      'related_type',
-      'lead',
-    )
-    .eq(
-      'related_id',
-      leadId,
-    )
-    .order(
-      'due_date',
-      {
-        ascending: true,
-      },
-    )
-    .limit(20);
-
-  /* ---------------------------------------------------------------------- */
-  /* Meetings                                                               */
-  /* ---------------------------------------------------------------------- */
-
-  const {
-    data: meetings,
-  } = await supabase
-    .from('meetings')
-    .select('*')
-    .eq(
-      'lead_id',
-      leadId,
-    )
-    .order(
-      'starts_at',
-      {
-        ascending: false,
-      },
-    )
+    .eq('lead_id', leadId)
+    .order('created_at', { ascending: false })
     .limit(10);
 
-  /* ---------------------------------------------------------------------- */
-  /* WhatsApp                                                               */
-  /* ---------------------------------------------------------------------- */
+  // ───────────────────────────────────────────────────────────
+  // 4. TASKS
+  // ───────────────────────────────────────────────────────────
 
-  const {
-    data: waConv,
-  } = await supabase
-    .from(
-      'whatsapp_conversations',
-    )
+  const { data: tasks } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('related_type', 'lead')
+    .eq('related_id', leadId)
+    .order('due_date', { ascending: true });
+
+  // ───────────────────────────────────────────────────────────
+  // 5. MEETINGS
+  // ───────────────────────────────────────────────────────────
+
+  const { data: meetings } = await supabase
+    .from('meetings')
+    .select('*')
+    .eq('lead_id', leadId)
+    .order('starts_at', { ascending: false })
+    .limit(5);
+
+  // ───────────────────────────────────────────────────────────
+  // 6. WHATSAPP
+  // ───────────────────────────────────────────────────────────
+
+  const { data: waConversations } = await supabase
+    .from('whatsapp_conversations')
     .select('id')
-    .eq(
-      'lead_id',
-      leadId,
-    )
-    .maybeSingle();
+    .eq('lead_id', leadId);
 
-  let waMessages: any[] =
-    [];
+  let waMessages: any[] = [];
 
-  if (waConv?.id) {
-    const {
-      data,
-    } = await supabase
-      .from(
-        'whatsapp_messages',
-      )
+  if (waConversations && waConversations.length > 0) {
+    const conversationIds = waConversations.map((item) => item.id);
+
+    const { data } = await supabase
+      .from('whatsapp_messages')
       .select('*')
-      .eq(
-        'conversation_id',
-        waConv.id,
-      )
-      .order(
-        'timestamp',
-        {
-          ascending: false,
-        },
-      )
+      .in('conversation_id', conversationIds)
+      .order('timestamp', { ascending: false })
       .limit(20);
 
     waMessages = data ?? [];
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* Instagram                                                              */
-  /* ---------------------------------------------------------------------- */
+  // ───────────────────────────────────────────────────────────
+  // 7. INSTAGRAM
+  // ───────────────────────────────────────────────────────────
 
-  const {
-    data: igConv,
-  } = await supabase
-    .from(
-      'instagram_conversations',
-    )
+  const { data: igConversations } = await supabase
+    .from('instagram_conversations')
     .select('id')
-    .eq(
-      'lead_id',
-      leadId,
-    )
-    .maybeSingle();
+    .eq('lead_id', leadId);
 
-  let igMessages: any[] =
-    [];
+  let igMessages: any[] = [];
 
-  if (igConv?.id) {
-    const {
-      data,
-    } = await supabase
-      .from(
-        'instagram_messages',
-      )
+  if (igConversations && igConversations.length > 0) {
+    const conversationIds = igConversations.map((item) => item.id);
+
+    const { data } = await supabase
+      .from('instagram_messages')
       .select('*')
-      .eq(
-        'conversation_id',
-        igConv.id,
-      )
-      .order(
-        'created_at',
-        {
-          ascending: false,
-        },
-      )
+      .in('conversation_id', conversationIds)
+      .order('created_at', { ascending: false })
       .limit(20);
 
     igMessages = data ?? [];
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* PROPERTY DATABASE                                                       */
-  /* ---------------------------------------------------------------------- */
+  // ───────────────────────────────────────────────────────────
+  // 8. AVAILABLE PROPERTIES
+  // ───────────────────────────────────────────────────────────
 
-  /**
-   * This is the important new part.
-   *
-   * Instead of looking only at the property attached to a deal,
-   * we fetch available properties from the actual properties table.
-   */
-
-  const {
-    data: allProperties,
-    error: propertiesError,
-  } = await supabase
-    .from('properties')
-    .select(
-      'id, title, city, price, status, type, bedrooms, bathrooms, area',
-    )
-    .limit(100);
+  const { data: allProperties, error: propertiesError } =
+    await supabase
+      .from('properties')
+      .select('*')
+      .limit(100);
 
   if (propertiesError) {
     console.warn(
-      'Unable to load properties for AI matching:',
+      'Unable to load properties for AI analysis:',
       propertiesError.message,
     );
   }
 
-  const normalizedLead =
-    normalizeLead(
-      lead as Record<string, any>,
-    );
+  const availableProperties: PropertyRecord[] = (
+    allProperties ?? []
+  ).filter(isPropertyAvailable);
 
-  /* ---------------------------------------------------------------------- */
-  /* Create property shortlist                                              */
-  /* ---------------------------------------------------------------------- */
+  // ───────────────────────────────────────────────────────────
+  // 9. CALCULATE BEST PROPERTY CANDIDATES
+  // ───────────────────────────────────────────────────────────
 
-  const normalizedProperties =
-    (allProperties ?? []).map(
-      (property: any) =>
-        normalizeProperty(
-          property,
-        ),
-    );
+  const scoredProperties = availableProperties
+    .map((property) => ({
+      property,
+      score: calculatePropertyMatchScore(property, lead),
+    }))
+    .sort((a, b) => b.score - a.score);
 
-  const availableProperties =
-    normalizedProperties.filter(
-      (property) => {
-        const status =
-          property.status?.toLowerCase();
+  const topProperties = scoredProperties
+    .slice(0, 15)
+    .map(({ property, score }) => ({
+      id: property.id,
+      title: property.title,
+      city: getPropertyCity(property),
+      price: getPropertyPrice(property),
+      type: getPropertyType(property),
+      bedrooms: property.bedrooms ?? null,
+      bathrooms: property.bathrooms ?? null,
+      area: property.area ?? null,
+      status: property.status ?? null,
+      matchScore: score,
+    }));
 
-        return (
-          !status ||
-          ![
-            'sold',
-            'rented',
-            'unavailable',
-            'inactive',
-          ].includes(status)
-        );
-      },
-    );
+  // ───────────────────────────────────────────────────────────
+  // 10. LEAD BUDGET / REQUIREMENTS
+  // ───────────────────────────────────────────────────────────
 
-  const rankedProperties =
-    availableProperties
-      .map((property) => ({
-        property,
-        matchScore:
-          scorePropertyMatch(
-            normalizedLead,
-            property,
-          ),
-      }))
-      .sort(
-        (a, b) =>
-          b.matchScore -
-          a.matchScore,
-      )
-      .slice(0, 10);
+  const budget = getLeadBudget(lead);
+  const interest = getLeadInterest(lead);
 
-  /* ---------------------------------------------------------------------- */
-  /* Contact                                                                 */
-  /* ---------------------------------------------------------------------- */
+  const leadCity =
+    normalizeText(lead?.city) ||
+    normalizeText(lead?.location) ||
+    normalizeText(lead?.preferred_city) ||
+    normalizeText(lead?.preferred_location) ||
+    'Unknown';
 
-  const contact =
-    lead.contact
-      ? {
-          id: cleanText(
-            lead.contact.id,
-          ),
-
-          name:
-            cleanText(
-              [
-                lead.contact.first_name,
-                lead.contact.last_name,
-              ]
-                .filter(Boolean)
-                .join(' '),
-            ) ||
-            cleanText(
-              lead.contact.name,
-            ),
-
-          company:
-            cleanText(
-              lead.contact.company,
-            ),
-
-          role:
-            cleanText(
-              lead.contact.role,
-            ),
-
-          email:
-            cleanText(
-              lead.contact.email,
-            ),
-
-          phone:
-            cleanText(
-              lead.contact.phone,
-            ),
-        }
-      : null;
-
-  /* ---------------------------------------------------------------------- */
-  /* Deal                                                                    */
-  /* ---------------------------------------------------------------------- */
-
-  const normalizedDeal =
-    deal
-      ? {
-          id: cleanText(
-            deal.id,
-          ),
-
-          title:
-            cleanText(
-              deal.title,
-            ),
-
-          stage:
-            cleanText(
-              deal.stage,
-            ),
-
-          value:
-            numberValue(
-              deal.value,
-            ),
-
-          probability:
-            numberValue(
-              deal.probability,
-            ),
-
-          expected_close_date:
-            cleanText(
-              deal.expected_close_date,
-            ),
-        }
-      : null;
-
-  /* ---------------------------------------------------------------------- */
-  /* Deal property                                                           */
-  /* ---------------------------------------------------------------------- */
-
-  const normalizedDealProperty =
-    deal?.property
-      ? normalizeProperty(
-          deal.property,
-        )
-      : null;
-
-  /* ---------------------------------------------------------------------- */
-  /* Full AI context                                                         */
-  /* ---------------------------------------------------------------------- */
+  // ───────────────────────────────────────────────────────────
+  // 11. STRUCTURED CRM CONTEXT
+  // ───────────────────────────────────────────────────────────
 
   const context = {
-    lead:
-      normalizedLead,
+    lead: {
+      id: lead.id,
+      name:
+        [lead.first_name, lead.last_name]
+          .filter(Boolean)
+          .join(' ') ||
+        lead.full_name ||
+        lead.name ||
+        'Unknown',
 
-    contact,
+      email: lead.email ?? null,
+      phone: lead.phone ?? null,
 
-    deal:
-      normalizedDeal,
+      status: lead.status ?? 'Unknown',
+      source: lead.source ?? 'Unknown',
 
-    deal_property:
-      normalizedDealProperty,
+      budget: lead.budget ?? null,
+      budget_min: budget.min,
+      budget_max: budget.max,
 
-    property_matches:
-      rankedProperties.map(
-        ({
-          property,
-          matchScore,
-        }) => ({
-          match_score:
-            matchScore,
+      interested_in: interest,
+      preferred_city: leadCity,
 
-          ...property,
-        }),
-      ),
+      notes: lead.notes ?? null,
 
-    recent_activities:
-      (activities ?? []).map(
-        (activity: any) => ({
-          type:
-            cleanText(
-              activity.type,
-            ),
+      score: lead.ai_score ?? lead.score ?? null,
 
-          title:
-            cleanText(
-              activity.title,
-            ),
+      created_at: lead.created_at ?? null,
+    },
 
-          description:
-            limitText(
-              activity.description,
-              500,
-            ),
+    contact: lead.contact
+      ? {
+          name:
+            [lead.contact.first_name, lead.contact.last_name]
+              .filter(Boolean)
+              .join(' ') || 'Unknown',
 
-          date:
-            cleanText(
-              activity.created_at,
-            ),
-        }),
-      ),
+          company: lead.contact.company ?? null,
+          role: lead.contact.role ?? null,
+        }
+      : null,
 
-    open_tasks:
-      (tasks ?? [])
-        .filter(
-          (task: any) =>
-            task.status !==
-            'done',
-        )
-        .map(
-          (task: any) => ({
-            title:
-              cleanText(
-                task.title,
-              ),
+    current_deal: deal
+      ? {
+          title: deal.title ?? null,
+          stage: deal.stage ?? null,
+          value: deal.value ?? null,
+          probability: deal.probability ?? null,
+          expected_close_date:
+            deal.expected_close_date ?? null,
+        }
+      : null,
 
-            status:
-              cleanText(
-                task.status,
-              ),
+    matched_deal_property: deal?.property
+      ? {
+          id: deal.property.id,
+          title: deal.property.title,
+          city: deal.property.city,
+          price: deal.property.price,
+          bedrooms: deal.property.bedrooms,
+          bathrooms: deal.property.bathrooms,
+          area: deal.property.area,
+          type: deal.property.type,
+          status: deal.property.status,
+        }
+      : null,
 
-            priority:
-              cleanText(
-                task.priority,
-              ),
+    available_properties: topProperties,
 
-            due_date:
-              cleanText(
-                task.due_date,
-              ),
-          }),
-        ),
+    recent_activities: (activities ?? []).map((activity: any) => ({
+      type: activity.type ?? null,
+      title: activity.title ?? null,
+      date: activity.created_at ?? null,
+    })),
 
-    meetings:
-      (meetings ?? []).map(
-        (meeting: any) => ({
-          title:
-            cleanText(
-              meeting.title,
-            ),
+    open_tasks: (tasks ?? [])
+      .filter((task: any) => task.status !== 'done')
+      .map((task: any) => ({
+        title: task.title ?? null,
+        due_date: task.due_date ?? null,
+        priority: task.priority ?? null,
+        status: task.status ?? null,
+      })),
 
-          status:
-            cleanText(
-              meeting.status,
-            ),
+    upcoming_meetings: (meetings ?? [])
+      .filter(
+        (meeting: any) =>
+          meeting.status === 'upcoming' ||
+          meeting.status === 'scheduled',
+      )
+      .map((meeting: any) => ({
+        title: meeting.title ?? null,
+        starts_at: meeting.starts_at ?? null,
+        type: meeting.meeting_type ?? null,
+      })),
 
-          starts_at:
-            cleanText(
-              meeting.starts_at,
-            ),
+    whatsapp_history: waMessages
+      .slice()
+      .reverse()
+      .map((message: any) => ({
+        from: message.from_me ? 'agent' : 'lead',
+        text: message.text ?? '',
+        date: message.timestamp ?? null,
+      })),
 
-          type:
-            cleanText(
-              meeting.meeting_type,
-            ),
-
-          location:
-            cleanText(
-              meeting.location,
-            ),
-        }),
-      ),
-
-    whatsapp_history:
-      waMessages
-        .slice()
-        .reverse()
-        .map(
-          (message: any) => ({
-            from:
-              message.from_me
-                ? 'agent'
-                : 'lead',
-
-            text:
-              limitText(
-                message.text,
-                1000,
-              ),
-
-            date:
-              cleanText(
-                message.timestamp,
-              ),
-          }),
-        ),
-
-    instagram_history:
-      igMessages
-        .slice()
-        .reverse()
-        .map(
-          (message: any) => ({
-            from:
-              message.direction ===
-              'outbound'
-                ? 'agent'
-                : 'lead',
-
-            text:
-              limitText(
-                message.body,
-                1000,
-              ),
-
-            date:
-              cleanText(
-                message.created_at,
-              ),
-          }),
-        ),
+    instagram_history: igMessages
+      .slice()
+      .reverse()
+      .map((message: any) => ({
+        from:
+          message.direction === 'outbound'
+            ? 'agent'
+            : 'lead',
+        text: message.body ?? '',
+        date: message.created_at ?? null,
+      })),
   };
 
-  /* ---------------------------------------------------------------------- */
-  /* AI instructions                                                        */
-  /* ---------------------------------------------------------------------- */
+  // ───────────────────────────────────────────────────────────
+  // 12. AI SYSTEM
+  // ───────────────────────────────────────────────────────────
 
   const system = `
-You are the MEHANS CRM Sales Intelligence Engine.
+You are MEHANS AI, a CRM sales operating system for a real estate agency.
 
-You analyze ONE real-estate lead using real CRM data.
+You are analyzing ONE real lead.
+
+Your job is to help the human sales agent make better decisions using ONLY the CRM information provided.
 
 Return ONLY valid JSON.
+Do not return markdown.
+Do not use code fences.
+Do not add explanations outside the JSON.
 
-Required fields:
+The JSON must contain EXACTLY these keys:
 
-summary
-intent
-objective
-budgetFit
-propertyFit
-keySignals
-objections
-nextAction
-followUpTiming
-suggestedProperty
-suggestedWhatsappReply
-
-Intent must be:
-High
-Medium
-Low
-Unknown
+{
+  "summary": "2-3 sentence summary",
+  "intent": "High" | "Medium" | "Low" | "Unknown",
+  "objective": "one sentence",
+  "budgetFit": "one sentence",
+  "propertyFit": "one sentence",
+  "keySignals": [],
+  "objections": [],
+  "nextAction": "one concrete action",
+  "followUpTiming": "specific timing",
+  "suggestedProperty": "exact property title from available_properties OR Unknown",
+  "suggestedWhatsappReply": "short WhatsApp message"
+}
 
 IMPORTANT PROPERTY MATCHING RULES:
 
-The property_matches array contains real properties
-retrieved from the CRM database.
+1. You may ONLY recommend a property whose title appears in available_properties.
 
-You may ONLY recommend a property that exists
-inside property_matches.
+2. Never invent a property.
 
-Use the following factors when evaluating a property:
+3. Never modify a property title.
 
-1. Location
-2. Property type
-3. Price versus budget
-4. Bedrooms
-5. Area
-6. Property availability
-7. Any stated requirement in the lead notes
-8. Match score supplied by the CRM
+4. If there is no suitable property, use:
+"Unknown"
 
-Do not invent properties.
+5. Budget alone does NOT mean a property is a perfect match.
 
-If no property reasonably matches the lead,
-suggestedProperty must be Unknown.
+6. City/location matters.
 
-propertyFit must explain the match using actual data.
+7. Property type matters.
 
-Budget rules:
+8. Bedrooms, bathrooms and area matter when those requirements exist.
 
-If the property price is within the known lead budget,
-say that clearly.
+9. If the lead wants Temara and a property is in Rabat, DO NOT describe it as a perfect location match.
 
-If the price is above or below the known budget,
-say that clearly.
+10. If a property is within budget but in a different city, describe the match as partial.
 
-If budget information is missing,
-say Unknown.
+11. If the lead's preferred city is unknown, do not assume a city.
 
-Lead intent:
+12. If the lead's property type is unknown, do not assume a property type.
 
-High, Medium, or Low must be supported by actual CRM signals.
+13. If there is a current deal property, mention it as the current deal property, but only recommend another property if it exists in available_properties.
 
-Examples of valid signals:
-- negotiation stage
-- qualified status
-- recent lead activity
-- clear property interest
-- high score
-- upcoming meeting
-- active conversation
-- existing deal
+INTENT RULES:
 
-Do not treat missing information as negative information.
+High:
+- negotiation / qualified / visit scheduled
+- strong score
+- clear budget and requirement
+- strong recent activity
 
-WhatsApp:
+Medium:
+- some qualification but missing important information
 
-Write a short natural WhatsApp draft.
+Low:
+- weak engagement
+- low score
+- unclear requirement
 
-If WhatsApp or Instagram conversation history exists,
-match the lead's language.
+Unknown:
+- insufficient information
 
-Never invent property details.
+WHATSAPP RULES:
 
-Never claim a message was sent.
+- Draft only.
+- Never claim the message was sent.
+- Match the lead's communication language when message history exists.
+- If no message history exists, use concise professional English.
+- Do not invent personal details.
+- Do not invent property information.
+- If recommending a property, use the EXACT title, city and price from the CRM.
+- Keep it natural and short.
 
-Next action:
-
-Give one concrete recommendation for the human agent.
-
-Never claim that an action was executed.
-
-General rules:
-
-Use ONLY CRM DATA.
+DATA INTEGRITY:
 
 Never invent:
 - names
 - prices
 - properties
-- locations
+- cities
 - budgets
 - appointments
 - conversations
-- deals
-- customer intentions
+- scores
+- deal information
 
-If information is unavailable, use Unknown.
+If information is missing, say "Unknown".
+`;
 
-Return raw JSON only.
-`.trim();
+  // ───────────────────────────────────────────────────────────
+  // 13. CALL AI
+  // ───────────────────────────────────────────────────────────
 
-  const raw =
-    await askAI(
-      [
-        {
-          role: 'user',
-          content:
-            `CRM DATA:\n${JSON.stringify(
-              context,
-              null,
-              2,
-            )}\n\nAnalyze this lead and find the best available property match.`,
-        },
-      ],
-      system,
-    );
+  const raw = await askAI(
+    [
+      {
+        role: 'user',
+        content:
+          `CRM DATA:\n${JSON.stringify(
+            context,
+            null,
+            2,
+          )}\n\nAnalyze this lead now.`,
+      },
+    ],
+    system,
+  );
 
-  /* ---------------------------------------------------------------------- */
-  /* Parse AI response                                                      */
-  /* ---------------------------------------------------------------------- */
+  // ───────────────────────────────────────────────────────────
+  // 14. PARSE RESPONSE
+  // ───────────────────────────────────────────────────────────
 
   try {
-    const parsed =
-      JSON.parse(
-        stripJsonMarkdown(
-          raw,
-        ),
-      );
+    const cleaned = cleanJsonResponse(raw);
+    const parsed = JSON.parse(cleaned);
 
-    const validIntent =
-      parsed?.intent ===
-        'High' ||
-      parsed?.intent ===
-        'Medium' ||
-      parsed?.intent ===
-        'Low'
-        ? parsed.intent
-        : 'Unknown';
-
-    const keySignals =
-      Array.isArray(
-        parsed?.keySignals,
+    const validSuggestedProperty =
+      typeof parsed.suggestedProperty === 'string' &&
+      topProperties.some(
+        (property) =>
+          property.title === parsed.suggestedProperty,
       )
-        ? parsed.keySignals
-            .map(
-              (
-                item: unknown,
-              ) =>
-                cleanText(item),
+        ? parsed.suggestedProperty
+        : deal?.property?.title &&
+            topProperties.some(
+              (property) =>
+                property.title === deal.property.title,
             )
-            .filter(
-              (
-                item,
-              ): item is string =>
-                Boolean(item),
-            )
-            .slice(0, 8)
-        : [];
-
-    const objections =
-      Array.isArray(
-        parsed?.objections,
-      )
-        ? parsed.objections
-            .map(
-              (
-                item: unknown,
-              ) =>
-                cleanText(item),
-            )
-            .filter(
-              (
-                item,
-              ): item is string =>
-                Boolean(item),
-            )
-            .slice(0, 8)
-        : [];
-
-    let suggestedProperty =
-      cleanText(
-        parsed?.suggestedProperty,
-      ) || 'Unknown';
-
-    /*
-     * Final safety check:
-     * The AI cannot recommend a property that wasn't
-     * actually supplied by the CRM.
-     */
-
-    if (
-      suggestedProperty !==
-      'Unknown'
-    ) {
-      const exists =
-        rankedProperties.some(
-          ({
-            property,
-          }) =>
-            property.title ===
-              suggestedProperty ||
-            property.id ===
-              suggestedProperty,
-        );
-
-      if (!exists) {
-        suggestedProperty =
-          'Unknown';
-      }
-    }
+          ? deal.property.title
+          : 'Unknown';
 
     return {
-      summary:
-        cleanText(
-          parsed?.summary,
-        ) || 'Unknown',
+      summary: String(
+        parsed.summary ?? 'Unknown',
+      ),
 
-      intent:
-        validIntent,
+      intent: [
+        'High',
+        'Medium',
+        'Low',
+      ].includes(parsed.intent)
+        ? parsed.intent
+        : 'Unknown',
 
-      objective:
-        cleanText(
-          parsed?.objective,
-        ) || 'Unknown',
+      objective: String(
+        parsed.objective ?? 'Unknown',
+      ),
 
-      budgetFit:
-        cleanText(
-          parsed?.budgetFit,
-        ) || 'Unknown',
+      budgetFit: String(
+        parsed.budgetFit ?? 'Unknown',
+      ),
 
-      propertyFit:
-        cleanText(
-          parsed?.propertyFit,
-        ) || 'Unknown',
+      propertyFit: String(
+        parsed.propertyFit ?? 'Unknown',
+      ),
 
-      keySignals,
+      keySignals: Array.isArray(parsed.keySignals)
+        ? parsed.keySignals
+            .slice(0, 6)
+            .map(String)
+        : [],
 
-      objections,
+      objections: Array.isArray(parsed.objections)
+        ? parsed.objections
+            .slice(0, 6)
+            .map(String)
+        : [],
 
-      nextAction:
-        cleanText(
-          parsed?.nextAction,
-        ) || 'Unknown',
+      nextAction: String(
+        parsed.nextAction ?? 'Unknown',
+      ),
 
-      followUpTiming:
-        cleanText(
-          parsed?.followUpTiming,
-        ) || 'Unknown',
+      followUpTiming: String(
+        parsed.followUpTiming ?? 'Unknown',
+      ),
 
-      suggestedProperty,
+      suggestedProperty: validSuggestedProperty,
 
-      suggestedWhatsappReply:
-        cleanText(
-          parsed?.suggestedWhatsappReply,
-        ) || 'Unknown',
+      suggestedWhatsappReply: String(
+        parsed.suggestedWhatsappReply ??
+          'Unknown',
+      ),
     };
   } catch {
     throw new Error(
