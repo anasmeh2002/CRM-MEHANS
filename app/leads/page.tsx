@@ -1,17 +1,18 @@
 'use client';
 
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Phone, Mail, MessageCircle, Star, X, TrendingUp, MoreHorizontal, CalendarPlus,
   Users, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown,
-  Columns3, Trash2, CheckSquare, Square, Sparkles,
+  Columns3, Trash2, CheckSquare, Square, Sparkles, Loader2,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, Card, Badge, Avatar, EmptyState, ScoreBar, SkeletonCard } from '@/components/shared';
 import { Field, TextInput, TextArea, Select, TagInput, LoadingButton, Modal, SearchInput, DateInput } from '@/components/forms';
 import { fetchLeads, createLead, updateLead, deleteLead, fetchTeamMembers } from '@/lib/data';
+import { analyzeLead, type LeadAnalysis } from '@/lib/ai';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import type { Lead, LeadStatus, LeadSource, TeamMember } from '@/lib/types';
 import { cn, safeConfig } from '@/lib/utils';
@@ -98,6 +99,14 @@ export default function LeadsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
+
+  // AI Analysis state
+  const [analysis, setAnalysis] = useState<LeadAnalysis | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+
+  useEffect(() => {
+    setAnalysis(null);
+  }, [detailLead?.id]);
 
   // Create form state
   const [form, setForm] = useState({
@@ -247,6 +256,25 @@ export default function LeadsPage() {
     setData((rawLeads ?? []).filter((l) => l.id !== id));
     setDetailLead(null);
     toast.success('Lead deleted');
+  };
+
+  const handleAnalyzeLead = async () => {
+    if (!detailLead) return;
+    setAnalyzing(true);
+    try {
+      const result = await analyzeLead(detailLead.id);
+      setAnalysis(result);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to analyze lead.');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleCopyReply = () => {
+    if (!analysis?.suggestedWhatsappReply) return;
+    navigator.clipboard.writeText(analysis.suggestedWhatsappReply);
+    toast.success('Reply copied to clipboard');
   };
 
   const SortIcon = ({ k }: { k: SortKey }) => {
@@ -664,15 +692,82 @@ export default function LeadsPage() {
                   <p className="text-[12px] leading-relaxed text-text-secondary">{t(getNextBestActionKey(detailLead), { name: detailLead.name })}</p>
                 </div>
 
-                {/* AI Summary */}
+                {/* AI Analysis */}
                 <div className="mb-5 rounded-xl border border-gold-border bg-gold-bg p-4">
-                  <div className="mb-2 flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-gold" strokeWidth={1.5} />
-                    <p className="text-[12px] font-semibold text-gold">AI Summary</p>
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-gold" strokeWidth={1.5} />
+                      <p className="text-[12px] font-semibold text-gold">AI Analysis</p>
+                    </div>
+                    {analysis && (
+                      <button onClick={handleAnalyzeLead} disabled={analyzing} className="text-[11px] font-medium text-gold hover:text-gold-soft disabled:opacity-50">
+                        {analyzing ? 'Analyzing…' : 'Regenerate'}
+                      </button>
+                    )}
                   </div>
-                  <p className="text-[12px] leading-relaxed text-text-secondary">
-                    {detailLead.name} is a {detailLead.score >= 80 ? 'high-value' : detailLead.score >= 50 ? 'moderate' : 'low'} priority lead with a budget of ${formatCurrency(detailLead.budget, currency)}. Sourced via {detailLead.source.replace('-', ' ')}. {detailLead.status === 'negotiation' ? 'Currently in active negotiation — recommend immediate follow-up.' : detailLead.status === 'won' ? 'Successfully closed. Consider referral outreach.' : 'Recommend scheduling a property visit to advance the pipeline.'}
-                  </p>
+
+                  {!analysis ? (
+                    <div className="flex flex-col items-start gap-2">
+                      <p className="text-[12px] leading-relaxed text-text-secondary">Get a real AI analysis grounded in this lead's actual CRM data — activities, tasks, conversations, and matched property.</p>
+                      <button onClick={handleAnalyzeLead} disabled={analyzing} className="btn btn-gold btn-sm mt-1">
+                        {analyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} /> : <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />}
+                        {analyzing ? 'Analyzing…' : 'Analyze Lead'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-[12px] leading-relaxed text-text-secondary">{analysis.summary}</p>
+                      <Badge variant={analysis.intent === 'High' ? 'success' : analysis.intent === 'Medium' ? 'warning' : analysis.intent === 'Low' ? 'error' : 'neutral'}>
+                        Intent: {analysis.intent}
+                      </Badge>
+                      <div>
+                        <p className="text-[11px] font-medium text-text-muted">Objective</p>
+                        <p className="text-[12px] text-text-primary">{analysis.objective}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-[11px] font-medium text-text-muted">Budget Fit</p>
+                          <p className="text-[12px] text-text-primary">{analysis.budgetFit}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-medium text-text-muted">Property Fit</p>
+                          <p className="text-[12px] text-text-primary">{analysis.propertyFit}</p>
+                        </div>
+                      </div>
+                      {analysis.keySignals.length > 0 && (
+                        <div>
+                          <p className="mb-1 text-[11px] font-medium text-text-muted">Key Signals</p>
+                          <ul className="list-inside list-disc space-y-0.5">
+                            {analysis.keySignals.map((s, i) => <li key={i} className="text-[12px] text-text-primary">{s}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      {analysis.objections.length > 0 && (
+                        <div>
+                          <p className="mb-1 text-[11px] font-medium text-text-muted">Possible Objections</p>
+                          <ul className="list-inside list-disc space-y-0.5">
+                            {analysis.objections.map((s, i) => <li key={i} className="text-[12px] text-text-primary">{s}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      <div className="rounded-lg border border-border bg-bg-elevated p-2.5">
+                        <p className="text-[11px] font-medium text-text-muted">Recommended Next Action</p>
+                        <p className="text-[12px] text-text-primary">{analysis.nextAction}</p>
+                        <p className="mt-1 text-[11px] text-text-muted">Follow up: {analysis.followUpTiming}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-medium text-text-muted">Suggested Property</p>
+                        <p className="text-[12px] text-text-primary">{analysis.suggestedProperty}</p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-bg-elevated p-2.5">
+                        <div className="mb-1 flex items-center justify-between">
+                          <p className="text-[11px] font-medium text-text-muted">Suggested WhatsApp Reply</p>
+                          <button onClick={handleCopyReply} className="text-[11px] font-medium text-gold hover:text-gold-soft">Copy</button>
+                        </div>
+                        <p className="text-[12px] leading-relaxed text-text-primary">{analysis.suggestedWhatsappReply}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
