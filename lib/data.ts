@@ -1059,36 +1059,121 @@ export interface SearchResult {
 
 export async function globalSearch(query: string): Promise<SearchResult[]> {
   if (!query.trim()) return [];
-  const q = query.toLowerCase();
-  const results: SearchResult[] = [];
 
-  const [leads, properties, deals, tasks, meetings] = await Promise.all([
-    supabase.from('leads').select('id, first_name, last_name, email, status').ilike('first_name', `%${q}%`),
-    supabase.from('leads').select('id, first_name, last_name, email, status').ilike('last_name', `%${q}%`),
-    supabase.from('properties').select('id, title, address, city, status').ilike('title', `%${q}%`),
-    supabase.from('deals').select('id, title, stage, value').ilike('title', `%${q}%`),
-    supabase.from('tasks').select('id, title, status, priority').ilike('title', `%${q}%`),
-    supabase.from('meetings').select('id, title, status, meeting_type').ilike('title', `%${q}%`),
+  const q = query.trim();
+
+  const [
+    leadFirstName,
+    leadLastName,
+    leadEmail,
+    properties,
+    deals,
+    tasks,
+    meetings,
+  ] = await Promise.all([
+    supabase
+      .from('leads')
+      .select('id, first_name, last_name, email, status')
+      .ilike('first_name', `%${q}%`),
+
+    supabase
+      .from('leads')
+      .select('id, first_name, last_name, email, status')
+      .ilike('last_name', `%${q}%`),
+
+    supabase
+      .from('leads')
+      .select('id, first_name, last_name, email, status')
+      .ilike('email', `%${q}%`),
+
+    supabase
+      .from('properties')
+      .select('id, title, address, city, status')
+      .ilike('title', `%${q}%`),
+
+    supabase
+      .from('deals')
+      .select('id, title, stage, value')
+      .ilike('title', `%${q}%`),
+
+    supabase
+      .from('tasks')
+      .select('id, title, status, priority')
+      .ilike('title', `%${q}%`),
+
+    supabase
+      .from('meetings')
+      .select('id, title, status, meeting_type')
+      .ilike('title', `%${q}%`),
   ]);
 
-  for (const l of (leads.data ?? [])) {
-    results.push({ id: l.id, type: 'lead', label: `${l.first_name ?? ''} ${l.last_name ?? ''}`.trim(), subtitle: `Lead · ${l.status}` });
+  const results: SearchResult[] = [];
+
+  // ─── Leads ───────────────────────────────
+  const leadMap = new Map<string, any>();
+
+  for (const result of [
+    ...(leadFirstName.data ?? []),
+    ...(leadLastName.data ?? []),
+    ...(leadEmail.data ?? []),
+  ]) {
+    if (!leadMap.has(result.id)) {
+      leadMap.set(result.id, result);
+    }
   }
-  for (const l of (leads.data ?? [])) {
-    // avoid duplicates from first_name match — already added above
-    break;
+
+  for (const lead of leadMap.values()) {
+    const name =
+      `${lead.first_name ?? ''} ${lead.last_name ?? ''}`.trim() ||
+      lead.email ||
+      'Unnamed Lead';
+
+    results.push({
+      id: lead.id,
+      type: 'lead',
+      label: name,
+      subtitle: `Lead · ${lead.status ?? 'new'}`,
+    });
   }
-  for (const l of ((properties.data ?? []) as any[])) {
-    results.push({ id: l.id, type: 'property', label: l.title, subtitle: `Property · ${l.city ?? ''}` });
+
+  // ─── Properties ──────────────────────────
+  for (const property of properties.data ?? []) {
+    results.push({
+      id: property.id,
+      type: 'property',
+      label: property.title ?? 'Untitled Property',
+      subtitle: `Property · ${property.city ?? property.address ?? ''}`,
+    });
   }
-  for (const d of ((deals.data ?? []) as any[])) {
-    results.push({ id: d.id, type: 'deal', label: d.title, subtitle: `Deal · ${d.stage}` });
+
+  // ─── Deals ───────────────────────────────
+  for (const deal of deals.data ?? []) {
+    results.push({
+      id: deal.id,
+      type: 'deal',
+      label: deal.title ?? 'Untitled Deal',
+      subtitle: `Deal · ${deal.stage ?? 'new_lead'}`,
+    });
   }
-  for (const t of ((tasks.data ?? []) as any[])) {
-    results.push({ id: t.id, type: 'task', label: t.title, subtitle: `Task · ${t.status}` });
+
+  // ─── Tasks ───────────────────────────────
+  for (const task of tasks.data ?? []) {
+    results.push({
+      id: task.id,
+      type: 'task',
+      label: task.title ?? 'Untitled Task',
+      subtitle: `Task · ${task.status ?? 'todo'}`,
+    });
   }
-  for (const m of ((meetings.data ?? []) as any[])) {
-    results.push({ id: m.id, type: 'meeting', label: m.title, subtitle: `Meeting · ${m.meeting_type}` });
+
+  // ─── Meetings ────────────────────────────
+  for (const meeting of meetings.data ?? []) {
+    results.push({
+      id: meeting.id,
+      type: 'meeting',
+      label: meeting.title ?? 'Untitled Meeting',
+      subtitle: `Meeting · ${meeting.meeting_type ?? 'meeting'}`,
+    });
   }
 
   return results.slice(0, 10);
