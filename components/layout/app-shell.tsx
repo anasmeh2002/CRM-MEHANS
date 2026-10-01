@@ -15,7 +15,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div dir={rtl ? 'rtl' : 'ltr'} className="min-h-screen bg-bg-primary bg-grid">
       <Sidebar collapsed={collapsed} onToggleCollapse={() => setCollapsed(!collapsed)} />
-      <div className={collapsed ? 'lg:pl-20' : 'lg:pl-[260px]'}>
+      <div className={collapsed ? 'lg:ps-20' : 'lg:ps-[260px]'}>
         <Navbar onMenuClick={() => setMobileNavOpen(true)} />
         <motion.main
           initial={{ opacity: 0 }}

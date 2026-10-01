@@ -8,7 +8,7 @@ import { locales, localeNames, type Locale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 export function LanguageSwitcher() {
-  const { locale, setLocale } = useLanguage();
+  const { locale, setLocale, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -25,7 +25,7 @@ export function LanguageSwitcher() {
       <button
         onClick={() => setOpen(!open)}
         className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-bg-secondary text-text-secondary transition-colors hover:border-border-strong"
-        title="Language"
+        title={t('navbar.language')}
       >
         <Globe className="h-[18px] w-[18px]" strokeWidth={1.5} />
       </button>

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronDown, Check, AlertCircle, Loader2, Calendar, Upload, Search } from 'lucide-react';
 import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/components/language-provider';
 
 /* ============================================================
    PREMIUM FORM COMPONENTS — Stripe + Linear quality
@@ -28,7 +29,7 @@ export function Field({
       {label && (
         <label className="block text-[13px] font-medium text-text-primary">
           {label}
-          {required && <span className="ml-0.5 text-gold">*</span>}
+          {required && <span className="ms-0.5 text-gold">*</span>}
         </label>
       )}
       {children}
@@ -66,7 +67,7 @@ export function TextInput({
   return (
     <div className="relative">
       {icon && (
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
+        <div className="absolute left-3 rtl:right-3 rtl:left-auto top-1/2 -translate-y-1/2 text-text-muted">
           {icon}
         </div>
       )}
@@ -76,7 +77,7 @@ export function TextInput({
         onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className={cn('input', icon && 'pl-10', error && 'input-error', className)}
+        className={cn('input', icon && 'ps-10', error && 'input-error', className)}
       />
     </div>
   );
@@ -117,7 +118,7 @@ export function Select({
   value,
   onChange,
   options,
-  placeholder = 'Select...',
+  placeholder = undefined,
   disabled,
   error,
 }: {
@@ -128,8 +129,8 @@ export function Select({
   disabled?: boolean;
   error?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
+  const placeholderText = placeholder ?? t('common.select');
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -147,9 +148,9 @@ export function Select({
         type="button"
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
-        className={cn('input flex items-center justify-between text-left', error && 'input-error', disabled && 'opacity-50 cursor-not-allowed')}
+        className={cn('input flex items-center justify-between text-start', error && 'input-error', disabled && 'opacity-50 cursor-not-allowed')}
       >
-        <span className={cn(!selected && 'text-text-muted')}>{selected?.label || placeholder}</span>
+        <span className={cn(!selected && 'text-text-muted')}>{selected?.label || placeholderText}</span>
         <ChevronDown className={cn('h-4 w-4 text-text-muted transition-transform', open && 'rotate-180')} />
       </button>
       <AnimatePresence>
@@ -187,7 +188,7 @@ export function Select({
 export function TagInput({
   value = [],
   onChange,
-  placeholder = 'Add tag...',
+  placeholder = undefined,
   suggestions = [],
 }: {
   value?: string[];
@@ -195,6 +196,8 @@ export function TagInput({
   placeholder?: string;
   suggestions?: string[];
 }) {
+  const { t } = useLanguage();
+  const placeholderText = placeholder ?? t('common.addTag');
   const [input, setInput] = useState('');
   const [focused, setFocused] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -241,7 +244,7 @@ export function TagInput({
             if (e.key === 'Backspace' && !input && value.length) removeTag(value[value.length - 1]);
           }}
           onFocus={() => setFocused(true)}
-          placeholder={value.length === 0 ? placeholder : ''}
+          placeholder={value.length === 0 ? placeholderText : ''}
           className="flex-1 bg-transparent text-[14px] text-text-primary placeholder:text-text-muted outline-none min-w-[80px]"
         />
       </div>
@@ -284,6 +287,7 @@ export function Switch({
   description?: string;
   disabled?: boolean;
 }) {
+  const { rtl } = useLanguage();
   return (
     <div className="flex items-center justify-between gap-4">
       {(label || description) && (
@@ -305,7 +309,7 @@ export function Switch({
         <motion.div
           layout
           className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm"
-          animate={{ left: checked ? 22 : 2 }}
+          animate={{ left: rtl ? (checked ? 2 : 22) : (checked ? 22 : 2) }}
           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
         />
       </button>
@@ -344,7 +348,7 @@ export function Checkbox({
 export function DateInput({
   value,
   onChange,
-  placeholder = 'Select date',
+  placeholder = undefined,
   disabled,
   error,
 }: {
@@ -354,24 +358,26 @@ export function DateInput({
   disabled?: boolean;
   error?: boolean;
 }) {
+  const { t } = useLanguage();
+  const placeholderText = placeholder ?? t('common.selectDate');
   return (
     <div className="relative">
       <input
         type="date"
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
-        placeholder={placeholder}
+        placeholder={placeholderText}
         disabled={disabled}
-        className={cn('input pr-10', error && 'input-error')}
+        className={cn('input pe-10', error && 'input-error')}
       />
-      <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
+      <Calendar className="absolute right-3 rtl:left-3 rtl:right-auto top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
     </div>
   );
 }
 
 // ---- UPLOAD ----
 export function UploadField({
-  label = 'Upload file',
+  label = undefined,
   accept = 'image/*',
   onChange,
   preview,
@@ -381,6 +387,8 @@ export function UploadField({
   onChange?: (file: File) => void;
   preview?: string;
 }) {
+  const { t } = useLanguage();
+  const labelText = label ?? t('common.uploadFile');
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -400,14 +408,14 @@ export function UploadField({
       )}
     >
       {preview ? (
-        <img src={preview} alt="Preview" className="mb-3 max-h-32 rounded-lg object-contain" />
+        <img src={preview} alt={t('common.preview')} className="mb-3 max-h-32 rounded-lg object-contain" />
       ) : (
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-bg-secondary text-gold">
           <Upload className="h-5 w-5" strokeWidth={1.5} />
         </div>
       )}
-      <p className="text-[13px] font-medium text-text-primary">{label}</p>
-      <p className="mt-0.5 text-[12px] text-text-muted">Drag & drop or click to browse</p>
+      <p className="text-[13px] font-medium text-text-primary">{labelText}</p>
+      <p className="mt-0.5 text-[12px] text-text-muted">{t('common.dragDrop')}</p>
       <input
         ref={inputRef}
         type="file"
@@ -539,7 +547,7 @@ export function LoadingButton({
 export function SearchInput({
   value,
   onChange,
-  placeholder = 'Search...',
+  placeholder = undefined,
   className,
 }: {
   value: string;
@@ -547,14 +555,16 @@ export function SearchInput({
   placeholder?: string;
   className?: string;
 }) {
+  const { t } = useLanguage();
+  const placeholderText = placeholder ?? t('common.searchPrompt');
   return (
     <div className={cn('relative', className)}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" strokeWidth={1.5} />
+      <Search className="absolute left-3 rtl:right-3 rtl:left-auto top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" strokeWidth={1.5} />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="input pl-10"
+        placeholder={placeholderText}
+        className="input ps-10"
       />
     </div>
   );

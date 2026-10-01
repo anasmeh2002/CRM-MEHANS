@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { MehansLogoIcon } from '@/components/logo';
+import { useLanguage } from '@/components/language-provider';
 
 export function PageHeader({
   title,
@@ -70,6 +71,7 @@ export const StatCard = memo(function StatCard({
   trend?: 'up' | 'down';
   delay?: number;
 }) {
+  const { t } = useLanguage();
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -91,7 +93,7 @@ export const StatCard = memo(function StatCard({
           <span className={cn('flex items-center gap-1 text-[12px] font-medium', trend === 'up' ? 'text-gold' : 'text-error')}>
             {trend === 'up' ? '↑' : '↓'} {change}
           </span>
-          <span className="text-[12px] text-text-muted">vs last month</span>
+          <span className="text-[12px] text-text-muted">{t('common.vsLastMonth')}</span>
         </div>
       )}
     </motion.div>

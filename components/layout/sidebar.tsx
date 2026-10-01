@@ -35,12 +35,12 @@ export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; o
   const pathname = usePathname();
   const { t } = useLanguage();
   const { data: agency } = useSupabaseQuery<AgencyProfile | null>(fetchAgency);
-  const agencyName = agency?.name ?? 'MEHANS Real Estate';
+  const agencyName = agency?.name ?? t('navbar.enterpriseWorkspace');
 
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-30 hidden h-screen flex-col border-r border-border bg-bg-secondary transition-all duration-300 ease-lux lg:flex',
+        'fixed left-0 rtl:right-0 rtl:left-auto top-0 z-30 hidden h-screen flex-col border-r rtl:border-l rtl:border-r-0 border-border bg-bg-secondary transition-all duration-300 ease-lux lg:flex',
         collapsed ? 'w-20' : 'w-[260px]'
       )}
     >
@@ -57,7 +57,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; o
               <MehansLogoIcon size={38} />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[12px] font-medium text-text-primary">{agencyName}</div>
-                <div className="text-[10px] text-text-muted">Enterprise Workspace</div>
+                <div className="text-[10px] text-text-muted">{t('navbar.enterpriseWorkspace')}</div>
               </div>
             </div>
           </div>
@@ -83,7 +83,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; o
                 <motion.div layoutId="sidebar-active-bg" className="absolute inset-0 rounded-xl bg-bg-elevated" transition={{ type: 'spring', stiffness: 400, damping: 35 }} />
               )}
               {active && (
-                <motion.div layoutId="sidebar-active-bar" className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full bg-gold" transition={{ type: 'spring', stiffness: 400, damping: 35 }} />
+                <motion.div layoutId="sidebar-active-bar" className="absolute left-0 rtl:right-0 rtl:left-auto top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full rtl:rounded-l-full rtl:rounded-r-none bg-gold" transition={{ type: 'spring', stiffness: 400, damping: 35 }} />
               )}
               <Icon className={cn('relative z-10 h-[18px] w-[18px] shrink-0 transition-colors', active && 'text-gold')} strokeWidth={1.5} />
               <AnimatePresence>
@@ -101,7 +101,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; o
           onClick={onToggleCollapse}
           className="flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] text-text-muted transition-colors hover:bg-bg-elevated hover:text-text-primary"
         >
-          <ChevronLeft className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')} strokeWidth={1.5} />
+          <ChevronLeft className={cn('h-4 w-4 transition-transform rtl:scale-x-[-1]', collapsed && 'rotate-180')} strokeWidth={1.5} />
           {!collapsed && <span>{t('nav.collapse')}</span>}
         </button>
       </div>
@@ -111,7 +111,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; o
 
 export function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
-  const { t } = useLanguage();
+  const { t, rtl } = useLanguage();
 
   return (
     <AnimatePresence>
@@ -125,9 +125,9 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
             className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden"
           />
           <motion.aside
-            initial={{ x: -280 }}
+            initial={{ x: rtl ? 280 : -280 }}
             animate={{ x: 0 }}
-            exit={{ x: -280 }}
+            exit={{ x: rtl ? 280 : -280 }}
             transition={{ type: 'spring', stiffness: 400, damping: 35 }}
             className="fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-border bg-bg-secondary lg:hidden rtl:left-auto rtl:right-0 rtl:border-l rtl:border-r-0"
           >

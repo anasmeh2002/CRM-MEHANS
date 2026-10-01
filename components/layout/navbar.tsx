@@ -30,15 +30,15 @@ const quickActions = [
   { id: 'meeting', labelKey: 'navbar.newMeeting', icon: CalendarClock, modal: 'meeting' as const },
 ];
 
-function timeAgo(date: string): string {
+function timeAgo(date: string, t: (k: string, v?: Record<string, string | number>) => string): string {
   const diff = Date.now() - new Date(date).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t('time.justNow');
+  if (mins < 60) return t('time.minutesAgo', { n: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t('time.hoursAgo', { n: hours });
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return t('time.daysAgo', { n: days });
 }
 
 export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
@@ -106,10 +106,10 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
     setMarkingRead(true);
     try {
       await markAllNotificationsRead();
-      toast.success('All notifications marked as read');
+      toast.success(t('navbar.allNotificationsRead'));
       refetchNotifs();
     } catch {
-      toast.error('Failed to mark notifications as read');
+      toast.error(t('navbar.markReadFailed'));
     } finally {
       setMarkingRead(false);
     }
@@ -150,7 +150,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
     router.push(routeMap[result.type] ?? '/');
   };
 
-  const orgName = agency?.name ?? 'MEHANS Real Estate';
+  const orgName = agency?.name ?? t('navbar.enterpriseWorkspace');
 
   return (
     <div className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-border glass px-4 sm:gap-3 sm:px-5 lg:px-8">
@@ -175,7 +175,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
           <Search className="h-4 w-4" strokeWidth={1.5} />
           <span className="hidden sm:block">{t('navbar.search')}</span>
           <span className="sm:hidden">{t('navbar.searchShort')}</span>
-          <kbd className="ml-auto hidden items-center gap-1 rounded-md border border-border bg-bg-elevated px-1.5 py-0.5 text-[10px] font-medium text-text-muted sm:flex">
+          <kbd className="ms-auto hidden items-center gap-1 rounded-md border border-border bg-bg-elevated px-1.5 py-0.5 text-[10px] font-medium text-text-muted sm:flex">
             <Command className="h-3 w-3" />K
           </kbd>
         </button>
@@ -183,7 +183,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
           {searchOpen && (
             <motion.div
               initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.12 }}
-              className="absolute left-0 top-full mt-2 w-full rounded-xl border border-border bg-bg-elevated p-2 shadow-modal"
+              className="absolute left-0 rtl:right-0 rtl:left-auto top-full mt-2 w-full rounded-xl border border-border bg-bg-elevated p-2 shadow-modal"
             >
               <div className="flex items-center gap-2 rounded-lg border border-border bg-bg-secondary px-3 py-2">
                 <Search className="h-4 w-4 text-text-muted" strokeWidth={1.5} />
@@ -206,7 +206,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
                     <button
                       key={`${result.type}-${result.id}`}
                       onClick={() => handleSearchResultClick(result)}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] text-text-primary transition-colors hover:bg-bg-hover"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-start text-[13px] text-text-primary transition-colors hover:bg-bg-hover"
                     >
                       <Search className="h-4 w-4 text-text-muted" strokeWidth={1.5} />
                       <div className="flex-1">
@@ -223,7 +223,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
       </div>
 
       {/* Right */}
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ms-auto flex items-center gap-2">
         <LanguageSwitcher />
         <ThemeToggle />
 
@@ -234,7 +234,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
             window.dispatchEvent(event);
           }}
           className="flex h-10 w-10 items-center justify-center rounded-xl border border-gold-border bg-gold-bg text-gold transition-all hover:scale-105 hover:bg-gold-soft hover:text-[#0D0D0F]"
-          title="AI Copilot"
+          title={t('navbar.aiCopilot')}
         >
           <Sparkles className="h-[18px] w-[18px]" strokeWidth={1.5} />
         </button>
@@ -249,7 +249,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
             {quickOpen && (
               <motion.div
                 initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.12 }}
-                className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-bg-elevated p-1.5 shadow-modal"
+                className="absolute right-0 rtl:left-0 rtl:right-auto top-full mt-2 w-56 rounded-xl border border-border bg-bg-elevated p-1.5 shadow-modal"
               >
                 {quickActions.map((action) => {
                   const Icon = action.icon;
@@ -257,7 +257,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
                     <button
                       key={action.id}
                       onClick={() => { openModal(action.modal); setQuickOpen(false); }}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] text-text-primary transition-colors hover:bg-bg-hover"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-start text-[13px] text-text-primary transition-colors hover:bg-bg-hover"
                     >
                       <Icon className="h-4 w-4 text-text-muted" strokeWidth={1.5} /> {t(action.labelKey)}
                     </button>
@@ -276,7 +276,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
           >
             <Bell className="h-[18px] w-[18px] text-text-secondary" strokeWidth={1.5} />
             {unreadCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[10px] font-bold text-[#0D0D0F]">
+              <span className="absolute -right-1 -top-1 rtl:-left-1 rtl:right-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[10px] font-bold text-[#0D0D0F]">
                 {unreadCount}
               </span>
             )}
@@ -285,7 +285,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
             {notifOpen && (
               <motion.div
                 initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.12 }}
-                className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] max-w-80 rounded-xl border border-border bg-bg-elevated shadow-modal"
+                className="absolute right-0 rtl:left-0 rtl:right-auto top-full mt-2 w-[calc(100vw-2rem)] max-w-80 rounded-xl border border-border bg-bg-elevated shadow-modal"
               >
                 <div className="flex items-center justify-between border-b border-border px-4 py-3">
                   <span className="text-[13px] font-semibold text-text-primary">{t('navbar.notifications')}</span>
@@ -305,13 +305,13 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
                       <button
                         key={n.id}
                         onClick={() => handleNotifClick(n)}
-                        className={cn('flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-bg-hover', !n.read && 'bg-gold-bg')}
+                        className={cn('flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-start transition-colors hover:bg-bg-hover', !n.read && 'bg-gold-bg')}
                       >
                         <div className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', !n.read ? 'bg-gold' : 'bg-transparent border border-border-strong')} />
                         <div className="flex-1">
                           <div className="text-[13px] font-medium text-text-primary">{n.title}</div>
                           {n.description && <div className="text-[12px] text-text-secondary">{n.description}</div>}
-                          <div className="mt-1 text-[11px] text-text-muted">{timeAgo(n.created_at)}</div>
+                          <div className="mt-1 text-[11px] text-text-muted">{timeAgo(n.created_at, t)}</div>
                         </div>
                       </button>
                     ))
@@ -326,7 +326,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
         <div ref={refs.user} className="relative">
           <button
             onClick={() => setUserOpen(!userOpen)}
-            className="flex items-center gap-2 rounded-xl border border-border bg-bg-secondary py-1.5 pl-1.5 pr-2 transition-colors hover:border-border-strong"
+            className="flex items-center gap-2 rounded-xl border border-border bg-bg-secondary py-1.5 ps-1.5 pe-2 transition-colors hover:border-border-strong"
           >
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gold text-xs font-bold text-[#0D0D0F]">{(user?.user_metadata?.full_name ?? user?.email ?? 'U').slice(0, 2).toUpperCase()}</div>
             <ChevronDown className="h-4 w-4 text-text-muted" strokeWidth={1.5} />
@@ -335,30 +335,30 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
             {userOpen && (
               <motion.div
                 initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.12 }}
-                className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-bg-elevated p-1.5 shadow-modal"
+                className="absolute right-0 rtl:left-0 rtl:right-auto top-full mt-2 w-56 rounded-xl border border-border bg-bg-elevated p-1.5 shadow-modal"
               >
                 <div className="border-b border-border px-3 py-3">
-                  <div className="text-[13px] font-medium text-text-primary">{user?.user_metadata?.full_name ?? 'Workspace user'}</div>
+                  <div className="text-[13px] font-medium text-text-primary">{user?.user_metadata?.full_name ?? t('navbar.workspaceUser')}</div>
                   <div className="text-[12px] text-text-muted">{user?.email}</div>
                 </div>
                 <button
                   onClick={() => { setUserOpen(false); router.push('/settings'); }}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[13px] text-text-primary transition-colors hover:bg-bg-hover"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-start text-[13px] text-text-primary transition-colors hover:bg-bg-hover"
                 >
-                  <User className="h-4 w-4 text-text-muted" strokeWidth={1.5} /> Profile
+                  <User className="h-4 w-4 text-text-muted" strokeWidth={1.5} /> {t('navbar.profile')}
                 </button>
                 <button
                   onClick={() => { setUserOpen(false); router.push('/settings'); }}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[13px] text-text-primary transition-colors hover:bg-bg-hover"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-start text-[13px] text-text-primary transition-colors hover:bg-bg-hover"
                 >
-                  <Settings className="h-4 w-4 text-text-muted" strokeWidth={1.5} /> Settings
+                  <Settings className="h-4 w-4 text-text-muted" strokeWidth={1.5} /> {t('nav.settings')}
                 </button>
                 <div className="my-1 h-px bg-border" />
                 <button
-                  onClick={async () => { try { await signOut(); router.replace('/login'); } catch { toast.error('Unable to sign out'); } }}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[13px] text-error transition-colors hover:bg-error-bg"
+                  onClick={async () => { try { await signOut(); router.replace('/login'); } catch { toast.error(t('navbar.signOutFailed')); } }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-start text-[13px] text-error transition-colors hover:bg-error-bg"
                 >
-                  <LogOut className="h-4 w-4" strokeWidth={1.5} /> Sign Out
+                  <LogOut className="h-4 w-4" strokeWidth={1.5} /> {t('navbar.signOut')}
                 </button>
               </motion.div>
             )}
