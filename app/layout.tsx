@@ -1,5 +1,5 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -9,6 +9,7 @@ import { AuthProvider } from '@/components/auth-provider';
 import { AuthGuard } from '@/components/auth-guard';
 import { LanguageProvider } from '@/components/language-provider';
 import { AgencyProvider } from '@/components/agency-provider';
+import { ServiceWorkerRegister } from '@/components/sw-register';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -26,11 +27,39 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: 'MEHANS — Real Estate OS',
   description: 'The operating system for modern real estate teams.',
+  manifest: '/manifest.webmanifest',
   icons: {
-    icon: '/logo.png',
-    apple: '/logo.png',
+    icon: [
+      { url: '/logo.png', sizes: 'any' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/icon-192.png', sizes: '192x192' },
+      { url: '/icons/icon-512.png', sizes: '512x512' },
+    ],
     shortcut: '/logo.png',
   },
+  appleWebApp: {
+    capable: true,
+    title: 'MEHANS',
+    statusBarStyle: 'black-translucent',
+  },
+  applicationName: 'MEHANS',
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-title': 'MEHANS',
+    'apple-mobile-web-app-status-bar-style': 'black-translucent',
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+  themeColor: '#0D0D0F',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -64,6 +93,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               },
             }}
           />
+          <ServiceWorkerRegister />
         </ThemeProvider>
       </body>
     </html>

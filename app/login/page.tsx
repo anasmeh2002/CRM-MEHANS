@@ -82,7 +82,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-bg-primary bg-grid px-5 py-10">
-      <div className="w-full max-w-md rounded-3xl border border-border bg-bg-secondary p-8 shadow-modal sm:p-10">
+      <div className="w-full max-w-md rounded-3xl border border-border bg-bg-secondary p-6 shadow-modal sm:p-10">
         <div className="mb-8 flex justify-center"><MehansLogo height={48} /></div>
         <div className="mb-8 text-center">
           <p className="eyebrow text-gold">MEHANS REAL ESTATE</p>

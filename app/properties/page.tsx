@@ -274,7 +274,7 @@ export default function PropertiesPage() {
                     <p className="font-serif text-lg font-medium text-white">{property.title}</p>
                   </div>
                 </div>
-                <div className="p-5">
+                <div className="p-4 sm:p-5">
                   <div className="flex items-center justify-between">
                     <p className="font-serif text-xl font-medium text-gold">{formatCurrency(property.price, currency)}</p>
                     <Badge variant="neutral" className="capitalize">{property.type}</Badge>
@@ -358,7 +358,7 @@ export default function PropertiesPage() {
             <Field label="Property Photos">
               <UploadField label="Upload property photos" accept="image/*" onChange={(file) => { setCreateFiles((p) => [...p, file]); setCreatePreviews((p) => [...p, URL.createObjectURL(file)]); }} />
               {createPreviews.length > 0 && (
-                <div className="mt-3 grid grid-cols-4 gap-2">
+                <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
                   {createPreviews.map((src, i) => (
                     <div key={i} className="relative aspect-square overflow-hidden rounded-lg border border-border">
                       <img src={src} alt={`Preview ${i + 1}`} className="h-full w-full object-cover" />

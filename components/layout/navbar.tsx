@@ -153,21 +153,21 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const orgName = agency?.name ?? 'MEHANS Real Estate';
 
   return (
-    <div className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border glass px-5 lg:px-8">
+    <div className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-border glass px-4 sm:gap-3 sm:px-5 lg:px-8">
       <button onClick={onMenuClick} className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-bg-secondary text-text-secondary transition-colors hover:border-border-strong lg:hidden">
         <Menu className="h-5 w-5" strokeWidth={1.5} />
       </button>
 
-      <div className="relative hidden sm:block">
+      <div className="relative hidden md:block">
         <button className="flex items-center gap-2.5 rounded-xl border border-border bg-bg-secondary px-3 py-2 text-[13px] transition-colors hover:border-border-strong">
           <MehansLogoIcon size={38} />
-          <span className="hidden font-medium text-text-primary md:block">{orgName}</span>
+          <span className="font-medium text-text-primary">{orgName}</span>
           <ChevronDown className="h-4 w-4 text-text-muted" strokeWidth={1.5} />
         </button>
       </div>
 
       {/* Search */}
-      <div ref={refs.search} className="relative flex-1 max-w-md">
+      <div ref={refs.search} className="relative min-w-0 flex-1 max-w-md">
         <button
           onClick={() => setSearchOpen(true)}
           className="flex w-full items-center gap-2 rounded-xl border border-border bg-bg-secondary px-3 py-2 text-[13px] text-text-muted transition-colors hover:border-border-strong"
@@ -241,7 +241,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
 
         {/* Quick Add */}
         <div ref={refs.quick} className="relative">
-          <button onClick={() => setQuickOpen(!quickOpen)} className="btn btn-gold btn-md">
+          <button onClick={() => setQuickOpen(!quickOpen)} className="btn btn-gold btn-md shrink-0">
             <Plus className="h-4 w-4" strokeWidth={2} />
             <span className="hidden sm:block">{t('navbar.quickAdd')}</span>
           </button>
@@ -285,7 +285,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
             {notifOpen && (
               <motion.div
                 initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.12 }}
-                className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-border bg-bg-elevated shadow-modal"
+                className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] max-w-80 rounded-xl border border-border bg-bg-elevated shadow-modal"
               >
                 <div className="flex items-center justify-between border-b border-border px-4 py-3">
                   <span className="text-[13px] font-semibold text-text-primary">{t('navbar.notifications')}</span>

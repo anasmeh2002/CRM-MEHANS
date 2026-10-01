@@ -108,8 +108,8 @@ export default function AIAssistantPage() {
       </PageHeader>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="flex h-[calc(100vh-240px)] flex-col lg:col-span-2" padding={false} delay={0.1}>
-          <div className="flex items-center gap-1 border-b border-border p-2">
+        <Card className="flex h-[calc(100vh-200px)] min-h-[400px] flex-col lg:col-span-2" padding={false} delay={0.1}>
+          <div className="flex items-center gap-1 overflow-x-auto border-b border-border p-2 scrollbar-thin">
             {(['chat', 'insights', 'generate'] as const).map((tab) => (
               <button
                 key={tab}

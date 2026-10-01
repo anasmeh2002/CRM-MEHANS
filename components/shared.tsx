@@ -19,13 +19,13 @@ export function PageHeader({
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"
+      className="mb-6 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between sm:gap-5"
     >
       <div>
-        <h1 className="font-serif text-[32px] font-medium tracking-tight text-text-primary">{title}</h1>
-        {description && <p className="mt-2 text-[14px] leading-relaxed text-text-secondary">{description}</p>}
+        <h1 className="font-serif text-2xl font-medium tracking-tight text-text-primary sm:text-[32px]">{title}</h1>
+        {description && <p className="mt-1.5 text-[13px] leading-relaxed text-text-secondary sm:mt-2 sm:text-[14px]">{description}</p>}
       </div>
-      {children && <div className="flex items-center gap-2.5">{children}</div>}
+      {children && <div className="flex flex-wrap items-center gap-2.5">{children}</div>}
     </motion.div>
   );
 }
@@ -80,7 +80,7 @@ export const StatCard = memo(function StatCard({
       <div className="flex items-start justify-between">
         <div>
           <p className="eyebrow">{label}</p>
-          <p className="mt-3.5 font-serif text-[30px] font-medium tracking-tight text-text-primary">{value}</p>
+          <p className="mt-3 font-serif text-2xl font-medium tracking-tight text-text-primary sm:mt-3.5 sm:text-[30px]">{value}</p>
         </div>
         <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-bg-elevated text-gold transition-colors group-hover:border-gold-border">
           <Icon className="h-[18px] w-[18px]" strokeWidth={1.5} />
@@ -184,7 +184,7 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center">
+    <div className="flex flex-col items-center justify-center py-12 text-center sm:py-24">
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-bg-elevated text-gold">
         <Icon className="h-8 w-8" strokeWidth={1.5} />
       </div>
