@@ -9,6 +9,7 @@ import { AuthProvider } from '@/components/auth-provider';
 import { AuthGuard } from '@/components/auth-guard';
 import { LanguageProvider } from '@/components/language-provider';
 import { AgencyProvider } from '@/components/agency-provider';
+import { ServiceWorkerRegister } from '@/components/sw-register';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -26,10 +27,30 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: 'MEHANS — Real Estate OS',
   description: 'The operating system for modern real estate teams.',
+  manifest: '/manifest.webmanifest',
+  applicationName: 'MEHANS',
+  appleWebApp: {
+    capable: true,
+    title: 'MEHANS',
+    statusBarStyle: 'black-translucent',
+  },
   icons: {
-    icon: '/logo.png',
-    apple: '/logo.png',
+    icon: [
+      { url: '/logo.png', sizes: 'any' },
+      { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/apple-touch-icon.png', sizes: '180x180' },
+    ],
     shortcut: '/logo.png',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-title': 'MEHANS',
+    'apple-mobile-web-app-status-bar-style': 'black-translucent',
   },
 };
 
@@ -72,6 +93,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               },
             }}
           />
+          <ServiceWorkerRegister />
         </ThemeProvider>
       </body>
     </html>
