@@ -87,27 +87,27 @@ const statusConfig: Record<
   }
 > = {
   new: {
-    label: 'New',
+    label: 'leadStatus.new',
     variant: 'info',
   },
   qualified: {
-    label: 'Qualified',
+    label: 'leadStatus.qualified',
     variant: 'gold',
   },
   visit_scheduled: {
-    label: 'Visit Scheduled',
+    label: 'leadStatus.visitScheduled',
     variant: 'warning',
   },
   negotiation: {
-    label: 'Negotiation',
+    label: 'leadStatus.negotiation',
     variant: 'gold',
   },
   won: {
-    label: 'Won',
+    label: 'leadStatus.won',
     variant: 'success',
   },
   lost: {
-    label: 'Lost',
+    label: 'leadStatus.lost',
     variant: 'error',
   },
 };
@@ -118,31 +118,31 @@ const statusFilters: {
 }[] = [
   {
     status: 'all',
-    label: 'All',
+    label: 'common.all',
   },
   {
     status: 'new',
-    label: 'New',
+    label: 'leadStatus.new',
   },
   {
     status: 'qualified',
-    label: 'Qualified',
+    label: 'leadStatus.qualified',
   },
   {
     status: 'visit_scheduled',
-    label: 'Visit',
+    label: 'leads.visitShort',
   },
   {
     status: 'negotiation',
-    label: 'Negotiation',
+    label: 'leadStatus.negotiation',
   },
   {
     status: 'won',
-    label: 'Won',
+    label: 'leadStatus.won',
   },
   {
     status: 'lost',
-    label: 'Lost',
+    label: 'leadStatus.lost',
   },
 ];
 
@@ -157,42 +157,42 @@ type SortDir = 'asc' | 'desc';
 const columns = [
   {
     key: 'name',
-    label: 'Name',
+    label: 'common.name',
     visible: true,
   },
   {
     key: 'status',
-    label: 'Status',
+    label: 'common.status',
     visible: true,
   },
   {
     key: 'score',
-    label: 'Score',
+    label: 'leads.score',
     visible: true,
   },
   {
     key: 'source',
-    label: 'Source',
+    label: 'leads.source',
     visible: true,
   },
   {
     key: 'budget',
-    label: 'Budget',
+    label: 'leads.budget',
     visible: true,
   },
   {
     key: 'owner',
-    label: 'Owner',
+    label: 'leads.owner',
     visible: true,
   },
   {
     key: 'tags',
-    label: 'Tags',
+    label: 'leads.tags',
     visible: true,
   },
   {
     key: 'lastActivity',
-    label: 'Activity',
+    label: 'leads.activity',
     visible: true,
   },
 ];
@@ -1111,7 +1111,7 @@ export default function LeadsPage() {
             setSearch(v);
             setPage(1);
           }}
-          placeholder="Search leads by name or email..."
+          placeholder={t('leads.searchPlaceholder')}
           className="flex-1 max-w-md"
         />
 
@@ -1135,7 +1135,7 @@ export default function LeadsPage() {
                     : 'border-border bg-bg-secondary text-text-secondary hover:text-text-primary'
                 )}
               >
-                {f.label}
+                {t(f.label)}
               </button>
             )
           )}
@@ -1155,7 +1155,7 @@ export default function LeadsPage() {
               strokeWidth={1.5}
             />
 
-            Columns
+            {t('leads.columns')}
           </button>
 
           <AnimatePresence>
@@ -1207,7 +1207,7 @@ export default function LeadsPage() {
                         />
                       )}
 
-                      {col.label}
+                      {t(col.label)}
                     </button>
                   )
                 )}
@@ -1254,7 +1254,7 @@ export default function LeadsPage() {
               }}
               className="text-[12px] font-medium text-text-primary hover:text-gold"
             >
-              Export
+              {t('leads.export')}
             </button>
 
             <button
@@ -1268,7 +1268,7 @@ export default function LeadsPage() {
               }}
               className="text-[12px] font-medium text-text-primary hover:text-gold"
             >
-              Assign
+              {t('leads.assign')}
             </button>
 
             <button
@@ -1315,7 +1315,7 @@ export default function LeadsPage() {
               }}
               className="text-[12px] font-medium text-error hover:opacity-80"
             >
-              Delete
+              {t('common.delete')}
             </button>
 
             <button
@@ -1358,8 +1358,7 @@ export default function LeadsPage() {
 
             <div>
               <p className="font-serif text-lg font-medium text-text-primary">
-                Failed to load
-                leads
+                {t('leads.couldntLoad')}
               </p>
 
               <p className="mt-1 text-[13px] text-text-secondary">
@@ -1373,7 +1372,7 @@ export default function LeadsPage() {
               }
               className="btn btn-outline btn-md mt-2"
             >
-              Retry
+              {t('common.tryAgain')}
             </button>
           </div>
         </Card>
@@ -1382,8 +1381,8 @@ export default function LeadsPage() {
         <Card>
           <EmptyState
             icon={Users}
-            title="No leads found"
-            description="Try adjusting your filters or search query."
+            title={t('leads.noLeads')}
+            description={t('leads.adjustFilters')}
             action={
               <button
                 onClick={() =>
@@ -1398,7 +1397,7 @@ export default function LeadsPage() {
                   strokeWidth={1.5}
                 />
 
-                New Lead
+                {t('leads.newLead')}
               </button>
             }
           />
@@ -1452,7 +1451,7 @@ export default function LeadsPage() {
                         }
                         className="flex items-center gap-1.5 hover:text-text-primary"
                       >
-                        Name
+                        {t('common.name')}
 
                         <SortIcon k="name" />
                       </button>
@@ -1463,7 +1462,7 @@ export default function LeadsPage() {
                     'status'
                   ) && (
                     <th className="px-4 py-3.5 font-medium">
-                      Status
+                      {t('common.status')}
                     </th>
                   )}
 
@@ -1479,7 +1478,7 @@ export default function LeadsPage() {
                         }
                         className="flex items-center gap-1.5 hover:text-text-primary"
                       >
-                        Score
+                        {t('leads.score')}
 
                         <SortIcon k="score" />
                       </button>
@@ -1490,7 +1489,7 @@ export default function LeadsPage() {
                     'source'
                   ) && (
                     <th className="px-4 py-3.5 font-medium">
-                      Source
+                      {t('leads.source')}
                     </th>
                   )}
 
@@ -1506,7 +1505,7 @@ export default function LeadsPage() {
                         }
                         className="flex items-center gap-1.5 hover:text-text-primary"
                       >
-                        Budget
+                        {t('leads.budget')}
 
                         <SortIcon k="budget" />
                       </button>
@@ -1517,7 +1516,7 @@ export default function LeadsPage() {
                     'owner'
                   ) && (
                     <th className="px-4 py-3.5 font-medium">
-                      Owner
+                      {t('leads.owner')}
                     </th>
                   )}
 
@@ -1525,7 +1524,7 @@ export default function LeadsPage() {
                     'tags'
                   ) && (
                     <th className="px-4 py-3.5 font-medium">
-                      Tags
+                      {t('leads.tags')}
                     </th>
                   )}
 
@@ -1541,7 +1540,7 @@ export default function LeadsPage() {
                         }
                         className="flex items-center gap-1.5 hover:text-text-primary"
                       >
-                        Activity
+                        {t('leads.activity')}
 
                         <SortIcon k="lastActivity" />
                       </button>
@@ -1659,18 +1658,7 @@ export default function LeadsPage() {
                               ).variant
                             }
                           >
-                            {
-                              safeConfig(
-                                statusConfig,
-                                lead.status,
-                                {
-                                  label:
-                                    'Unknown',
-                                  variant:
-                                    'neutral',
-                                }
-                              ).label
-                            }
+                            {t(safeConfig(statusConfig, lead.status, { label: 'leadStatus.new', variant: 'neutral' }).label)}
                           </Badge>
                         </td>
                       )}
@@ -1692,10 +1680,7 @@ export default function LeadsPage() {
                       ) && (
                         <td className="px-4 py-3.5">
                           <span className="text-[13px] capitalize text-text-secondary">
-                            {lead.source.replace(
-                              '-',
-                              ' '
-                            )}
+                            {t(`source.${lead.source === 'social' ? 'socialMedia' : lead.source === 'walk-in' ? 'walkIn' : lead.source === 'cold-call' ? 'coldCall' : lead.source}`)}
                           </span>
                         </td>
                       )}
@@ -1895,8 +1880,8 @@ export default function LeadsPage() {
         onClose={() =>
           setShowCreate(false)
         }
-        title="Create New Lead"
-        description="Add a new lead to your pipeline"
+        title={t('leadModal.title')}
+        description={t('leadModal.description')}
         size="lg"
         footer={
           <>
@@ -1919,7 +1904,7 @@ export default function LeadsPage() {
                 !form.email
               }
             >
-              Create Lead
+              {t('leadModal.saveLead')}
             </LoadingButton>
           </>
         }

@@ -20,12 +20,12 @@ import { useAgency } from '@/components/agency-provider';
 import { formatCurrency } from '@/lib/format';
 
 const stageConfig: Record<DealStage, { label: string; color: string }> = {
-  new_lead: { label: 'New Lead', color: '#4A90D9' },
-  qualified: { label: 'Qualified', color: '#D4AF37' },
-  visit_scheduled: { label: 'Visit Scheduled', color: '#D4823A' },
-  negotiation: { label: 'Negotiation', color: '#9B6FBF' },
-  won: { label: 'Won', color: '#5BAA6F' },
-  lost: { label: 'Lost', color: '#C75555' },
+  new_lead: { label: 'stage.newLead', color: '#4A90D9' },
+  qualified: { label: 'stage.qualified', color: '#D4AF37' },
+  visit_scheduled: { label: 'stage.visitScheduled', color: '#D4823A' },
+  negotiation: { label: 'stage.negotiation', color: '#9B6FBF' },
+  won: { label: 'stage.won', color: '#5BAA6F' },
+  lost: { label: 'stage.lost', color: '#C75555' },
 };
 
 function getLeadName(lead: Deal['lead']): string {
@@ -126,7 +126,7 @@ export default function DealsPage() {
       };
       const created = await createDeal(payload);
       if (!created) {
-        toast.error('Failed to create deal. Please try again.');
+        toast.error(t('deals.createFailed'));
         return;
       }
       const mapped = mapDealForDisplay(created);
@@ -136,7 +136,7 @@ export default function DealsPage() {
         title: '', leadId: '', contactId: '', propertyId: '', ownerId: '',
         value: '', stage: 'new_lead', probability: '20', closeDate: '2026-09-15', notes: '',
       });
-      toast.success(`Deal "${mapped.title}" created successfully`);
+      toast.success(t('deals.created', { title: mapped.title }));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create deal');
     } finally {
@@ -162,13 +162,13 @@ export default function DealsPage() {
       };
       const updated = await updateDeal(editDeal.id, patch);
       if (!updated) {
-        toast.error('Failed to update deal. Please try again.');
+        toast.error(t('deals.updateFailed'));
         return;
       }
       const mapped = mapDealForDisplay(updated);
       setDealsData((prev) => (prev ?? []).map((d) => (d.id === editDeal.id ? mapped : d)));
       setEditDeal(null);
-      toast.success(`Deal "${mapped.title}" updated successfully`);
+      toast.success(t('deals.updated', { title: mapped.title }));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update deal');
     } finally {
@@ -179,12 +179,12 @@ export default function DealsPage() {
   const handleDelete = async (id: string) => {
     const ok = await deleteDeal(id);
     if (!ok) {
-      toast.error('Failed to delete deal. Please try again.');
+      toast.error(t('deals.deleteFailed'));
       return;
     }
     setDealsData((prev) => (prev ?? []).filter((d) => d.id !== id));
     setSelected(null);
-    toast.success('Deal deleted');
+    toast.success(t('deals.deleted'));
   };
 
   return (
@@ -200,7 +200,7 @@ export default function DealsPage() {
           onClick={() => setStageFilter('all')}
           className={cn('rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-all duration-200 whitespace-nowrap', stageFilter === 'all' ? 'border-gold-border bg-gold-bg text-gold' : 'border-border bg-bg-secondary text-text-secondary hover:text-text-primary')}
         >
-          All Deals
+          {t('common.all')} {t('nav.deals')}
         </button>
         {Object.entries(stageConfig).map(([stage, config]) => (
           <button
@@ -209,7 +209,7 @@ export default function DealsPage() {
             className={cn('flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition-all duration-200 whitespace-nowrap', stageFilter === stage ? 'border-gold-border bg-gold-bg text-gold' : 'border-border bg-bg-secondary text-text-secondary hover:text-text-primary')}
           >
             <span className="h-2 w-2 rounded-full" style={{ background: config.color }} />
-            {config.label}
+            {t(config.label)}
           </button>
         ))}
       </div>
@@ -243,12 +243,12 @@ export default function DealsPage() {
       ) : dealsError ? (
         <Card>
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-[14px] font-medium text-text-primary">Unable to load deals</p>
+            <p className="text-[14px] font-medium text-text-primary">{t('deals.couldntLoad')}</p>
             <p className="mt-1 text-[12px] text-text-secondary">{dealsError}</p>
           </div>
         </Card>
       ) : filtered.length === 0 ? (
-        <Card><EmptyState icon={TrendingUp} title="No deals found" description="Create a new deal to get started." action={<button onClick={() => setShowCreate(true)} className="btn btn-gold btn-md"><Plus className="h-4 w-4" strokeWidth={1.5} /> New Deal</button>} /></Card>
+        <Card><EmptyState icon={TrendingUp} title={t('deals.noDeals')} description={t('deals.createFirst')} action={<button onClick={() => setShowCreate(true)} className="btn btn-gold btn-md"><Plus className="h-4 w-4" strokeWidth={1.5} /> {t('navbar.newDeal')}</button>} /></Card>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {filtered.map((deal, i) => {
@@ -298,12 +298,12 @@ export default function DealsPage() {
       <Modal
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        title="Create New Deal"
-        description="Add a new deal to your pipeline"
+        title={t('dealModal.title')}
+        description={t('dealModal.description')}
         size="lg"
         footer={<>
-          <button onClick={() => setShowCreate(false)} className="btn btn-ghost btn-md">Cancel</button>
-          <LoadingButton onClick={handleCreate} loading={saving} disabled={!form.value}>Create Deal</LoadingButton>
+          <button onClick={() => setShowCreate(false)} className="btn btn-ghost btn-md">{t('common.cancel')}</button>
+          <LoadingButton onClick={handleCreate} loading={saving} disabled={!form.value}>{t('dealModal.saveDeal')}</LoadingButton>
         </>}
       >
         <div className="grid gap-5 sm:grid-cols-2">
@@ -341,12 +341,12 @@ export default function DealsPage() {
       <Modal
         open={!!editDeal}
         onClose={() => setEditDeal(null)}
-        title="Edit Deal"
+        title={t('common.edit')}
         description={editDeal?.title}
         size="lg"
         footer={<>
-          <button onClick={() => setEditDeal(null)} className="btn btn-ghost btn-md">Cancel</button>
-          <LoadingButton onClick={handleSaveEdit} loading={saving}>Save Changes</LoadingButton>
+          <button onClick={() => setEditDeal(null)} className="btn btn-ghost btn-md">{t('common.cancel')}</button>
+          <LoadingButton onClick={handleSaveEdit} loading={saving}>{t('common.save')}</LoadingButton>
         </>}
       >
         {editDeal && (
@@ -385,30 +385,30 @@ export default function DealsPage() {
               <div className="scrollbar-thin flex-1 overflow-y-auto p-6">
                 <div className="mb-5 grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-border bg-bg-elevated p-4">
-                    <p className="text-[11px] text-text-muted">Deal Value</p>
+                    <p className="text-[11px] text-text-muted">{t('deals.value')}</p>
                     <p className="mt-1 font-serif text-2xl font-medium text-gold">{formatCurrency(selected.value, currency)}</p>
                   </div>
                   <div className="rounded-xl border border-border bg-bg-elevated p-4">
-                    <p className="text-[11px] text-text-muted">Probability</p>
+                    <p className="text-[11px] text-text-muted">{t('dealModal.probability')}</p>
                     <p className="mt-1 font-serif text-2xl font-medium text-text-primary">{selected.probability}%</p>
                   </div>
                 </div>
                 <div className="mb-5 space-y-3">
                   <div className="flex items-center gap-3 rounded-xl border border-border bg-bg-elevated p-3">
                     <User className="h-4 w-4 text-gold" strokeWidth={1.5} />
-                    <div><p className="text-[11px] text-text-muted">Lead</p><p className="text-[13px] font-medium text-text-primary">{selected.leadName}</p></div>
+                    <div><p className="text-[11px] text-text-muted">{t('dealModal.connectLead')}</p><p className="text-[13px] font-medium text-text-primary">{selected.leadName}</p></div>
                   </div>
                   <div className="flex items-center gap-3 rounded-xl border border-border bg-bg-elevated p-3">
                     <Building className="h-4 w-4 text-gold" strokeWidth={1.5} />
-                    <div><p className="text-[11px] text-text-muted">Property</p><p className="text-[13px] font-medium text-text-primary">{selected.propertyName}</p></div>
+                    <div><p className="text-[11px] text-text-muted">{t('dealModal.connectProperty')}</p><p className="text-[13px] font-medium text-text-primary">{selected.propertyName}</p></div>
                   </div>
                   <div className="flex items-center gap-3 rounded-xl border border-border bg-bg-elevated p-3">
                     <Calendar className="h-4 w-4 text-gold" strokeWidth={1.5} />
-                    <div><p className="text-[11px] text-text-muted">Expected Close</p><p className="text-[13px] font-medium text-text-primary">{selected.closeDate !== 'N/A' ? new Date(selected.closeDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}</p></div>
+                    <div><p className="text-[11px] text-text-muted">{t('dealModal.expectedCloseDate')}</p><p className="text-[13px] font-medium text-text-primary">{selected.closeDate !== 'N/A' ? new Date(selected.closeDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}</p></div>
                   </div>
                   <div className="flex items-center gap-3 rounded-xl border border-border bg-bg-elevated p-3">
                     <DollarSign className="h-4 w-4 text-gold" strokeWidth={1.5} />
-                    <div><p className="text-[11px] text-text-muted">Deal Owner</p><p className="text-[13px] font-medium text-text-primary">{selected.ownerName}</p></div>
+                    <div><p className="text-[11px] text-text-muted">{t('dealModal.dealOwner')}</p><p className="text-[13px] font-medium text-text-primary">{selected.ownerName}</p></div>
                   </div>
                 </div>
 
@@ -430,8 +430,8 @@ export default function DealsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 border-t border-border p-4">
-                <button onClick={() => { setEditDeal(selected); setSelected(null); }} className="btn btn-outline btn-sm flex-1"><Pencil className="h-4 w-4" strokeWidth={1.5} /> Edit</button>
-                <button onClick={() => handleDelete(selected.id)} className="btn btn-danger btn-sm"><Trash2 className="h-4 w-4" strokeWidth={1.5} /> Delete</button>
+                <button onClick={() => { setEditDeal(selected); setSelected(null); }} className="btn btn-outline btn-sm flex-1"><Pencil className="h-4 w-4" strokeWidth={1.5} /> {t('common.edit')}</button>
+                <button onClick={() => handleDelete(selected.id)} className="btn btn-danger btn-sm"><Trash2 className="h-4 w-4" strokeWidth={1.5} /> {t('common.delete')}</button>
               </div>
             </motion.div>
           </>

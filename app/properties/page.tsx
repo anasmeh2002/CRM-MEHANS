@@ -21,13 +21,16 @@ import { useAgency } from '@/components/agency-provider';
 import { formatCurrency } from '@/lib/format';
 
 const statusConfig: Record<PropertyStatus, { label: string; variant: 'success' | 'gold' | 'error' | 'info' | 'neutral' }> = {
-  draft: { label: 'Draft', variant: 'neutral' },
-  available: { label: 'Available', variant: 'success' },
-  reserved: { label: 'Reserved', variant: 'gold' },
-  sold: { label: 'Sold', variant: 'error' },
-  rented: { label: 'Rented', variant: 'info' },
-  'off-market': { label: 'Off Market', variant: 'neutral' },
-  archived: { label: 'Archived', variant: 'neutral' },
+  draft: { label: 'property.draft', variant: 'neutral' },
+  available: { label: 'property.available', variant: 'success' },
+  reserved: { label: 'property.reserved', variant: 'gold' },
+  sold: { label: 'property.sold', variant: 'error' },
+  rented: { label: 'property.rented', variant: 'info' },
+  'off-market': { label: 'property.offMarket', variant: 'neutral' },
+  archived: { label: 'property.archived', variant: 'neutral' },
+};
+const propertyTypeKeys: Record<PropertyType, string> = {
+  apartment: 'property.apartment', villa: 'property.villa', penthouse: 'property.penthouse', townhouse: 'property.townhouse', land: 'property.land', commercial: 'property.commercial',
 };
 
 const statusFilters = ['all', 'available', 'reserved', 'sold', 'rented'] as const;
@@ -135,7 +138,7 @@ export default function PropertiesPage() {
       };
       const created = await createProperty(input);
       if (!created) {
-        toast.error('Failed to create property. Please try again.');
+        toast.error(t('properties.createFailed'));
         return;
       }
       for (let i = 0; i < createFiles.length; i++) {
@@ -148,9 +151,9 @@ export default function PropertiesPage() {
       setCreateFiles([]);
       setCreatePreviews([]);
       setForm({ title: '', address: '', city: '', price: '', type: 'apartment', status: 'available', bedrooms: '3', bathrooms: '2', area: '2000', agent: teamMembers[0]?.name ?? '', description: '', featured: false });
-      toast.success(`Property "${form.title}" created successfully`);
+      toast.success(t('properties.created', { title: form.title }));
     } catch (err) {
-      toast.error('Failed to create property. Please try again.');
+      toast.error(t('properties.createFailed'));
     } finally {
       setSaving(false);
     }
@@ -177,12 +180,12 @@ export default function PropertiesPage() {
       };
       const updated = await updateProperty(editProp.id, patch);
       if (!updated) {
-        toast.error('Failed to update property. Please try again.');
+        toast.error(t('properties.updateFailed'));
         return;
       }
       setProperties((prev) => prev.map((p) => (p.id === editProp.id ? { ...p, ...mapProperty(updated) } : p)));
       setEditProp(null);
-      toast.success(`Property "${editProp.title}" updated successfully`);
+      toast.success(t('properties.updated', { title: editProp.title }));
     } catch (err) {
       toast.error('Failed to update property. Please try again.');
     } finally {
@@ -193,12 +196,12 @@ export default function PropertiesPage() {
   const handleDelete = async (id: string) => {
     const ok = await deleteProperty(id);
     if (!ok) {
-      toast.error('Failed to delete property. Please try again.');
+      toast.error(t('properties.deleteFailed'));
       return;
     }
     setProperties((prev) => prev.filter((p) => p.id !== id));
     setSelected(null);
-    toast.success('Property deleted');
+    toast.success(t('properties.deleted'));
   };
 
   return (
@@ -210,7 +213,7 @@ export default function PropertiesPage() {
       </PageHeader>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search properties by name or location..." className="flex-1 max-w-md" />
+        <SearchInput value={search} onChange={setSearch} placeholder={t('properties.searchPlaceholder')} className="flex-1 max-w-md" />
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           {statusFilters.map((status) => (
             <button
@@ -221,7 +224,7 @@ export default function PropertiesPage() {
                 statusFilter === status ? 'border-gold-border bg-gold-bg text-gold' : 'border-border bg-bg-secondary text-text-secondary hover:text-text-primary'
               )}
             >
-              {status === 'all' ? 'All' : safeConfig(statusConfig, status, { label: status, variant: 'neutral' as const }).label}
+              {status === 'all' ? t('common.all') : t(safeConfig(statusConfig, status, { label: 'property.available', variant: 'neutral' as const }).label)}
             </button>
           ))}
         </div>
@@ -240,14 +243,14 @@ export default function PropertiesPage() {
               <X className="h-6 w-6 text-error" strokeWidth={1.5} />
             </div>
             <div>
-              <p className="font-serif text-lg font-medium text-text-primary">Unable to load properties</p>
+              <p className="font-serif text-lg font-medium text-text-primary">{t('properties.couldntLoad')}</p>
               <p className="mt-1 text-[13px] text-text-secondary">{error}</p>
             </div>
-            <button onClick={() => refetch()} className="btn btn-outline btn-md">Try again</button>
+            <button onClick={() => refetch()} className="btn btn-outline btn-md">{t('common.tryAgain')}</button>
           </div>
         </Card>
       ) : filtered.length === 0 ? (
-        <Card><EmptyState icon={Home} title="No properties found" description="Try adjusting your filters or add a new property." action={<button onClick={() => setShowCreate(true)} className="btn btn-gold btn-md"><Plus className="h-4 w-4" strokeWidth={1.5} /> New Property</button>} /></Card>
+        <Card><EmptyState icon={Home} title={t('properties.noProperties')} description={t('properties.adjustFilters')} action={<button onClick={() => setShowCreate(true)} className="btn btn-gold btn-md"><Plus className="h-4 w-4" strokeWidth={1.5} /> {t('properties.newProperty')}</button>} /></Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((property, i) => (
@@ -262,7 +265,7 @@ export default function PropertiesPage() {
                   <img src={property.image} alt={property.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-bg-secondary via-transparent to-transparent" />
                   <div className="absolute left-3 top-3">
-                    <Badge variant={safeConfig(statusConfig, property.status, { label: 'Unknown', variant: 'neutral' as const }).variant}>{safeConfig(statusConfig, property.status, { label: 'Unknown', variant: 'neutral' as const }).label}</Badge>
+                    <Badge variant={safeConfig(statusConfig, property.status, { label: 'property.available', variant: 'neutral' as const }).variant}>{t(safeConfig(statusConfig, property.status, { label: 'property.available', variant: 'neutral' as const }).label)}</Badge>
                   </div>
                   {property.featured && (
                     <div className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-lg border border-gold-border bg-bg-secondary/80 backdrop-blur-sm">
@@ -277,7 +280,7 @@ export default function PropertiesPage() {
                 <div className="p-4 sm:p-5">
                   <div className="flex items-center justify-between">
                     <p className="font-serif text-xl font-medium text-gold">{formatCurrency(property.price, currency)}</p>
-                    <Badge variant="neutral" className="capitalize">{property.type}</Badge>
+                    <Badge variant="neutral">{t(propertyTypeKeys[property.type as PropertyType] ?? 'property.apartment')}</Badge>
                   </div>
                   <div className="mt-3 flex items-center gap-4 text-[12px] text-text-secondary">
                     {property.bedrooms > 0 && <span className="flex items-center gap-1.5"><Bed className="h-3.5 w-3.5" strokeWidth={1.5} /> {property.bedrooms} bd</span>}
@@ -299,8 +302,8 @@ export default function PropertiesPage() {
       <Modal
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        title="Add New Property"
-        description="Create a new property listing"
+        title={t('propertyModal.title')}
+        description={t('propertyModal.description')}
         size="lg"
         footer={
           <>
@@ -324,7 +327,7 @@ export default function PropertiesPage() {
           <Field label={t('properties.price')}>
             <TextInput type="number" value={form.price} onChange={(v) => setForm({ ...form, price: v })} placeholder="4200000" />
           </Field>
-          <Field label="Property Type">
+          <Field label={t('propertyModal.propertyType')}>
             <Select value={form.type} onChange={(v) => setForm({ ...form, type: v as PropertyType })} options={[
               { value: 'apartment', label: 'Apartment' }, { value: 'villa', label: 'Villa' },
               { value: 'penthouse', label: 'Penthouse' }, { value: 'townhouse', label: 'Townhouse' },
@@ -337,7 +340,7 @@ export default function PropertiesPage() {
               { value: 'sold', label: 'Sold' }, { value: 'rented', label: 'Rented' }, { value: 'off-market', label: 'Off Market' },
             ]} />
           </Field>
-          <Field label="Listing Agent">
+          <Field label={t('propertyModal.agent')}>
             <Select value={form.agent} onChange={(v) => setForm({ ...form, agent: v })} options={teamMembers.map((m) => ({ value: m.name, label: `${m.name} — ${m.role}` }))} />
           </Field>
           <Field label="Bedrooms">
@@ -355,7 +358,7 @@ export default function PropertiesPage() {
             </Field>
           </div>
           <div className="sm:col-span-2">
-            <Field label="Property Photos">
+            <Field label={t('propertyModal.photoGallery')}>
               <UploadField label="Upload property photos" accept="image/*" onChange={(file) => { setCreateFiles((p) => [...p, file]); setCreatePreviews((p) => [...p, URL.createObjectURL(file)]); }} />
               {createPreviews.length > 0 && (
                 <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -376,7 +379,7 @@ export default function PropertiesPage() {
       <Modal
         open={!!editProp}
         onClose={() => setEditProp(null)}
-        title="Edit Property"
+        title={t('common.edit')}
         description={editProp?.title}
         size="lg"
         footer={
@@ -408,7 +411,7 @@ export default function PropertiesPage() {
             <Field label="Bathrooms"><TextInput type="number" value={String(editProp.bathrooms)} onChange={(v) => setEditProp({ ...editProp, bathrooms: parseInt(v) || 0 })} /></Field>
             <Field label="Area (sq ft)"><TextInput type="number" value={String(editProp.area)} onChange={(v) => setEditProp({ ...editProp, area: parseInt(v) || 0 })} /></Field>
             <div className="sm:col-span-2">
-              <Field label="Description"><TextArea value={editProp.description} onChange={(v) => setEditProp({ ...editProp, description: v })} rows={3} /></Field>
+              <Field label={t('propertyModal.description')}><TextArea value={editProp.description} onChange={(v) => setEditProp({ ...editProp, description: v })} rows={3} /></Field>
             </div>
           </div>
         )}
@@ -485,14 +488,14 @@ export default function PropertiesPage() {
                     <div className="rounded-xl border border-border bg-bg-elevated p-4 text-center">
                       <Bed className="mx-auto h-5 w-5 text-gold" strokeWidth={1.5} />
                       <p className="mt-1.5 font-serif text-xl font-medium text-text-primary">{selected.bedrooms}</p>
-                      <p className="text-[11px] text-text-muted">Bedrooms</p>
+                      <p className="text-[11px] text-text-muted">{t('properties.bedrooms')}</p>
                     </div>
                   )}
                   {selected.bathrooms > 0 && (
                     <div className="rounded-xl border border-border bg-bg-elevated p-4 text-center">
                       <Bath className="mx-auto h-5 w-5 text-gold" strokeWidth={1.5} />
                       <p className="mt-1.5 font-serif text-xl font-medium text-text-primary">{selected.bathrooms}</p>
-                      <p className="text-[11px] text-text-muted">Bathrooms</p>
+                      <p className="text-[11px] text-text-muted">{t('properties.bathrooms')}</p>
                     </div>
                   )}
                   <div className="rounded-xl border border-border bg-bg-elevated p-4 text-center">
@@ -509,7 +512,7 @@ export default function PropertiesPage() {
                   <Avatar name={selected.agent} size="lg" color="#D4AF37" />
                   <div>
                     <p className="text-[13px] font-medium text-text-primary">{selected.agent}</p>
-                    <p className="text-[12px] text-text-muted">Listing Agent</p>
+                    <p className="text-[12px] text-text-muted">{t('propertyModal.agent')}</p>
                   </div>
                 </div>
                 <div className="mt-5 flex items-center gap-2 text-[13px] text-text-secondary">
@@ -517,8 +520,8 @@ export default function PropertiesPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 border-t border-border p-4">
-                <button onClick={() => { setEditProp(selected); setSelected(null); }} className="btn btn-outline btn-sm flex-1"><Pencil className="h-4 w-4" strokeWidth={1.5} /> Edit</button>
-                <button onClick={() => handleDelete(selected.id)} className="btn btn-danger btn-sm"><Trash2 className="h-4 w-4" strokeWidth={1.5} /> Delete</button>
+                <button onClick={() => { setEditProp(selected); setSelected(null); }} className="btn btn-outline btn-sm flex-1"><Pencil className="h-4 w-4" strokeWidth={1.5} /> {t('common.edit')}</button>
+                <button onClick={() => handleDelete(selected.id)} className="btn btn-danger btn-sm"><Trash2 className="h-4 w-4" strokeWidth={1.5} /> {t('common.delete')}</button>
               </div>
             </motion.div>
           </>
