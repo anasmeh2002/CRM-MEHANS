@@ -15,10 +15,13 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/components/language-provider';
 import { useAgency } from '@/components/agency-provider';
 
-const statusConfig: Record<string, { label: string; color: string; dot: string }> = {
-  active: { label: 'Active', color: 'text-success', dot: 'bg-success' },
-  away: { label: 'Away', color: 'text-warning', dot: 'bg-warning' },
-  offline: { label: 'Offline', color: 'text-text-muted', dot: 'bg-text-muted' },
+const statusKeys: Record<string, string> = {
+  active: 'team.active', away: 'team.away', offline: 'team.offline',
+};
+const statusColors: Record<string, { color: string; dot: string }> = {
+  active: { color: 'text-success', dot: 'bg-success' },
+  away: { color: 'text-warning', dot: 'bg-warning' },
+  offline: { color: 'text-text-muted', dot: 'bg-text-muted' },
 };
 
 export default function TeamPage() {
@@ -36,7 +39,7 @@ export default function TeamPage() {
   return (
     <AppShell>
       <PageHeader title={t('page.team')} description={t('page.teamDescription')}>
-        <button onClick={() => toast.success('Invite member form opened')} className="btn btn-gold btn-md">
+        <button onClick={() => toast.success(t('team.inviteOpened'))} className="btn btn-gold btn-md">
           <Plus className="h-4 w-4" strokeWidth={1.5} /> {t('settings.invite')}
         </button>
       </PageHeader>
@@ -58,7 +61,7 @@ export default function TeamPage() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search team members..."
+          placeholder={t('team.searchMembers')}
           className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
         />
       </div>
@@ -88,7 +91,7 @@ export default function TeamPage() {
         <Card delay={0.2}>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-sm text-text-muted">
-              {teamMembers.length === 0 ? 'No team members found.' : 'No members match your search.'}
+              {teamMembers.length === 0 ? t('team.noMembers') : t('team.noMembersMatch')}
             </p>
           </div>
         </Card>
@@ -97,19 +100,20 @@ export default function TeamPage() {
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-border text-left text-xs text-text-muted">
-                  <th className="px-5 py-3.5 font-medium">Member</th>
-                  <th className="px-5 py-3.5 font-medium">Role</th>
-                  <th className="px-5 py-3.5 font-medium">Status</th>
-                  <th className="hidden px-5 py-3.5 font-medium sm:table-cell">Deals</th>
-                  <th className="hidden px-5 py-3.5 font-medium sm:table-cell">Revenue</th>
-                  <th className="hidden px-5 py-3.5 font-medium lg:table-cell">Performance</th>
+                <tr className="border-b border-border text-start text-xs text-text-muted">
+                  <th className="px-5 py-3.5 font-medium">{t('team.member')}</th>
+                  <th className="px-5 py-3.5 font-medium">{t('common.role')}</th>
+                  <th className="px-5 py-3.5 font-medium">{t('common.status')}</th>
+                  <th className="hidden px-5 py-3.5 font-medium sm:table-cell">{t('team.deals')}</th>
+                  <th className="hidden px-5 py-3.5 font-medium sm:table-cell">{t('team.revenue')}</th>
+                  <th className="hidden px-5 py-3.5 font-medium lg:table-cell">{t('team.performance')}</th>
                   <th className="px-5 py-3.5"></th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((member, i) => {
-                  const status = safeConfig(statusConfig, member.status, { label: 'Offline', color: 'text-text-muted', dot: 'bg-text-muted' });
+                  const statusColor = statusColors[member.status] ?? statusColors.offline;
+                  const statusLabel = t(statusKeys[member.status] ?? 'team.offline');
                   return (
                     <motion.tr
                       key={member.id}
@@ -122,7 +126,7 @@ export default function TeamPage() {
                         <div className="flex items-center gap-3">
                           <div className="relative">
                             <Avatar name={member.name} color={member.avatarColor} size="md" />
-                            <span className={cn('absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-bg-secondary', status.dot)} />
+                            <span className={cn('absolute -bottom-0.5 -right-0.5 rtl:-left-0.5 rtl:right-auto h-3 w-3 rounded-full border-2 border-bg-secondary', statusColor.dot)} />
                           </div>
                           <div>
                             <p className="text-sm font-medium text-text-primary">{member.name}</p>
@@ -134,9 +138,9 @@ export default function TeamPage() {
                         <span className="text-sm text-text-secondary">{member.role}</span>
                       </td>
                       <td className="px-5 py-4">
-                        <span className={cn('flex items-center gap-1.5 text-xs font-medium', status.color)}>
-                          <span className={cn('h-1.5 w-1.5 rounded-full', status.dot)} />
-                          {status.label}
+                        <span className={cn('flex items-center gap-1.5 text-xs font-medium', statusColor.color)}>
+                          <span className={cn('h-1.5 w-1.5 rounded-full', statusColor.dot)} />
+                          {statusLabel}
                         </span>
                       </td>
                       <td className="hidden px-5 py-4 sm:table-cell">

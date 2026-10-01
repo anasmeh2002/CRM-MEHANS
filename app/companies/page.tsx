@@ -30,8 +30,8 @@ export default function CompaniesPage() {
   return (
     <AppShell>
       <PageHeader title={t('page.companies')} description={t('page.companiesDescription')}>
-        <button onClick={() => toast.success('New company form opened')} className="btn btn-gold btn-md">
-          <Plus className="h-4 w-4" strokeWidth={1.5} /> New Company
+        <button onClick={() => toast.success(t('companies.formOpened'))} className="btn btn-gold btn-md">
+          <Plus className="h-4 w-4" strokeWidth={1.5} /> {t('companies.newCompany')}
         </button>
       </PageHeader>
 
@@ -40,7 +40,7 @@ export default function CompaniesPage() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search companies..."
+          placeholder={t('companies.searchCompanies')}
           className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
         />
       </div>
@@ -78,7 +78,7 @@ export default function CompaniesPage() {
         <Card>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-sm text-text-muted">
-              {contacts.length === 0 ? 'No companies found.' : 'No companies match your search.'}
+              {contacts.length === 0 ? t('companies.noCompanies') : t('companies.noCompaniesMatch')}
             </p>
           </div>
         </Card>
@@ -101,7 +101,7 @@ export default function CompaniesPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-text-primary">{contact.company ?? contact.name}</p>
-                    <p className="text-xs text-text-muted">{contact.role ?? 'Contact'}</p>
+                    <p className="text-xs text-text-muted">{contact.role ?? t('companies.contact')}</p>
                     {contact.email && (
                       <div className="mt-1 flex items-center gap-1 text-xs text-gold">
                         <Globe className="h-3 w-3" strokeWidth={1.5} /> {contact.email}
@@ -112,19 +112,19 @@ export default function CompaniesPage() {
                 <div className="mt-5 grid grid-cols-3 gap-3 border-t border-border pt-4">
                   <div>
                     <p className="flex items-center gap-1 text-xs text-text-muted">
-                      <Users className="h-3 w-3" strokeWidth={1.5} /> Contact
+                      <Users className="h-3 w-3" strokeWidth={1.5} /> {t('companies.contact')}
                     </p>
                     <p className="mt-0.5 truncate text-sm font-semibold text-text-primary">{contact.name}</p>
                   </div>
                   <div>
                     <p className="flex items-center gap-1 text-xs text-text-muted">
-                      <TrendingUp className="h-3 w-3" strokeWidth={1.5} /> Value
+                      <TrendingUp className="h-3 w-3" strokeWidth={1.5} /> {t('companies.value')}
                     </p>
                     <p className="mt-0.5 text-sm font-semibold text-text-primary">{formatCurrency(contact.value, currency)}</p>
                   </div>
                   <div>
                     <p className="flex items-center gap-1 text-xs text-text-muted">
-                      <Building2 className="h-3 w-3" strokeWidth={1.5} /> Last Contact
+                      <Building2 className="h-3 w-3" strokeWidth={1.5} /> {t('companies.lastContact')}
                     </p>
                     <p className="mt-0.5 text-sm font-semibold text-text-primary">{contact.lastContact}</p>
                   </div>

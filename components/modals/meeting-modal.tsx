@@ -5,18 +5,17 @@ import { toast } from 'sonner';
 import { Field, TextInput, TextArea, Select, LoadingButton, Modal } from '@/components/forms';
 import { createMeeting, fetchLeads, fetchContacts, fetchTeamMembers } from '@/lib/data';
 import { useRefresh } from '@/components/refresh-provider';
+import { useLanguage } from '@/components/language-provider';
 import type { MeetingType, Lead, Contact, TeamMember } from '@/lib/types';
 import type { MeetingPrefill } from '@/components/modal-provider';
 
-const meetingTypes: { value: MeetingType; label: string }[] = [
-  { value: 'google_meet', label: 'Video Call' },
-  { value: 'zoom', label: 'Zoom' },
-  { value: 'in-person', label: 'In Person' },
-  { value: 'call', label: 'Phone Call' },
-  { value: 'visit', label: 'Property Visit' },
-];
+const typeKeys: Record<MeetingType, string> = {
+  google_meet: 'meetingType.videoCall', zoom: 'meetingType.zoom', 'in-person': 'meetingType.inPerson',
+  call: 'meetingType.phoneCall', visit: 'meetingType.propertyVisit',
+};
 
 export function MeetingModal({ open, onClose, prefill }: { open: boolean; onClose: () => void; prefill?: MeetingPrefill | null }) {
+  const { t } = useLanguage();
   const { triggerRefresh } = useRefresh();
   const [saving, setSaving] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -43,9 +42,11 @@ export function MeetingModal({ open, onClose, prefill }: { open: boolean; onClos
     }
   }, [open, prefill]);
 
+  const meetingTypes = (Object.keys(typeKeys) as MeetingType[]).map((v) => ({ value: v, label: t(typeKeys[v]) }));
+
   const handleSave = async () => {
-    if (!form.title.trim()) { toast.error('Title is required'); return; }
-    if (!form.date) { toast.error('Date is required'); return; }
+    if (!form.title.trim()) { toast.error(t('meetingModal.titleRequired')); return; }
+    if (!form.date) { toast.error(t('meetingModal.dateRequired')); return; }
     setSaving(true);
     try {
       const startsAt = new Date(`${form.date}T${form.time}:00`).toISOString();
@@ -63,15 +64,15 @@ export function MeetingModal({ open, onClose, prefill }: { open: boolean; onClos
         notes: form.notes || undefined,
       });
       if (result) {
-        toast.success(`Meeting "${form.title}" scheduled`);
+        toast.success(t('meetingModal.meetingCreated', { title: form.title }));
         triggerRefresh();
         onClose();
         setForm({ title: '', date: '', time: '10:00', duration: '30', type: 'in-person', location: '', attendeeName: '', leadId: '', contactId: '', agentId: '', notes: '' });
       } else {
-        toast.error('Failed to save. Check your database connection and try again.');
+        toast.error(t('modal.failedToSaveDb'));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save. Please try again.');
+      toast.error(err instanceof Error ? err.message : t('modal.failedToSave'));
     } finally {
       setSaving(false);
     }
@@ -81,52 +82,52 @@ export function MeetingModal({ open, onClose, prefill }: { open: boolean; onClos
     <Modal
       open={open}
       onClose={onClose}
-      title="Schedule Meeting"
-      description="Create a meeting in the MEHANS Calendar."
+      title={t('meetingModal.title')}
+      description={t('meetingModal.description')}
       size="xl"
       footer={
         <>
-          <button className="btn btn-outline btn-md" onClick={onClose}>Cancel</button>
-          <LoadingButton onClick={handleSave} loading={saving} variant="gold">Schedule</LoadingButton>
+          <button className="btn btn-outline btn-md" onClick={onClose}>{t('modal.cancel')}</button>
+          <LoadingButton onClick={handleSave} loading={saving} variant="gold">{t('meetingModal.schedule')}</LoadingButton>
         </>
       }
     >
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <Field label="Title" required>
-            <TextInput value={form.title} onChange={(v) => set('title', v)} placeholder="e.g. Property Viewing" />
+          <Field label={t('common.name')} required>
+            <TextInput value={form.title} onChange={(v) => set('title', v)} placeholder={t('meetingModal.meetingTitlePlaceholder')} />
           </Field>
         </div>
-        <Field label="Date" required>
+        <Field label={t('common.date')} required>
           <input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} className="input" />
         </Field>
-        <Field label="Time">
+        <Field label={t('common.time')}>
           <input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} className="input" />
         </Field>
-        <Field label="Duration (minutes)">
-          <TextInput value={form.duration} onChange={(v) => set('duration', v)} placeholder="30" type="number" />
+        <Field label={t('meetingModal.duration')}>
+          <TextInput value={form.duration} onChange={(v) => set('duration', v)} placeholder={t('meetingModal.durationPlaceholder')} type="number" />
         </Field>
-        <Field label="Meeting Type">
+        <Field label={t('meetingModal.meetingType')}>
           <Select value={form.type} onChange={(v) => set('type', v as MeetingType)} options={meetingTypes} />
         </Field>
-        <Field label="Location">
-          <TextInput value={form.location} onChange={(v) => set('location', v)} placeholder="Skyline Penthouse, Miami" />
+        <Field label={t('meetingModal.location')}>
+          <TextInput value={form.location} onChange={(v) => set('location', v)} placeholder={t('meetingModal.locationPlaceholder')} />
         </Field>
-        <Field label="Attendee Name">
-          <TextInput value={form.attendeeName} onChange={(v) => set('attendeeName', v)} placeholder="Attendee name" />
+        <Field label={t('meetingModal.attendeeName')}>
+          <TextInput value={form.attendeeName} onChange={(v) => set('attendeeName', v)} placeholder={t('meetingModal.attendeePlaceholder')} />
         </Field>
-        <Field label="Connect Lead">
-          <Select value={form.leadId} onChange={(v) => set('leadId', v)} options={leads.map((l) => ({ value: l.id, label: `${l.first_name} ${l.last_name}`.trim() }))} placeholder="Select lead..." />
+        <Field label={t('meetingModal.connectLead')}>
+          <Select value={form.leadId} onChange={(v) => set('leadId', v)} options={leads.map((l) => ({ value: l.id, label: `${l.first_name} ${l.last_name}`.trim() }))} placeholder={t('meetingModal.selectLead')} />
         </Field>
-        <Field label="Connect Contact">
-          <Select value={form.contactId} onChange={(v) => set('contactId', v)} options={contacts.map((c) => ({ value: c.id, label: `${c.first_name} ${c.last_name}`.trim() }))} placeholder="Select contact..." />
+        <Field label={t('meetingModal.connectContact')}>
+          <Select value={form.contactId} onChange={(v) => set('contactId', v)} options={contacts.map((c) => ({ value: c.id, label: `${c.first_name} ${c.last_name}`.trim() }))} placeholder={t('meetingModal.selectContact')} />
         </Field>
-        <Field label="Assigned Agent">
-          <Select value={form.agentId} onChange={(v) => set('agentId', v)} options={members.map((m) => ({ value: m.id, label: m.name }))} placeholder="Select agent..." />
+        <Field label={t('meetingModal.assignedAgent')}>
+          <Select value={form.agentId} onChange={(v) => set('agentId', v)} options={members.map((m) => ({ value: m.id, label: m.name }))} placeholder={t('meetingModal.selectAgent')} />
         </Field>
         <div className="sm:col-span-2">
-          <Field label="Notes">
-            <TextArea value={form.notes} onChange={(v) => set('notes', v)} placeholder="Confirm parking arrangements with building concierge." rows={3} />
+          <Field label={t('leads.notes')}>
+            <TextArea value={form.notes} onChange={(v) => set('notes', v)} placeholder={t('meetingModal.notesPlaceholder')} rows={3} />
           </Field>
         </div>
       </div>

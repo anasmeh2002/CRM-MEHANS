@@ -14,27 +14,31 @@ import { cn, safeConfig } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useLanguage } from '@/components/language-provider';
 
-const statusConfig: Record<TaskStatus, { label: string; icon: React.ElementType; color: string }> = {
-  todo: { label: 'To Do', icon: Circle, color: 'text-text-muted' },
-  in_progress: { label: 'In Progress', icon: Clock, color: 'text-gold' },
-  done: { label: 'Done', icon: CheckCircle2, color: 'text-success' },
+const statusKeys: Record<TaskStatus, string> = {
+  todo: 'taskStatus.todo', in_progress: 'taskStatus.inProgress', done: 'taskStatus.done',
+};
+const statusIcons: Record<TaskStatus, React.ElementType> = {
+  todo: Circle, in_progress: Clock, done: CheckCircle2,
+};
+const statusColors: Record<TaskStatus, string> = {
+  todo: 'text-text-muted', in_progress: 'text-gold', done: 'text-success',
 };
 
-const priorityConfig: Record<Priority, { label: string; variant: 'error' | 'warning' | 'info' | 'neutral' }> = {
-  urgent: { label: 'Urgent', variant: 'error' },
-  high: { label: 'High', variant: 'warning' },
-  medium: { label: 'Medium', variant: 'info' },
-  low: { label: 'Low', variant: 'neutral' },
+const priorityKeys: Record<Priority, string> = {
+  urgent: 'taskPriority.urgent', high: 'taskPriority.high', medium: 'taskPriority.medium', low: 'taskPriority.low',
+};
+const priorityVariants: Record<Priority, 'error' | 'warning' | 'info' | 'neutral'> = {
+  urgent: 'error', high: 'warning', medium: 'info', low: 'neutral',
 };
 
 /** Map a raw DB task (snake_case + nested relations) into the display shape the UI expects. */
-function toDisplayTask(t: Task): Task {
+function toDisplayTask(task: Task, unassigned: string): Task {
   return {
-    ...t,
-    dueDate: t.due_date ?? 'N/A',
-    assignee: t.assignee?.name ?? 'Unassigned',
-    relatedType: t.related_type ?? '',
-    description: t.description ?? '',
+    ...task,
+    dueDate: task.due_date ?? null,
+    assignee: task.assignee?.name ?? unassigned,
+    relatedType: task.related_type ?? '',
+    description: task.description ?? '',
   };
 }
 
@@ -74,7 +78,7 @@ export default function TasksPage() {
     return () => window.removeEventListener('focus', onFocus);
   }, [refetch]);
 
-  const tasks = (data ?? []).map(toDisplayTask);
+  const tasks = (data ?? []).map((task) => toDisplayTask(task, t('common.unassigned')));
 
   const toggleStatus = async (id: string) => {
     const current = tasks.find((t) => t.id === id);
@@ -88,11 +92,11 @@ export default function TasksPage() {
     });
 
     if (!updated) {
-      toast.error('Failed to update task. Please try again.');
+      toast.error(t('taskStatus.updateFailed'));
       return;
     }
 
-    if (next === 'done') toast.success(`Task "${current.title}" completed`);
+    if (next === 'done') toast.success(t('taskStatus.completed', { title: current.title }));
     refetch();
   };
 
@@ -111,7 +115,7 @@ export default function TasksPage() {
           onClick={() => setFilter('all')}
           className={cn('rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-200', filter === 'all' ? 'border-gold-border bg-gold-bg text-gold' : 'border-border bg-bg-secondary text-text-secondary hover:text-text-primary')}
         >
-          All Tasks
+          {t('taskStatus.allTasks')}
         </button>
         {columns.map((col) => (
           <button
@@ -119,7 +123,7 @@ export default function TasksPage() {
             onClick={() => setFilter(col)}
             className={cn('rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-200', filter === col ? 'border-gold-border bg-gold-bg text-gold' : 'border-border bg-bg-secondary text-text-secondary hover:text-text-primary')}
           >
-            {safeConfig(statusConfig, col, { label: col, icon: Circle, color: 'text-text-muted' }).label}
+            {t(statusKeys[col])}
           </button>
         ))}
       </div>
@@ -130,10 +134,10 @@ export default function TasksPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-error/10 text-error">
               <Circle className="h-5 w-5" strokeWidth={1.5} />
             </div>
-            <p className="text-sm font-medium text-text-primary">Couldn&apos;t load tasks</p>
+            <p className="text-sm font-medium text-text-primary">{t('taskStatus.couldntLoad')}</p>
             <p className="max-w-sm text-xs text-text-secondary">{error}</p>
             <button onClick={() => refetch()} className="btn btn-secondary btn-sm mt-1">
-              Try again
+              {t('common.tryAgain')}
             </button>
           </div>
         </Card>
@@ -141,20 +145,20 @@ export default function TasksPage() {
         <div className="grid gap-4 lg:grid-cols-3">
           {columns.map((col) => {
             const colTasks = filter === 'all' || filter === col ? tasks.filter((t) => t.status === col) : [];
-            const config = safeConfig(statusConfig, col, { label: col, icon: Circle, color: 'text-text-muted' });
-            const Icon = config.icon;
+            const Icon = statusIcons[col] ?? Circle;
+            const color = statusColors[col] ?? 'text-text-muted';
             return (
               <Card key={col} className="p-5" delay={columns.indexOf(col) * 0.05}>
                 <div className="mb-4 flex items-center gap-2.5">
-                  <Icon className={cn('h-4 w-4', config.color)} strokeWidth={1.5} />
-                  <span className="text-sm font-medium text-text-primary">{config.label}</span>
+                  <Icon className={cn('h-4 w-4', color)} strokeWidth={1.5} />
+                  <span className="text-sm font-medium text-text-primary">{t(statusKeys[col])}</span>
                   <Badge variant="neutral">{loading ? '…' : colTasks.length}</Badge>
                 </div>
                 <div className="space-y-2">
                   {loading ? (
                     Array.from({ length: 3 }).map((_, i) => <TaskSkeleton key={i} />)
                   ) : colTasks.length === 0 ? (
-                    <p className="py-4 text-center text-xs text-text-muted">No tasks</p>
+                    <p className="py-4 text-center text-xs text-text-muted">{t('taskStatus.noTasks')}</p>
                   ) : (
                     colTasks.map((task, i) => (
                       <motion.div
@@ -176,17 +180,17 @@ export default function TasksPage() {
                             <p className={cn('text-sm font-medium text-text-primary', task.status === 'done' && 'line-through opacity-50')}>{task.title}</p>
                             <p className="mt-0.5 text-xs text-text-secondary">{task.description}</p>
                             <div className="mt-2.5 flex items-center gap-2">
-                              <Badge variant={safeConfig(priorityConfig, task.priority, { label: 'Medium', variant: 'neutral' as const }).variant}>
-                                <Flag className="h-2.5 w-2.5" /> {safeConfig(priorityConfig, task.priority, { label: 'Medium', variant: 'neutral' as const }).label}
+                              <Badge variant={priorityVariants[task.priority] ?? 'neutral'}>
+                                <Flag className="h-2.5 w-2.5" /> {t(priorityKeys[task.priority])}
                               </Badge>
                               <span className="flex items-center gap-1 text-[11px] text-text-muted">
-                                <Calendar className="h-3 w-3" strokeWidth={1.5} /> {task.dueDate !== 'N/A' ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+                                <Calendar className="h-3 w-3" strokeWidth={1.5} /> {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : t('common.na')}
                               </span>
                             </div>
                             <div className="mt-2.5 flex items-center gap-1.5 border-t border-border pt-2.5">
                               <Avatar name={task.assignee} size="sm" color="#D4AF37" />
                               <span className="text-[11px] text-text-muted">{task.assignee.split(' ')[0]}</span>
-                              <span className="ml-auto text-[11px] text-gold">{task.relatedType}</span>
+                              <span className="ms-auto text-[11px] text-gold">{task.relatedType}</span>
                             </div>
                           </div>
                         </div>

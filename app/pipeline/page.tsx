@@ -15,14 +15,14 @@ import { useLanguage } from '@/components/language-provider';
 import { useAgency } from '@/components/agency-provider';
 import { formatCurrency } from '@/lib/format';
 
-const columns: { stage: DealStage; label: string; color: string }[] = [
-  { stage: 'new_lead', label: 'New Lead', color: '#4A90D9' },
-  { stage: 'qualified', label: 'Qualified', color: '#D4AF37' },
-  { stage: 'visit_scheduled', label: 'Visit Scheduled', color: '#D4823A' },
-  { stage: 'negotiation', label: 'Negotiation', color: '#9B6FBF' },
-  { stage: 'won', label: 'Won', color: '#5BAA6F' },
-  { stage: 'lost', label: 'Lost', color: '#C75555' },
-];
+const stageKeys: Record<DealStage, string> = {
+  new_lead: 'stage.newLead', qualified: 'stage.qualified', visit_scheduled: 'stage.visitScheduled',
+  negotiation: 'stage.negotiation', won: 'stage.won', lost: 'stage.lost',
+};
+const stageColors: Record<DealStage, string> = {
+  new_lead: '#4A90D9', qualified: '#D4AF37', visit_scheduled: '#D4823A',
+  negotiation: '#9B6FBF', won: '#5BAA6F', lost: '#C75555',
+};
 
 function mapDealForDisplay(deal: Deal): Deal {
   const leadName =
@@ -31,8 +31,8 @@ function mapDealForDisplay(deal: Deal): Deal {
     `${deal.lead?.first_name ?? ''} ${deal.lead?.last_name ?? ''}`.trim() ||
     'N/A';
   const propertyName = deal.propertyName || deal.property?.title || 'N/A';
-  const ownerName = deal.ownerName || deal.owner?.name || 'Unassigned';
-  const closeDate = deal.closeDate || deal.expected_close_date || 'N/A';
+  const ownerName = deal.ownerName || deal.owner?.name || null;
+  const closeDate = deal.closeDate || deal.expected_close_date || null;
   return { ...deal, leadName, propertyName, ownerName, closeDate };
 }
 
@@ -43,6 +43,7 @@ export default function PipelinePage() {
   const deals = (data ?? []).map(mapDealForDisplay);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<DealStage | null>(null);
+  const columns = (Object.keys(stageKeys) as DealStage[]).map((s) => ({ stage: s, label: t(stageKeys[s]), color: stageColors[s] }));
 
   const handleDrop = async (stage: DealStage) => {
     if (!draggedId) return;
@@ -61,26 +62,26 @@ export default function PipelinePage() {
 
     const updated = await updateDeal(draggedId, { stage });
     if (updated) {
-      toast.success(`"${draggedDeal.title}" moved to ${stage.replace('_', ' ')}`);
+      toast.success(t('pipeline.dealMoved', { title: draggedDeal.title, stage: t(stageKeys[stage]) }));
     } else {
       // Revert on failure
       setData((prev) => (prev ?? []).map((d) => (d.id === draggedId ? { ...d, stage: previousStage } : d)));
-      toast.error('Failed to update deal stage. Please try again.');
+      toast.error(t('pipeline.updateFailed'));
     }
   };
 
   return (
     <AppShell>
       <PageHeader title={t('page.pipeline')} description={t('page.pipelineDescription')}>
-        <button onClick={() => toast.success('New deal form opened')} className="btn btn-gold btn-md">
-          <Plus className="h-4 w-4" strokeWidth={1.5} /> New Deal
+        <button onClick={() => toast.success(t('pipeline.newDealOpened'))} className="btn btn-gold btn-md">
+          <Plus className="h-4 w-4" strokeWidth={1.5} /> {t('navbar.newDeal')}
         </button>
       </PageHeader>
 
       {error ? (
         <Card>
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-sm font-medium text-error">Something went wrong</p>
+            <p className="text-sm font-medium text-error">{t('common.error')}</p>
             <p className="mt-2 text-sm text-text-secondary">{error}</p>
           </div>
         </Card>
@@ -114,8 +115,8 @@ export default function PipelinePage() {
       ) : deals.length === 0 ? (
         <Card>
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-sm font-medium text-text-primary">No deals yet</p>
-            <p className="mt-2 text-sm text-text-secondary">Create your first deal to start tracking it through the pipeline.</p>
+            <p className="text-sm font-medium text-text-primary">{t('pipeline.noDealsYet')}</p>
+            <p className="mt-2 text-sm text-text-secondary">{t('pipeline.createFirstDeal')}</p>
           </div>
         </Card>
       ) : (
@@ -168,20 +169,20 @@ export default function PipelinePage() {
                       </div>
                       <div className="mt-3 flex items-center justify-between border-t border-border pt-2.5">
                         <div className="flex items-center gap-1.5">
-                          <Avatar name={deal.ownerName || 'Unassigned'} size="sm" color="#D4AF37" />
-                          <span className="text-xs text-text-muted">{(deal.ownerName || 'Unassigned').split(' ')[0]}</span>
+                          <Avatar name={deal.ownerName || t('common.unassigned')} size="sm" color="#D4AF37" />
+                          <span className="text-xs text-text-muted">{(deal.ownerName || t('common.unassigned')).split(' ')[0]}</span>
                         </div>
                         <span className="text-[11px] text-text-muted">
-                          {deal.closeDate && deal.closeDate !== 'N/A'
+                          {deal.closeDate
                             ? new Date(deal.closeDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                            : 'N/A'}
+                            : t('common.na')}
                         </span>
                       </div>
                     </motion.div>
                   ))}
                   {colDeals.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-10 text-center">
-                      <p className="text-xs text-text-muted">Drop deals here</p>
+                      <p className="text-xs text-text-muted">{t('pipeline.dropDealsHere')}</p>
                     </div>
                   )}
                 </div>

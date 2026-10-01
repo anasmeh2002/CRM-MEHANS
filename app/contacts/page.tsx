@@ -46,7 +46,7 @@ export default function ContactsPage() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search contacts..."
+          placeholder={t('contacts.searchContacts')}
           className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
         />
       </div>
@@ -56,7 +56,7 @@ export default function ContactsPage() {
           <div className="flex items-center gap-3 text-text-secondary">
             <AlertCircle className="h-5 w-5 text-red-500" strokeWidth={1.5} />
             <div>
-              <p className="text-sm font-medium text-text-primary">Couldn&apos;t load contacts</p>
+              <p className="text-sm font-medium text-text-primary">{t('contacts.couldntLoad')}</p>
               <p className="text-xs text-text-muted">{error}</p>
             </div>
           </div>
@@ -93,9 +93,9 @@ export default function ContactsPage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-bg-tertiary">
               <Search className="h-5 w-5 text-text-muted" strokeWidth={1.5} />
             </div>
-            <p className="mt-4 text-sm font-medium text-text-primary">No contacts found</p>
+            <p className="mt-4 text-sm font-medium text-text-primary">{t('contacts.noContacts')}</p>
             <p className="mt-1 text-xs text-text-muted">
-              {search ? 'Try a different search term.' : 'Create your first contact to get started.'}
+              {search ? t('contacts.tryDifferentSearch') : t('contacts.createFirst')}
             </p>
           </div>
         </Card>
@@ -107,7 +107,7 @@ export default function ContactsPage() {
             const value = contact.value ?? 0;
             const lastContact = contact.updated_at
               ? new Date(contact.updated_at).toLocaleDateString()
-              : 'N/A';
+              : t('common.na');
 
             return (
               <motion.div
@@ -135,7 +135,7 @@ export default function ContactsPage() {
                   </div>
                   <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
                     <div>
-                      <p className="text-xs text-text-muted">Deal Value</p>
+                      <p className="text-xs text-text-muted">{t('contacts.dealValue')}</p>
                       <p className="text-sm font-semibold text-gold">{formatCurrency(value, currency)}</p>
                     </div>
                     <Badge variant="neutral">{lastContact}</Badge>

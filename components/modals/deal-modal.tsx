@@ -5,18 +5,16 @@ import { toast } from 'sonner';
 import { Field, TextInput, TextArea, Select, DateInput, LoadingButton, Modal } from '@/components/forms';
 import { createDeal, fetchLeads, fetchContacts, fetchProperties } from '@/lib/data';
 import { useRefresh } from '@/components/refresh-provider';
+import { useLanguage } from '@/components/language-provider';
 import type { DealStage, Lead, Contact, Property } from '@/lib/types';
 
-const stages: { value: DealStage; label: string }[] = [
-  { value: 'new_lead', label: 'New Lead' },
-  { value: 'qualified', label: 'Qualified' },
-  { value: 'visit_scheduled', label: 'Visit Scheduled' },
-  { value: 'negotiation', label: 'Negotiation' },
-  { value: 'won', label: 'Won' },
-  { value: 'lost', label: 'Lost' },
-];
+const stageKeys: Record<DealStage, string> = {
+  new_lead: 'stage.newLead', qualified: 'stage.qualified', visit_scheduled: 'stage.visitScheduled',
+  negotiation: 'stage.negotiation', won: 'stage.won', lost: 'stage.lost',
+};
 
 export function DealModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useLanguage();
   const { triggerRefresh } = useRefresh();
   const [saving, setSaving] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -35,8 +33,10 @@ export function DealModal({ open, onClose }: { open: boolean; onClose: () => voi
     }
   }, [open]);
 
+  const stages = (Object.keys(stageKeys) as DealStage[]).map((v) => ({ value: v, label: t(stageKeys[v]) }));
+
   const handleSave = async () => {
-    if (!form.title.trim()) { toast.error('Title is required'); return; }
+    if (!form.title.trim()) { toast.error(t('dealModal.titleRequired')); return; }
     setSaving(true);
     try {
       const result = await createDeal({
@@ -51,15 +51,15 @@ export function DealModal({ open, onClose }: { open: boolean; onClose: () => voi
         notes: form.notes || undefined,
       });
       if (result) {
-        toast.success(`Deal "${form.title}" created`);
+        toast.success(t('dealModal.dealCreated', { title: form.title }));
         triggerRefresh();
         onClose();
         setForm({ title: '', leadId: '', contactId: '', propertyId: '', value: '', closeDate: '', stage: 'new_lead', probability: '20', notes: '' });
       } else {
-        toast.error('Failed to save. Check your database connection and try again.');
+        toast.error(t('modal.failedToSaveDb'));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save. Please try again.');
+      toast.error(err instanceof Error ? err.message : t('modal.failedToSave'));
     } finally {
       setSaving(false);
     }
@@ -69,61 +69,61 @@ export function DealModal({ open, onClose }: { open: boolean; onClose: () => voi
     <Modal
       open={open}
       onClose={onClose}
-      title="New Deal"
-      description="Create a deal by connecting a lead, contact, and property."
+      title={t('dealModal.title')}
+      description={t('dealModal.description')}
       size="xl"
       footer={
         <>
-          <button className="btn btn-outline btn-md" onClick={onClose}>Cancel</button>
-          <LoadingButton onClick={handleSave} loading={saving} variant="gold">Save Deal</LoadingButton>
+          <button className="btn btn-outline btn-md" onClick={onClose}>{t('modal.cancel')}</button>
+          <LoadingButton onClick={handleSave} loading={saving} variant="gold">{t('dealModal.saveDeal')}</LoadingButton>
         </>
       }
     >
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <Field label="Deal Title" required>
-            <TextInput value={form.title} onChange={(v) => set('title', v)} placeholder="e.g. Apartment Sale — Downtown" />
+          <Field label={t('dealModal.dealTitle')} required>
+            <TextInput value={form.title} onChange={(v) => set('title', v)} placeholder={t('dealModal.dealTitlePlaceholder')} />
           </Field>
         </div>
-        <Field label="Connect Lead">
+        <Field label={t('dealModal.connectLead')}>
           <Select
             value={form.leadId}
             onChange={(v) => set('leadId', v)}
             options={leads.map((l) => ({ value: l.id, label: `${l.first_name} ${l.last_name}`.trim() }))}
-            placeholder="Select lead..."
+            placeholder={t('dealModal.selectLead')}
           />
         </Field>
-        <Field label="Connect Contact">
+        <Field label={t('dealModal.connectContact')}>
           <Select
             value={form.contactId}
             onChange={(v) => set('contactId', v)}
             options={contacts.map((c) => ({ value: c.id, label: `${c.first_name} ${c.last_name}`.trim() }))}
-            placeholder="Select contact..."
+            placeholder={t('dealModal.selectContact')}
           />
         </Field>
-        <Field label="Connect Property">
+        <Field label={t('dealModal.connectProperty')}>
           <Select
             value={form.propertyId}
             onChange={(v) => set('propertyId', v)}
             options={properties.map((p) => ({ value: p.id, label: p.title }))}
-            placeholder="Select property..."
+            placeholder={t('dealModal.selectProperty')}
           />
         </Field>
-        <Field label="Deal Value">
-          <TextInput value={form.value} onChange={(v) => set('value', v)} placeholder="4,200,000" type="number" />
+        <Field label={t('dealModal.dealValue')}>
+          <TextInput value={form.value} onChange={(v) => set('value', v)} placeholder={t('dealModal.dealValuePlaceholder')} type="number" />
         </Field>
-        <Field label="Expected Close Date">
+        <Field label={t('dealModal.expectedCloseDate')}>
           <DateInput value={form.closeDate} onChange={(v) => set('closeDate', v)} />
         </Field>
-        <Field label="Pipeline Stage">
+        <Field label={t('dealModal.pipelineStage')}>
           <Select value={form.stage} onChange={(v) => set('stage', v as DealStage)} options={stages} />
         </Field>
-        <Field label="Probability (%)" hint="0–100, based on stage">
+        <Field label={t('dealModal.probability')} hint={t('dealModal.probabilityPlaceholder')}>
           <TextInput value={form.probability} onChange={(v) => set('probability', v)} placeholder="20" type="number" />
         </Field>
         <div className="sm:col-span-2">
-          <Field label="Notes">
-            <TextArea value={form.notes} onChange={(v) => set('notes', v)} placeholder="Cash buyer, ready to close quickly." rows={3} />
+          <Field label={t('leads.notes')}>
+            <TextArea value={form.notes} onChange={(v) => set('notes', v)} placeholder={t('dealModal.notesPlaceholder')} rows={3} />
           </Field>
         </div>
       </div>

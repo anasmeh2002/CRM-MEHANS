@@ -7,27 +7,28 @@ import { Field, TextInput, TextArea, Select, LoadingButton, TagInput } from '@/c
 import { Modal } from '@/components/forms';
 import { createLead, fetchTeamMembers } from '@/lib/data';
 import { useRefresh } from '@/components/refresh-provider';
+import { useLanguage } from '@/components/language-provider';
 import type { LeadSource, LeadStatus, TeamMember } from '@/lib/types';
 
-const sources: { value: LeadSource; label: string }[] = [
-  { value: 'website', label: 'Website' },
-  { value: 'referral', label: 'Referral' },
-  { value: 'social', label: 'Social Media' },
-  { value: 'walk-in', label: 'Walk-in' },
-  { value: 'portal', label: 'Portal' },
-  { value: 'cold-call', label: 'Cold Call' },
-];
+const sourceKeys: Record<LeadSource, string> = {
+  website: 'source.website', referral: 'source.referral', social: 'source.socialMedia',
+  'walk-in': 'source.walkIn', portal: 'source.portal', 'cold-call': 'source.coldCall',
+};
 
-const statuses: { value: LeadStatus; label: string }[] = [
-  { value: 'new', label: 'New' },
-  { value: 'qualified', label: 'Qualified' },
-  { value: 'visit_scheduled', label: 'Visit Scheduled' },
-  { value: 'negotiation', label: 'Negotiation' },
-  { value: 'won', label: 'Won' },
-  { value: 'lost', label: 'Lost' },
-];
+const statusKeys: Record<LeadStatus, string> = {
+  new: 'leadStatus.new', qualified: 'leadStatus.qualified', visit_scheduled: 'leadStatus.visitScheduled',
+  negotiation: 'leadStatus.negotiation', won: 'leadStatus.won', lost: 'leadStatus.lost',
+};
 
-const languages = ['English', 'Spanish', 'French', 'Arabic', 'Mandarin', 'Hindi', 'Portuguese'];
+const languageKeys: Record<string, string> = {
+  English: 'lang.english', Spanish: 'lang.spanish', French: 'lang.french',
+  Arabic: 'lang.arabic', Mandarin: 'lang.mandarin', Hindi: 'lang.hindi', Portuguese: 'lang.portuguese',
+};
+
+const tagKeys: Record<string, string> = {
+  VIP: 'tag.vip', 'Cash Buyer': 'tag.cashBuyer', 'Hot Lead': 'tag.hotLead',
+  Investor: 'tag.investor', 'First-Time Buyer': 'tag.firstTimeBuyer',
+};
 
 function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; children: string }) {
   return (
@@ -39,6 +40,7 @@ function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; child
 }
 
 export function LeadModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useLanguage();
   const { triggerRefresh } = useRefresh();
   const [saving, setSaving] = useState(false);
   const [agents, setAgents] = useState<TeamMember[]>([]);
@@ -57,8 +59,14 @@ export function LeadModal({ open, onClose }: { open: boolean; onClose: () => voi
 
   const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
 
+  const sources = (Object.keys(sourceKeys) as LeadSource[]).map((v) => ({ value: v, label: t(sourceKeys[v]) }));
+  const statuses = (Object.keys(statusKeys) as LeadStatus[]).map((v) => ({ value: v, label: t(statusKeys[v]) }));
+  const languages = Object.keys(languageKeys);
+  const languageOptions = languages.map((l) => ({ value: l, label: t(languageKeys[l]) }));
+  const tagSuggestions = Object.keys(tagKeys);
+
   const handleSave = async () => {
-    if (!form.firstName.trim()) { toast.error('First name is required'); return; }
+    if (!form.firstName.trim()) { toast.error(t('leadModal.firstNameRequired')); return; }
     setSaving(true);
     try {
       const result = await createLead({
@@ -78,15 +86,15 @@ export function LeadModal({ open, onClose }: { open: boolean; onClose: () => voi
         tags: form.tags,
       });
       if (result) {
-        toast.success(`Lead ${form.firstName} ${form.lastName} created`);
+        toast.success(t('leadModal.leadCreated', { name: `${form.firstName} ${form.lastName}`.trim() }));
         triggerRefresh();
         onClose();
         setForm({ firstName: '', lastName: '', phone: '', whatsapp: '', email: '', source: 'website', propertyInterest: '', budget: '', language: 'English', agentId: '', status: 'new', score: '50', notes: '', tags: [] });
       } else {
-        toast.error('Failed to save. Check your database connection and try again.');
+        toast.error(t('modal.failedToSaveDb'));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save. Please try again.');
+      toast.error(err instanceof Error ? err.message : t('modal.failedToSave'));
     } finally {
       setSaving(false);
     }
@@ -96,66 +104,66 @@ export function LeadModal({ open, onClose }: { open: boolean; onClose: () => voi
     <Modal
       open={open}
       onClose={onClose}
-      title="New Lead"
-      description="Capture a new prospect entering the pipeline."
+      title={t('leadModal.title')}
+      description={t('leadModal.description')}
       size="xl"
       footer={
         <>
-          <button className="btn btn-outline btn-md" onClick={onClose}>Cancel</button>
-          <LoadingButton onClick={handleSave} loading={saving} variant="gold">Save Lead</LoadingButton>
+          <button className="btn btn-outline btn-md" onClick={onClose}>{t('modal.cancel')}</button>
+          <LoadingButton onClick={handleSave} loading={saving} variant="gold">{t('leadModal.saveLead')}</LoadingButton>
         </>
       }
     >
       <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-        <SectionTitle icon={User}>Contact Info</SectionTitle>
-        <Field label="First Name" required>
+        <SectionTitle icon={User}>{t('leadModal.contactInfo')}</SectionTitle>
+        <Field label={t('leads.firstName')} required>
           <TextInput value={form.firstName} onChange={(v) => set('firstName', v)} placeholder="James" icon={<User className="h-4 w-4" strokeWidth={1.5} />} />
         </Field>
-        <Field label="Last Name">
+        <Field label={t('leads.lastName')}>
           <TextInput value={form.lastName} onChange={(v) => set('lastName', v)} placeholder="Wilson" icon={<User className="h-4 w-4" strokeWidth={1.5} />} />
         </Field>
-        <Field label="Phone">
+        <Field label={t('common.phone')}>
           <TextInput value={form.phone} onChange={(v) => set('phone', v)} placeholder="+1 415 555 0192" type="tel" icon={<Phone className="h-4 w-4" strokeWidth={1.5} />} />
         </Field>
-        <Field label="WhatsApp">
+        <Field label={t('leadModal.whatsapp')}>
           <TextInput value={form.whatsapp} onChange={(v) => set('whatsapp', v)} placeholder="+1 415 555 0192" type="tel" icon={<Phone className="h-4 w-4" strokeWidth={1.5} />} />
         </Field>
-        <Field label="Email">
+        <Field label={t('common.email')}>
           <TextInput value={form.email} onChange={(v) => set('email', v)} placeholder="james@email.com" type="email" icon={<Mail className="h-4 w-4" strokeWidth={1.5} />} />
         </Field>
-        <Field label="Language">
-          <Select value={form.language} onChange={(v) => set('language', v)} options={languages.map((l) => ({ value: l, label: l }))} />
+        <Field label={t('leads.language')}>
+          <Select value={form.language} onChange={(v) => set('language', v)} options={languageOptions} />
         </Field>
 
-        <SectionTitle icon={DollarSign}>Deal Info</SectionTitle>
-        <Field label="Lead Source">
+        <SectionTitle icon={DollarSign}>{t('leadModal.dealInfo')}</SectionTitle>
+        <Field label={t('leadModal.leadSource')}>
           <Select value={form.source} onChange={(v) => set('source', v as LeadSource)} options={sources} />
         </Field>
-        <Field label="Status">
+        <Field label={t('leadModal.leadStatus')}>
           <Select value={form.status} onChange={(v) => set('status', v as LeadStatus)} options={statuses} />
         </Field>
-        <Field label="Property Interest">
-          <TextInput value={form.propertyInterest} onChange={(v) => set('propertyInterest', v)} placeholder="3BHK Penthouse" icon={<Home className="h-4 w-4" strokeWidth={1.5} />} />
+        <Field label={t('leads.propertyInterest')}>
+          <TextInput value={form.propertyInterest} onChange={(v) => set('propertyInterest', v)} placeholder={t('leadModal.propertyInterestPlaceholder')} icon={<Home className="h-4 w-4" strokeWidth={1.5} />} />
         </Field>
-        <Field label="Budget">
-          <TextInput value={form.budget} onChange={(v) => set('budget', v)} placeholder="2,500,000" type="number" icon={<DollarSign className="h-4 w-4" strokeWidth={1.5} />} />
+        <Field label={t('leads.budget')}>
+          <TextInput value={form.budget} onChange={(v) => set('budget', v)} placeholder={t('leadModal.budgetPlaceholder')} type="number" icon={<DollarSign className="h-4 w-4" strokeWidth={1.5} />} />
         </Field>
-        <Field label="Assigned Agent">
-          <Select value={form.agentId} onChange={(v) => set('agentId', v)} options={agents.map((a) => ({ value: a.id, label: a.name }))} placeholder="Select agent..." />
+        <Field label={t('leadModal.assignedAgent')}>
+          <Select value={form.agentId} onChange={(v) => set('agentId', v)} options={agents.map((a) => ({ value: a.id, label: a.name }))} placeholder={t('leadModal.selectAgent')} />
         </Field>
-        <Field label="Lead Score" hint="0–100, based on qualification">
+        <Field label={t('leadModal.leadScore')} hint={t('leadModal.scorePlaceholder')}>
           <TextInput value={form.score} onChange={(v) => set('score', v)} placeholder="72" type="number" />
         </Field>
 
-        <SectionTitle icon={Tag}>Additional</SectionTitle>
+        <SectionTitle icon={Tag}>{t('leadModal.additional')}</SectionTitle>
         <div className="col-span-full">
-          <Field label="Tags">
-            <TagInput value={form.tags} onChange={(v) => set('tags', v)} placeholder="Add tags..." suggestions={['VIP', 'Cash Buyer', 'Hot Lead', 'Investor', 'First-Time Buyer']} />
+          <Field label={t('leads.tags')}>
+            <TagInput value={form.tags} onChange={(v) => set('tags', v)} placeholder={t('leadModal.tagsPlaceholder')} suggestions={tagSuggestions} />
           </Field>
         </div>
         <div className="col-span-full">
-          <Field label="Notes">
-            <TextArea value={form.notes} onChange={(v) => set('notes', v)} placeholder="Looking for a 3BHK penthouse in downtown. Cash buyer, ready to move quickly." rows={3} />
+          <Field label={t('leads.notes')}>
+            <TextArea value={form.notes} onChange={(v) => set('notes', v)} placeholder={t('leadModal.notesPlaceholder')} rows={3} />
           </Field>
         </div>
       </div>

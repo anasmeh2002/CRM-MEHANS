@@ -34,6 +34,10 @@ const en: Dict = {
   'nav.reports': 'Reports',
   'nav.settings': 'Settings',
   'nav.collapse': 'Collapse',
+  'nav.companies': 'Companies',
+  'nav.contacts': 'Contacts',
+  'nav.team': 'Team',
+  'nav.automations': 'Automations',
 
   // Navbar
   'navbar.search': 'Search leads, deals, properties...',
@@ -54,6 +58,12 @@ const en: Dict = {
   'navbar.aiCopilot': 'AI Copilot',
   'navbar.profile': 'Profile',
   'navbar.signOut': 'Sign out',
+  'navbar.allNotificationsRead': 'All notifications marked as read',
+  'navbar.markReadFailed': 'Failed to mark notifications as read',
+  'navbar.signOutFailed': 'Unable to sign out',
+  'navbar.workspaceUser': 'Workspace user',
+  'navbar.enterpriseWorkspace': 'Enterprise Workspace',
+  'navbar.language': 'Language',
 
   // Common
   'common.save': 'Save Changes',
@@ -82,6 +92,16 @@ const en: Dict = {
   'common.viewAll': 'View all',
   'common.created': 'Created',
   'common.updated': 'Updated',
+  'common.unassigned': 'Unassigned',
+  'common.na': 'N/A',
+  'common.vsLastMonth': 'vs last month',
+  'common.select': 'Select...',
+  'common.addTag': 'Add tag...',
+  'common.selectDate': 'Select date',
+  'common.uploadFile': 'Upload file',
+  'common.dragDrop': 'Drag & drop or click to browse',
+  'common.preview': 'Preview',
+  'common.searchPrompt': 'Search...',
 
   // Dashboard
   'dashboard.title': 'Overview',
@@ -275,6 +295,11 @@ const en: Dict = {
   'settings.availableWebhookEvents': 'Available Webhook Events',
   'settings.availableWebhookEventsHint': 'Use these events as trigger nodes in your n8n workflows.',
   'settings.eventNewWhatsapp': 'New WhatsApp message', 'settings.eventOutgoingWhatsapp': 'Outgoing WhatsApp message', 'settings.eventNewConversation': 'New WhatsApp conversation', 'settings.eventConnectionChange': 'WhatsApp connection changed', 'settings.eventLeadCreated': 'Lead created', 'settings.eventLeadInactive': 'Lead inactive (48h)', 'settings.eventDealWon': 'Deal won', 'settings.eventDealLost': 'Deal lost', 'settings.eventMeetingCreated': 'Appointment created', 'settings.eventMeetingUpdated': 'Appointment updated', 'settings.eventMeetingCancelled': 'Appointment cancelled', 'settings.eventMeetingCompleted': 'Appointment completed',
+  'settings.n8nLoadFailed': 'Failed to load n8n configuration',
+  'settings.n8nSaved': 'n8n settings saved',
+  'settings.n8nSaveFailed': 'Failed to save n8n settings',
+  'settings.testFailed': 'Test failed',
+  'settings.testConnection': 'Test connection',
 
   // Auth
   'auth.signIn': 'Sign In',
@@ -286,12 +311,25 @@ const en: Dict = {
   'auth.createAccount': 'Create your account',
   'auth.noAccount': 'Don\'t have an account?',
   'auth.haveAccount': 'Already have an account?',
+  'auth.fullName': 'Full name',
+  'auth.continueWithGoogle': 'Continue with Google',
+  'auth.or': 'or',
+  'auth.realEstate': 'Real Estate',
+  'auth.nameRequired': 'Please enter your full name',
+  'auth.emailRequired': 'Please enter your email',
+  'auth.emailInvalid': 'Please enter a valid email address',
+  'auth.passwordRequired': 'Please enter your password',
+  'auth.passwordTooShort': 'Password must be at least 6 characters',
+  'auth.accountCreated': 'Account created. You can sign in now.',
+  'auth.unableToContinue': 'Unable to continue',
 
   // Time
   'time.justNow': 'just now',
   'time.minutesAgo': '{n}m ago',
   'time.hoursAgo': '{n}h ago',
   'time.daysAgo': '{n}d ago',
+
+  // Pages
   'page.analytics': 'Analytics',
   'page.automations': 'Automations',
   'page.companies': 'Companies',
@@ -300,10 +338,6 @@ const en: Dict = {
   'page.aiAssistant': 'AI Assistant',
   'page.pipeline': 'Pipeline',
   'page.reports': 'Reports',
-  'analytics.leadsGenerated': 'Leads Generated',
-  'team.members': 'Team Members',
-  'team.totalDeals': 'Total Deals',
-  'team.avgRevenue': 'Avg Revenue',
   'page.whatsapp': 'WhatsApp',
   'page.tasks': 'Tasks',
   'page.meetings': 'Meetings',
@@ -355,7 +389,8 @@ const en: Dict = {
   'ai.unableReachAI': 'Unable to reach the AI service',
   'ai.unableLoadInsights': 'Unable to load AI insights',
   'ai.unableGenerate': 'Unable to generate content',
-  'ai.copied': 'Copied to clipboard', 'ai.actionPrefix': 'Action: {action}',
+  'ai.copied': 'Copied to clipboard',
+  'ai.actionPrefix': 'Action: {action}',
   'ai.suggestion1': 'Qualify my highest-priority lead. Show known facts, missing information, intent, objections, and next action.',
   'ai.suggestion2': 'Find real available properties matching my highest-priority lead and explain why each matches.',
   'ai.suggestion3': 'Which leads are waiting for us today? Recommend the next best action from real activity.',
@@ -387,6 +422,23 @@ const en: Dict = {
   'analytics.records': 'Records',
   'analytics.closedDeals': 'Closed deals',
   'analytics.wonDeals': 'Won deals',
+  'analytics.leadsGenerated': 'Leads Generated',
+
+  // Team
+  'team.members': 'Team Members',
+  'team.totalDeals': 'Total Deals',
+  'team.avgRevenue': 'Avg Revenue',
+  'team.active': 'Active',
+  'team.away': 'Away',
+  'team.offline': 'Offline',
+  'team.member': 'Member',
+  'team.deals': 'Deals',
+  'team.revenue': 'Revenue',
+  'team.performance': 'Performance',
+  'team.searchMembers': 'Search team members...',
+  'team.noMembers': 'No team members found.',
+  'team.noMembersMatch': 'No members match your search.',
+  'team.inviteOpened': 'Invite member form opened',
 
   // Property types
   'property.apartments': 'Apartments',
@@ -394,6 +446,17 @@ const en: Dict = {
   'property.penthouses': 'Penthouses',
   'property.townhouses': 'Townhouses',
   'property.commercial': 'Commercial',
+  'property.apartment': 'Apartment',
+  'property.villa': 'Villa',
+  'property.penthouse': 'Penthouse',
+  'property.townhouse': 'Townhouse',
+  'property.land': 'Land',
+  'property.draft': 'Draft',
+  'property.available': 'Available',
+  'property.reserved': 'Reserved',
+  'property.sold': 'Sold',
+  'property.rented': 'Rented',
+  'property.offMarket': 'Off Market',
 
   // Months
   'month.jan': 'Jan', 'month.feb': 'Feb', 'month.mar': 'Mar', 'month.apr': 'Apr',
@@ -409,6 +472,237 @@ const en: Dict = {
   'dashboard.priorityMeetingToday': 'Meeting today: {title}',
   'dashboard.priorityHotLead': 'Hot lead: {name}',
   'dashboard.priorityFollowUp': 'Follow up with {name}',
+
+  // Pipeline stages
+  'stage.newLead': 'New Lead',
+  'stage.qualified': 'Qualified',
+  'stage.visitScheduled': 'Visit Scheduled',
+  'stage.negotiation': 'Negotiation',
+  'stage.won': 'Won',
+  'stage.lost': 'Lost',
+
+  // Lead sources
+  'source.website': 'Website',
+  'source.referral': 'Referral',
+  'source.socialMedia': 'Social Media',
+  'source.walkIn': 'Walk-in',
+  'source.portal': 'Portal',
+  'source.coldCall': 'Cold Call',
+
+  // Lead statuses
+  'leadStatus.new': 'New',
+  'leadStatus.qualified': 'Qualified',
+  'leadStatus.visitScheduled': 'Visit Scheduled',
+  'leadStatus.negotiation': 'Negotiation',
+  'leadStatus.won': 'Won',
+  'leadStatus.lost': 'Lost',
+
+  // Task priorities
+  'taskPriority.low': 'Low',
+  'taskPriority.medium': 'Medium',
+  'taskPriority.high': 'High',
+  'taskPriority.urgent': 'Urgent',
+
+  // Task statuses
+  'taskStatus.todo': 'To Do',
+  'taskStatus.inProgress': 'In Progress',
+  'taskStatus.done': 'Done',
+  'taskStatus.allTasks': 'All Tasks',
+  'taskStatus.noTasks': 'No tasks',
+  'taskStatus.completed': 'Task "{title}" completed',
+  'taskStatus.updateFailed': 'Failed to update task. Please try again.',
+  'taskStatus.couldntLoad': 'Couldn\'t load tasks',
+
+  // Meeting types
+  'meetingType.videoCall': 'Video Call',
+  'meetingType.zoom': 'Zoom',
+  'meetingType.inPerson': 'In Person',
+  'meetingType.phoneCall': 'Phone Call',
+  'meetingType.propertyVisit': 'Property Visit',
+
+  // Companies
+  'companies.newCompany': 'New Company',
+  'companies.searchCompanies': 'Search companies...',
+  'companies.noCompanies': 'No companies found.',
+  'companies.noCompaniesMatch': 'No companies match your search.',
+  'companies.contact': 'Contact',
+  'companies.value': 'Value',
+  'companies.lastContact': 'Last Contact',
+  'companies.formOpened': 'New company form opened',
+
+  // Contacts
+  'contacts.searchContacts': 'Search contacts...',
+  'contacts.couldntLoad': 'Couldn\'t load contacts',
+  'contacts.noContacts': 'No contacts found',
+  'contacts.tryDifferentSearch': 'Try a different search term.',
+  'contacts.createFirst': 'Create your first contact to get started.',
+  'contacts.dealValue': 'Deal Value',
+
+  // Pipeline page
+  'pipeline.dropDealsHere': 'Drop deals here',
+  'pipeline.noDealsYet': 'No deals yet',
+  'pipeline.createFirstDeal': 'Create your first deal to get started',
+  'pipeline.dealMoved': '"{title}" moved to {stage}',
+  'pipeline.updateFailed': 'Failed to update deal stage. Please try again.',
+  'pipeline.newDealOpened': 'New deal form opened',
+
+  // Modals - common
+  'modal.cancel': 'Cancel',
+  'modal.save': 'Save',
+  'modal.failedToSave': 'Failed to save. Please try again.',
+  'modal.failedToSaveDb': 'Failed to save. Check your database connection and try again.',
+
+  // Lead modal
+  'leadModal.title': 'New Lead',
+  'leadModal.description': 'Capture a new prospect entering the pipeline.',
+  'leadModal.saveLead': 'Save Lead',
+  'leadModal.firstNameRequired': 'First name is required',
+  'leadModal.leadCreated': 'Lead {name} created',
+  'leadModal.contactInfo': 'Contact Info',
+  'leadModal.dealInfo': 'Deal Info',
+  'leadModal.additional': 'Additional',
+  'leadModal.leadSource': 'Lead Source',
+  'leadModal.leadStatus': 'Status',
+  'leadModal.leadScore': 'Lead Score',
+  'leadModal.assignedAgent': 'Assigned Agent',
+  'leadModal.selectAgent': 'Select agent...',
+  'leadModal.propertyInterestPlaceholder': '3BHK Penthouse',
+  'leadModal.budgetPlaceholder': '2,500,000',
+  'leadModal.scorePlaceholder': '0–100, based on qualification',
+  'leadModal.tagsPlaceholder': 'Add tags...',
+  'leadModal.notesPlaceholder': 'Looking for a 3BHK penthouse...',
+  'leadModal.whatsapp': 'WhatsApp',
+
+  // Contact modal
+  'contactModal.title': 'New Contact',
+  'contactModal.description': 'Add a person or client to your CRM.',
+  'contactModal.saveContact': 'Save Contact',
+  'contactModal.firstNameRequired': 'First name is required',
+  'contactModal.contactCreated': 'Contact {name} created',
+  'contactModal.company': 'Company',
+  'contactModal.whatsapp': 'WhatsApp',
+  'contactModal.notesPlaceholder': 'Key decision maker...',
+
+  // Deal modal
+  'dealModal.title': 'New Deal',
+  'dealModal.description': 'Create a deal by connecting a lead, contact, and property.',
+  'dealModal.saveDeal': 'Save Deal',
+  'dealModal.titleRequired': 'Title is required',
+  'dealModal.dealCreated': 'Deal "{title}" created',
+  'dealModal.dealTitle': 'Deal Title',
+  'dealModal.dealTitlePlaceholder': 'e.g. Apartment Sale — Downtown',
+  'dealModal.connectLead': 'Connect Lead',
+  'dealModal.selectLead': 'Select lead...',
+  'dealModal.connectContact': 'Connect Contact',
+  'dealModal.selectContact': 'Select contact...',
+  'dealModal.connectProperty': 'Connect Property',
+  'dealModal.selectProperty': 'Select property...',
+  'dealModal.dealValue': 'Deal Value',
+  'dealModal.dealValuePlaceholder': '4,200,000',
+  'dealModal.expectedCloseDate': 'Expected Close Date',
+  'dealModal.pipelineStage': 'Pipeline Stage',
+  'dealModal.probability': 'Probability (%)',
+  'dealModal.probabilityPlaceholder': '0–100, based on stage',
+  'dealModal.notesPlaceholder': 'Cash buyer, ready to close quickly.',
+
+  // Property modal
+  'propertyModal.title': 'New Property',
+  'propertyModal.description': 'List a new property with photos and full details.',
+  'propertyModal.saveDraft': 'Save Draft',
+  'propertyModal.publishProperty': 'Publish Property',
+  'propertyModal.titleRequired': 'Title is required',
+  'propertyModal.addressRequired': 'Address is required',
+  'propertyModal.propertyCreated': 'Property "{title}" created',
+  'propertyModal.photoGallery': 'Photo Gallery',
+  'propertyModal.uploadPhotos': 'Upload photos',
+  'propertyModal.cover': 'COVER',
+  'propertyModal.propertyTitle': 'Title',
+  'propertyModal.titlePlaceholder': 'Skyline Penthouse',
+  'propertyModal.address': 'Address',
+  'propertyModal.addressPlaceholder': '1200 Brickell Ave, PH-2',
+  'propertyModal.cityPlaceholder': 'Miami, FL',
+  'propertyModal.country': 'Country',
+  'propertyModal.countryPlaceholder': 'United States',
+  'propertyModal.propertyType': 'Property Type',
+  'propertyModal.pricePlaceholder': '4,200,000',
+  'propertyModal.bedroomsPlaceholder': '4',
+  'propertyModal.bathroomsPlaceholder': '5',
+  'propertyModal.surface': 'Surface (sq ft)',
+  'propertyModal.surfacePlaceholder': '4200',
+  'propertyModal.agent': 'Agent',
+  'propertyModal.selectAgent': 'Select agent...',
+  'propertyModal.amenities': 'Amenities',
+  'propertyModal.amenitiesPlaceholder': 'Add amenity...',
+  'propertyModal.description': 'Description',
+  'propertyModal.descriptionPlaceholder': 'Featured listing',
+  'propertyModal.showFeatured': 'Show this property in featured sections across the CRM',
+
+  // Task modal
+  'taskModal.title': 'New Task',
+  'taskModal.description': 'Assign a task to yourself or a team member.',
+  'taskModal.saveTask': 'Save Task',
+  'taskModal.titleRequired': 'Title is required',
+  'taskModal.taskCreated': 'Task "{title}" created',
+  'taskModal.taskTitlePlaceholder': 'e.g. Follow up with lead',
+  'taskModal.dueDate': 'Due Date',
+  'taskModal.assignedTo': 'Assigned To',
+  'taskModal.selectTeamMember': 'Select team member...',
+  'taskModal.descriptionPlaceholder': 'Send additional photos and schedule a viewing.',
+
+  // Meeting modal
+  'meetingModal.title': 'Schedule Meeting',
+  'meetingModal.description': 'Create a meeting in the MEHANS Calendar.',
+  'meetingModal.schedule': 'Schedule',
+  'meetingModal.titleRequired': 'Title is required',
+  'meetingModal.dateRequired': 'Date is required',
+  'meetingModal.meetingCreated': 'Meeting "{title}" scheduled',
+  'meetingModal.meetingTitlePlaceholder': 'e.g. Property Viewing',
+  'meetingModal.date': 'Date',
+  'meetingModal.time': 'Time',
+  'meetingModal.duration': 'Duration (minutes)',
+  'meetingModal.durationPlaceholder': '30',
+  'meetingModal.meetingType': 'Meeting Type',
+  'meetingModal.location': 'Location',
+  'meetingModal.locationPlaceholder': 'Skyline Penthouse, Miami',
+  'meetingModal.attendeeName': 'Attendee Name',
+  'meetingModal.attendeePlaceholder': 'Attendee name',
+  'meetingModal.connectLead': 'Connect Lead',
+  'meetingModal.selectLead': 'Select lead...',
+  'meetingModal.connectContact': 'Connect Contact',
+  'meetingModal.selectContact': 'Select contact...',
+  'meetingModal.assignedAgent': 'Assigned Agent',
+  'meetingModal.selectAgent': 'Select agent...',
+  'meetingModal.notesPlaceholder': 'Confirm parking arrangements with building concierge.',
+
+  // Languages for lead/contact
+  'lang.english': 'English',
+  'lang.spanish': 'Spanish',
+  'lang.french': 'French',
+  'lang.arabic': 'Arabic',
+  'lang.mandarin': 'Mandarin',
+  'lang.hindi': 'Hindi',
+  'lang.portuguese': 'Portuguese',
+
+  // Amenities
+  'amenity.pool': 'Pool',
+  'amenity.gym': 'Gym',
+  'amenity.garden': 'Garden',
+  'amenity.garage': 'Garage',
+  'amenity.smartHome': 'Smart Home',
+  'amenity.seaView': 'Sea View',
+  'amenity.rooftop': 'Rooftop',
+  'amenity.elevator': 'Elevator',
+  'amenity.security': 'Security',
+  'amenity.concierge': 'Concierge',
+  'amenity.ac': 'AC',
+  'amenity.heating': 'Heating',
+
+  // Tags
+  'tag.vip': 'VIP',
+  'tag.cashBuyer': 'Cash Buyer',
+  'tag.hotLead': 'Hot Lead',
+  'tag.investor': 'Investor',
+  'tag.firstTimeBuyer': 'First-Time Buyer',
 };
 
 const fr: Dict = {
@@ -427,6 +721,10 @@ const fr: Dict = {
   'nav.reports': 'Rapports',
   'nav.settings': 'Paramètres',
   'nav.collapse': 'Réduire',
+  'nav.companies': 'Entreprises',
+  'nav.contacts': 'Contacts',
+  'nav.team': 'Équipe',
+  'nav.automations': 'Automatisations',
 
   // Navbar
   'navbar.search': 'Rechercher prospects, affaires, propriétés...',
@@ -447,6 +745,12 @@ const fr: Dict = {
   'navbar.aiCopilot': 'Copilote IA',
   'navbar.profile': 'Profil',
   'navbar.signOut': 'Déconnexion',
+  'navbar.allNotificationsRead': 'Toutes les notifications marquées comme lues',
+  'navbar.markReadFailed': 'Échec du marquage des notifications',
+  'navbar.signOutFailed': 'Impossible de se déconnecter',
+  'navbar.workspaceUser': 'Utilisateur de l\'espace',
+  'navbar.enterpriseWorkspace': 'Espace Entreprise',
+  'navbar.language': 'Langue',
 
   // Common
   'common.save': 'Enregistrer',
@@ -475,6 +779,16 @@ const fr: Dict = {
   'common.viewAll': 'Voir tout',
   'common.created': 'Créé',
   'common.updated': 'Modifié',
+  'common.unassigned': 'Non assigné',
+  'common.na': 'N/A',
+  'common.vsLastMonth': 'vs mois dernier',
+  'common.select': 'Sélectionner...',
+  'common.addTag': 'Ajouter une étiquette...',
+  'common.selectDate': 'Sélectionner une date',
+  'common.uploadFile': 'Télécharger un fichier',
+  'common.dragDrop': 'Glissez-déposez ou cliquez pour parcourir',
+  'common.preview': 'Aperçu',
+  'common.searchPrompt': 'Rechercher...',
 
   // Dashboard
   'dashboard.title': 'Tableau de bord',
@@ -501,12 +815,12 @@ const fr: Dict = {
   'dashboard.thisMonth': 'Ce mois-ci',
   'dashboard.thisQuarter': 'Ce trimestre',
   'dashboard.allTime': 'Depuis toujours',
-  'dashboard.monthlyRevenueTarget': 'Revenus mensuels comparés à l’objectif',
+  'dashboard.monthlyRevenueTarget': 'Revenus mensuels comparés à l'objectif',
   'dashboard.revenueLabel': 'Revenus',
   'dashboard.targetLabel': 'Objectif',
   'dashboard.leadSourcesDescription': 'Origine des prospects',
   'dashboard.pipelineOverTime': 'Valeur totale du pipeline dans le temps (M$)',
-  'dashboard.teamPerformance': 'Performance de l’équipe',
+  'dashboard.teamPerformance': 'Performance de l'équipe',
   'dashboard.thisQuarterBadge': 'Ce trimestre',
   'dashboard.dealsMetric': 'Affaires',
   'dashboard.revenueMetric': 'Revenus',
@@ -514,7 +828,7 @@ const fr: Dict = {
   'dashboard.noActivity': 'Aucune activité récente',
   'dashboard.priorities': 'Priorités du jour',
   'dashboard.prioritiesDescription': 'Prochaines actions issues de vos données CRM',
-  'dashboard.noPriorities': 'Aucun suivi urgent enregistré aujourd’hui',
+  'dashboard.noPriorities': 'Aucun suivi urgent enregistré aujourd'hui',
 
   // Leads
   'leads.title': 'Prospects',
@@ -533,7 +847,7 @@ const fr: Dict = {
   'leads.empty': 'Aucun prospect',
   'leads.emptyHint': 'Créez votre premier prospect pour commencer',
   'leads.nextBestAction': 'Meilleure prochaine action',
-  'leads.actionNegotiation': 'Contactez {name} aujourd’hui au sujet de la négociation en cours.',
+  'leads.actionNegotiation': 'Contactez {name} aujourd'hui au sujet de la négociation en cours.',
   'leads.actionNew': 'Qualifiez {name} : demandez le délai, le budget et la zone recherchée.',
   'leads.actionVisit': 'Relancez {name} après la visite planifiée.',
   'leads.actionQualified': 'Envoyez à {name} les biens disponibles correspondants et proposez une visite.',
@@ -585,24 +899,24 @@ const fr: Dict = {
   'settings.permissions': 'Permissions',
   'settings.integrations': 'Intégrations',
   'settings.apiKeys': 'Clés API',
-  'settings.organizationDetails': 'Détails de l\'organisation',
-  'settings.orgName': 'Nom de l\'organisation',
+  'settings.organizationDetails': 'Détails de l'organisation',
+  'settings.orgName': 'Nom de l'organisation',
   'settings.website': 'Site web',
   'settings.currency': 'Devise',
   'settings.industry': 'Secteur',
   'settings.timezone': 'Fuseau horaire',
   'settings.language': 'Langue',
   'settings.invite': 'Inviter',
-  'settings.sendInvite': 'Envoyer l\'invitation',
+  'settings.sendInvite': 'Envoyer l'invitation',
   'settings.fullName': 'Nom complet',
   'settings.emailAddress': 'Adresse email',
-  'settings.noUsers': 'Aucun utilisateur. Invitez des membres d\'équipe pour commencer.',
-  'settings.saved': 'Paramètres de l\'organisation enregistrés',
-  'settings.saveFailed': 'Échec de l\'enregistrement des paramètres',
+  'settings.noUsers': 'Aucun utilisateur. Invitez des membres d'équipe pour commencer.',
+  'settings.saved': 'Paramètres de l'organisation enregistrés',
+  'settings.saveFailed': 'Échec de l'enregistrement des paramètres',
   'settings.workspaceLoadFailed': 'Impossible de charger le profil de cet espace de travail.',
-  'settings.workspaceUnavailable': 'Le profil de cet espace de travail n’est pas encore disponible.',
-  'settings.companyInfo': 'Informations sur l\'entreprise',
-  'settings.agencyName': 'Nom de l\'agence',
+  'settings.workspaceUnavailable': 'Le profil de cet espace de travail n'est pas encore disponible.',
+  'settings.companyInfo': 'Informations sur l'entreprise',
+  'settings.agencyName': 'Nom de l'agence',
   'settings.address': 'Adresse',
   'settings.city': 'Ville',
   'settings.country': 'Pays',
@@ -613,20 +927,20 @@ const fr: Dict = {
   'settings.logoTooLarge': 'Le logo doit faire moins de 2 Mo',
   'settings.unnamedAgency': 'Agence sans nom',
   'settings.locationNotSet': 'Lieu non défini',
-  'settings.nameEmailRequired': 'Le nom et l\'email sont requis',
+  'settings.nameEmailRequired': 'Le nom et l'email sont requis',
   'settings.inviteSuccess': '{name} a été invité avec succès',
-  'settings.inviteFailed': 'Échec de l\'invitation de l\'utilisateur',
+  'settings.inviteFailed': 'Échec de l'invitation de l'utilisateur',
   'settings.roleUpdated': 'Rôle mis à jour',
   'settings.roleUpdateFailed': 'Échec de la mise à jour du rôle',
   'settings.userDeactivated': 'Utilisateur désactivé',
-  'settings.deactivateFailed': 'Échec de la désactivation de l\'utilisateur',
+  'settings.deactivateFailed': 'Échec de la désactivation de l'utilisateur',
   'settings.permissionUpdateFailed': 'Échec de la mise à jour des permissions',
   'settings.module': 'Module',
   'settings.view': 'Voir',
   'settings.create': 'Créer',
   'settings.edit': 'Modifier',
   'settings.delete': 'Supprimer',
-  'settings.disconnectFailed': 'Échec de la déconnexion de l\'intégration',
+  'settings.disconnectFailed': 'Échec de la déconnexion de l'intégration',
   'settings.noIntegrations': 'Aucune intégration configurée.',
   'settings.nameApiKey': 'Veuillez nommer votre clé API',
   'settings.apiKeyCreated': 'Clé API créée',
@@ -648,22 +962,17 @@ const fr: Dict = {
   'settings.agent': 'Agent',
   'settings.viewer': 'Lecteur',
   'settings.modules': 'modules',
-  'settings.n8nLoadFailed': 'Échec du chargement de la configuration n8n',
-  'settings.n8nSaved': 'Paramètres n8n enregistrés',
-  'settings.n8nSaveFailed': 'Échec de l\'enregistrement des paramètres n8n',
-  'settings.testFailed': 'Échec du test',
-  'settings.testConnection': 'Tester la connexion',
   'settings.whatsappDescription': 'Envoyer des messages aux prospects',
   'settings.integration': 'Intégration',
   'settings.connected': 'Connecté',
   'settings.manage': 'Gérer',
   'settings.connect': 'Connecter',
   'settings.webhooks': 'Webhooks',
-  'settings.n8nActionWebhook': 'Webhook d’action n8n (n8n → CRM)',
+  'settings.n8nActionWebhook': 'Webhook d'action n8n (n8n → CRM)',
   'settings.n8nActionWebhookHint': 'n8n envoie des actions à cette adresse. Le secret est requis.',
   'settings.crmEventDispatch': 'Envoi des événements CRM (CRM → n8n)',
   'settings.crmEventDispatchHint': 'Les événements CRM sont envoyés à votre webhook n8n. Configurez-le dans Automatisations.',
-  'settings.n8nEngine': 'Moteur d’automatisation n8n',
+  'settings.n8nEngine': 'Moteur d'automatisation n8n',
   'settings.n8nEngineHint': 'Connectez n8n pour déclencher les automatisations CRM.',
   'settings.n8nWebhookUrl': 'URL du webhook n8n',
   'settings.n8nWebhookHint': 'Les événements CRM sont envoyés à cette adresse. Gardez-la secrète.',
@@ -673,6 +982,11 @@ const fr: Dict = {
   'settings.availableWebhookEvents': 'Événements webhook disponibles',
   'settings.availableWebhookEventsHint': 'Utilisez ces événements comme déclencheurs dans vos workflows n8n.',
   'settings.eventNewWhatsapp': 'Nouveau message WhatsApp', 'settings.eventOutgoingWhatsapp': 'Message WhatsApp sortant', 'settings.eventNewConversation': 'Nouvelle conversation WhatsApp', 'settings.eventConnectionChange': 'Connexion WhatsApp modifiée', 'settings.eventLeadCreated': 'Prospect créé', 'settings.eventLeadInactive': 'Prospect inactif (48 h)', 'settings.eventDealWon': 'Affaire gagnée', 'settings.eventDealLost': 'Affaire perdue', 'settings.eventMeetingCreated': 'Rendez-vous créé', 'settings.eventMeetingUpdated': 'Rendez-vous modifié', 'settings.eventMeetingCancelled': 'Rendez-vous annulé', 'settings.eventMeetingCompleted': 'Rendez-vous terminé',
+  'settings.n8nLoadFailed': 'Échec du chargement de la configuration n8n',
+  'settings.n8nSaved': 'Paramètres n8n enregistrés',
+  'settings.n8nSaveFailed': 'Échec de l'enregistrement des paramètres n8n',
+  'settings.testFailed': 'Échec du test',
+  'settings.testConnection': 'Tester la connexion',
 
   // Auth
   'auth.signIn': 'Connexion',
@@ -684,12 +998,25 @@ const fr: Dict = {
   'auth.createAccount': 'Créez votre compte',
   'auth.noAccount': 'Vous n\'avez pas de compte ?',
   'auth.haveAccount': 'Vous avez déjà un compte ?',
+  'auth.fullName': 'Nom complet',
+  'auth.continueWithGoogle': 'Continuer avec Google',
+  'auth.or': 'ou',
+  'auth.realEstate': 'Immobilier',
+  'auth.nameRequired': 'Veuillez entrer votre nom complet',
+  'auth.emailRequired': 'Veuillez entrer votre email',
+  'auth.emailInvalid': 'Veuillez entrer une adresse email valide',
+  'auth.passwordRequired': 'Veuillez entrer votre mot de passe',
+  'auth.passwordTooShort': 'Le mot de passe doit contenir au moins 6 caractères',
+  'auth.accountCreated': 'Compte créé. Vous pouvez vous connecter maintenant.',
+  'auth.unableToContinue': 'Impossible de continuer',
 
   // Time
   'time.justNow': 'à l\'instant',
   'time.minutesAgo': 'il y a {n} min',
   'time.hoursAgo': 'il y a {n} h',
   'time.daysAgo': 'il y a {n} j',
+
+  // Pages
   'page.analytics': 'Analytique',
   'page.automations': 'Automatisations',
   'page.companies': 'Entreprises',
@@ -698,10 +1025,6 @@ const fr: Dict = {
   'page.aiAssistant': 'Assistant IA',
   'page.pipeline': 'Pipeline',
   'page.reports': 'Rapports',
-  'analytics.leadsGenerated': 'Prospects générés',
-  'team.members': "Membres de l'équipe",
-  'team.totalDeals': 'Total des affaires',
-  'team.avgRevenue': 'Revenu moyen',
   'page.whatsapp': 'WhatsApp',
   'page.tasks': 'Tâches',
   'page.meetings': 'Réunions',
@@ -713,16 +1036,16 @@ const fr: Dict = {
   'page.analyticsDescription': 'Analyses approfondies de vos performances',
   'page.reportsDescription': 'Générer et télécharger des rapports',
   'page.whatsappDescription': 'Gérer les conversations de votre numéro professionnel',
-  'page.aiAssistantDescription': 'Votre système de vente IA pour l’immobilier',
+  'page.aiAssistantDescription': 'Votre système de vente IA pour l'immobilier',
   'page.automationsDescription': 'Automatiser les tâches répétitives de votre CRM',
   'page.tasksDescription': 'Suivre les tâches de votre équipe',
   'page.meetingsDescription': 'Planifier et gérer vos réunions',
   'page.dealsDescription': 'Suivre et gérer vos opportunités commerciales',
 
-  // Assistant IA
+  // AI Assistant
   'ai.chat': 'Discussion', 'ai.insights': 'Insights', 'ai.generate': 'Générer',
   'ai.welcomeMessage': 'Je suis votre assistant IA MEHANS. Je peux vous aider à qualifier les prospects, rédiger des emails et messages WhatsApp, analyser votre pipeline et suggérer les prochaines actions. Comment puis-je vous aider ?',
-  'ai.placeholder': 'Demandez quelque chose à l’IA...', 'ai.leadScoring': 'Scoring IA des prospects', 'ai.suggestedActions': 'Actions suggérées',
+  'ai.placeholder': 'Demandez quelque chose à l'IA...', 'ai.leadScoring': 'Scoring IA des prospects', 'ai.suggestedActions': 'Actions suggérées',
   'ai.loadingScores': 'Chargement des scores…', 'ai.unableLoadScores': 'Impossible de charger les scores.', 'ai.noLeadsScored': 'Aucun prospect noté.', 'ai.aiScore': 'Score IA',
   'ai.unableLoadActions': 'Impossible de charger les actions.', 'ai.addLeadsActions': 'Ajoutez des prospects pour obtenir des actions suggérées.', 'ai.noHighPriority': 'Aucun prospect prioritaire.',
   'ai.actionCall': 'Appeler {name} (négociation)', 'ai.actionEmail': 'Email à {name} (nouveau prospect)', 'ai.actionWhatsapp': 'WhatsApp à {name}', 'ai.actionFollowUp': 'Relancer {name}',
@@ -733,24 +1056,99 @@ const fr: Dict = {
   'ai.unableReachAI': 'Impossible de joindre le service IA', 'ai.unableLoadInsights': 'Impossible de charger les insights IA', 'ai.unableGenerate': 'Impossible de générer le contenu', 'ai.copied': 'Copié dans le presse-papiers',
   'ai.suggestion1': 'Qualifiez mon prospect prioritaire : faits connus, informations manquantes, intention, objections et prochaine action.',
   'ai.suggestion2': 'Trouvez les biens disponibles correspondant à mon prospect prioritaire et expliquez chaque correspondance.',
-  'ai.suggestion3': 'Quels prospects attendent une action aujourd’hui ? Recommandez la prochaine action selon l’activité réelle.',
-  'ai.suggestion4': 'Rédigez une relance WhatsApp professionnelle pour la conversation sélectionnée. Ne l’envoyez pas.',
+  'ai.suggestion3': 'Quels prospects attendent une action aujourd'hui ? Recommandez la prochaine action selon l'activité réelle.',
+  'ai.suggestion4': 'Rédigez une relance WhatsApp professionnelle pour la conversation sélectionnée. Ne l'envoyez pas.',
+
+  // Analytics
   'analytics.last8Months': '8 derniers mois', 'analytics.totalRevenue': 'Revenus totaux', 'analytics.dealsClosed': 'Affaires conclues', 'analytics.avgDealSize': 'Valeur moyenne', 'analytics.winRate': 'Taux de réussite',
   'analytics.revenueTrend': 'Évolution des revenus', 'analytics.monthlyRevenue': 'Revenus mensuels dans le temps', 'analytics.dealsCreatedVsWon': 'Affaires : créées vs gagnées', 'analytics.monthlyDealFlow': 'Flux mensuel des affaires',
   'analytics.leadSources': 'Sources des prospects', 'analytics.distributionChannel': 'Répartition par canal', 'analytics.propertyTypes': 'Types de biens', 'analytics.listingsByCategory': 'Annonces par catégorie',
-  'analytics.conversionRate': 'Taux de conversion', 'analytics.leadToClose': 'Du prospect à la conclusion', 'analytics.industryAvg': 'Moyenne du secteur', 'analytics.yourRate': 'Votre taux', 'analytics.responseTime': 'Temps de réponse', 'analytics.avgFirstResponse': 'Première réponse moyenne (heures) par jour', 'analytics.teamLeaderboard': 'Classement de l’équipe', 'analytics.revenueByAgent': 'Revenus par agent ce trimestre', 'analytics.noTeamMembers': 'Aucun membre d’équipe trouvé.', 'analytics.records': 'Enregistrements', 'analytics.closedDeals': 'Affaires conclues', 'analytics.wonDeals': 'Affaires gagnées',
+  'analytics.conversionRate': 'Taux de conversion', 'analytics.leadToClose': 'Du prospect à la conclusion', 'analytics.industryAvg': 'Moyenne du secteur', 'analytics.yourRate': 'Votre taux', 'analytics.responseTime': 'Temps de réponse', 'analytics.avgFirstResponse': 'Première réponse moyenne (heures) par jour', 'analytics.teamLeaderboard': 'Classement de l'équipe', 'analytics.revenueByAgent': 'Revenus par agent ce trimestre', 'analytics.noTeamMembers': 'Aucun membre d'équipe trouvé.', 'analytics.records': 'Enregistrements', 'analytics.closedDeals': 'Affaires conclues', 'analytics.wonDeals': 'Affaires gagnées', 'analytics.leadsGenerated': 'Prospects générés',
+
+  // Team
+  'team.members': "Membres de l'équipe", 'team.totalDeals': 'Total des affaires', 'team.avgRevenue': 'Revenu moyen',
+  'team.active': 'Actif', 'team.away': 'Absent', 'team.offline': 'Hors ligne',
+  'team.member': 'Membre', 'team.deals': 'Affaires', 'team.revenue': 'Revenus', 'team.performance': 'Performance',
+  'team.searchMembers': 'Rechercher des membres...', 'team.noMembers': 'Aucun membre trouvé.', 'team.noMembersMatch': 'Aucun membre ne correspond à votre recherche.', 'team.inviteOpened': 'Formulaire d'invitation ouvert',
+
+  // Property types
   'property.apartments': 'Appartements', 'property.villas': 'Villas', 'property.penthouses': 'Penthouses', 'property.townhouses': 'Maisons de ville', 'property.commercial': 'Commercial',
+  'property.apartment': 'Appartement', 'property.villa': 'Villa', 'property.penthouse': 'Penthouse', 'property.townhouse': 'Maison de ville', 'property.land': 'Terrain',
+  'property.draft': 'Brouillon', 'property.available': 'Disponible', 'property.reserved': 'Réservé', 'property.sold': 'Vendu', 'property.rented': 'Loué', 'property.offMarket': 'Retiré',
+
+  // Months
   'month.jan': 'Jan', 'month.feb': 'Fév', 'month.mar': 'Mar', 'month.apr': 'Avr', 'month.may': 'Mai', 'month.jun': 'Juin', 'month.jul': 'Juil', 'month.aug': 'Aoû', 'month.sep': 'Sep', 'month.oct': 'Oct', 'month.nov': 'Nov', 'month.dec': 'Déc',
+
+  // Days
   'day.mon': 'Lun', 'day.tue': 'Mar', 'day.wed': 'Mer', 'day.thu': 'Jeu', 'day.fri': 'Ven', 'day.sat': 'Sam', 'day.sun': 'Dim',
-  'dashboard.priorityOverdueTask': 'Tâche en retard : {title}', 'dashboard.priorityMeetingToday': 'Réunion aujourd’hui : {title}', 'dashboard.priorityHotLead': 'Prospect chaud : {name}', 'dashboard.priorityFollowUp': 'Relancer {name}',
+
+  // Dashboard priorities
+  'dashboard.priorityOverdueTask': 'Tâche en retard : {title}', 'dashboard.priorityMeetingToday': 'Réunion aujourd'hui : {title}', 'dashboard.priorityHotLead': 'Prospect chaud : {name}', 'dashboard.priorityFollowUp': 'Relancer {name}',
+
+  // Pipeline stages
+  'stage.newLead': 'Nouveau prospect', 'stage.qualified': 'Qualifié', 'stage.visitScheduled': 'Visite planifiée', 'stage.negotiation': 'Négociation', 'stage.won': 'Gagnée', 'stage.lost': 'Perdue',
+
+  // Lead sources
+  'source.website': 'Site web', 'source.referral': 'Recommandation', 'source.socialMedia': 'Réseaux sociaux', 'source.walkIn': 'Visite directe', 'source.portal': 'Portail', 'source.coldCall': 'Appel à froid',
+
+  // Lead statuses
+  'leadStatus.new': 'Nouveau', 'leadStatus.qualified': 'Qualifié', 'leadStatus.visitScheduled': 'Visite planifiée', 'leadStatus.negotiation': 'Négociation', 'leadStatus.won': 'Gagné', 'leadStatus.lost': 'Perdu',
+
+  // Task priorities
+  'taskPriority.low': 'Bas', 'taskPriority.medium': 'Moyen', 'taskPriority.high': 'Élevé', 'taskPriority.urgent': 'Urgent',
+
+  // Task statuses
+  'taskStatus.todo': 'À faire', 'taskStatus.inProgress': 'En cours', 'taskStatus.done': 'Terminé', 'taskStatus.allTasks': 'Toutes les tâches', 'taskStatus.noTasks': 'Aucune tâche', 'taskStatus.completed': 'Tâche "{title}" terminée', 'taskStatus.updateFailed': 'Échec de la mise à jour de la tâche. Réessayez.', 'taskStatus.couldntLoad': 'Impossible de charger les tâches',
+
+  // Meeting types
+  'meetingType.videoCall': 'Visioconférence', 'meetingType.zoom': 'Zoom', 'meetingType.inPerson': 'En personne', 'meetingType.phoneCall': 'Appel téléphonique', 'meetingType.propertyVisit': 'Visite de bien',
+
+  // Companies
+  'companies.newCompany': 'Nouvelle entreprise', 'companies.searchCompanies': 'Rechercher des entreprises...', 'companies.noCompanies': 'Aucune entreprise trouvée.', 'companies.noCompaniesMatch': 'Aucune entreprise ne correspond à votre recherche.', 'companies.contact': 'Contact', 'companies.value': 'Valeur', 'companies.lastContact': 'Dernier contact', 'companies.formOpened': 'Formulaire nouvelle entreprise ouvert',
+
+  // Contacts
+  'contacts.searchContacts': 'Rechercher des contacts...', 'contacts.couldntLoad': 'Impossible de charger les contacts', 'contacts.noContacts': 'Aucun contact trouvé', 'contacts.tryDifferentSearch': 'Essayez une autre recherche.', 'contacts.createFirst': 'Créez votre premier contact pour commencer.', 'contacts.dealValue': 'Valeur de l'affaire',
+
+  // Pipeline page
+  'pipeline.dropDealsHere': 'Déposez les affaires ici', 'pipeline.noDealsYet': 'Aucune affaire', 'pipeline.createFirstDeal': 'Créez votre première affaire pour commencer', 'pipeline.dealMoved': '"{title}" déplacée vers {stage}', 'pipeline.updateFailed': 'Échec de la mise à jour de l'étape. Réessayez.', 'pipeline.newDealOpened': 'Formulaire nouvelle affaire ouvert',
+
+  // Modals
+  'modal.cancel': 'Annuler', 'modal.save': 'Enregistrer', 'modal.failedToSave': 'Échec de l'enregistrement. Réessayez.', 'modal.failedToSaveDb': 'Échec de l'enregistrement. Vérifiez la connexion à la base de données.',
+
+  // Lead modal
+  'leadModal.title': 'Nouveau prospect', 'leadModal.description': 'Capturez un nouveau prospect dans le pipeline.', 'leadModal.saveLead': 'Enregistrer le prospect', 'leadModal.firstNameRequired': 'Le prénom est requis', 'leadModal.leadCreated': 'Prospect {name} créé', 'leadModal.contactInfo': 'Coordonnées', 'leadModal.dealInfo': 'Informations de l'affaire', 'leadModal.additional': 'Compléments', 'leadModal.leadSource': 'Source du prospect', 'leadModal.leadStatus': 'Statut', 'leadModal.leadScore': 'Score du prospect', 'leadModal.assignedAgent': 'Agent assigné', 'leadModal.selectAgent': 'Sélectionner un agent...', 'leadModal.propertyInterestPlaceholder': 'Appartement 3 chambres', 'leadModal.budgetPlaceholder': '2 500 000', 'leadModal.scorePlaceholder': '0–100, selon la qualification', 'leadModal.tagsPlaceholder': 'Ajouter des étiquettes...', 'leadModal.notesPlaceholder': 'Recherche un appartement 3 chambres...', 'leadModal.whatsapp': 'WhatsApp',
+
+  // Contact modal
+  'contactModal.title': 'Nouveau contact', 'contactModal.description': 'Ajouter une personne ou un client à votre CRM.', 'contactModal.saveContact': 'Enregistrer le contact', 'contactModal.firstNameRequired': 'Le prénom est requis', 'contactModal.contactCreated': 'Contact {name} créé', 'contactModal.company': 'Entreprise', 'contactModal.whatsapp': 'WhatsApp', 'contactModal.notesPlaceholder': 'Décideur clé...',
+
+  // Deal modal
+  'dealModal.title': 'Nouvelle affaire', 'dealModal.description': 'Créez une affaire en reliant un prospect, un contact et un bien.', 'dealModal.saveDeal': 'Enregistrer l'affaire', 'dealModal.titleRequired': 'Le titre est requis', 'dealModal.dealCreated': 'Affaire "{title}" créée', 'dealModal.dealTitle': 'Titre de l'affaire', 'dealModal.dealTitlePlaceholder': 'ex. Vente d'appartement — Centre-ville', 'dealModal.connectLead': 'Lier le prospect', 'dealModal.selectLead': 'Sélectionner un prospect...', 'dealModal.connectContact': 'Lier le contact', 'dealModal.selectContact': 'Sélectionner un contact...', 'dealModal.connectProperty': 'Lier le bien', 'dealModal.selectProperty': 'Sélectionner un bien...', 'dealModal.dealValue': 'Valeur de l'affaire', 'dealModal.dealValuePlaceholder': '4 200 000', 'dealModal.expectedCloseDate': 'Date de clôture prévue', 'dealModal.pipelineStage': 'Étape du pipeline', 'dealModal.probability': 'Probabilité (%)', 'dealModal.probabilityPlaceholder': '0–100, selon l'étape', 'dealModal.notesPlaceholder': 'Acheteur cash, prêt à clôturer rapidement.',
+
+  // Property modal
+  'propertyModal.title': 'Nouvelle propriété', 'propertyModal.description': 'Ajoutez un bien avec photos et détails complets.', 'propertyModal.saveDraft': 'Enregistrer le brouillon', 'propertyModal.publishProperty': 'Publier le bien', 'propertyModal.titleRequired': 'Le titre est requis', 'propertyModal.addressRequired': 'L'adresse est requise', 'propertyModal.propertyCreated': 'Bien "{title}" créé', 'propertyModal.photoGallery': 'Galerie photo', 'propertyModal.uploadPhotos': 'Télécharger des photos', 'propertyModal.cover': 'COUVERTURE', 'propertyModal.propertyTitle': 'Titre', 'propertyModal.titlePlaceholder': 'Penthouse Skyline', 'propertyModal.address': 'Adresse', 'propertyModal.addressPlaceholder': '1200 Brickell Ave, PH-2', 'propertyModal.cityPlaceholder': 'Miami, FL', 'propertyModal.country': 'Pays', 'propertyModal.countryPlaceholder': 'États-Unis', 'propertyModal.propertyType': 'Type de bien', 'propertyModal.pricePlaceholder': '4 200 000', 'propertyModal.bedroomsPlaceholder': '4', 'propertyModal.bathroomsPlaceholder': '5', 'propertyModal.surface': 'Surface (pi²)', 'propertyModal.surfacePlaceholder': '4200', 'propertyModal.agent': 'Agent', 'propertyModal.selectAgent': 'Sélectionner un agent...', 'propertyModal.amenities': 'Équipements', 'propertyModal.amenitiesPlaceholder': 'Ajouter un équipement...', 'propertyModal.description': 'Description', 'propertyModal.descriptionPlaceholder': 'Bien en vedette', 'propertyModal.showFeatured': 'Afficher ce bien dans les sections vedettes du CRM',
+
+  // Task modal
+  'taskModal.title': 'Nouvelle tâche', 'taskModal.description': 'Assignez une tâche à vous-même ou à un membre de l'équipe.', 'taskModal.saveTask': 'Enregistrer la tâche', 'taskModal.titleRequired': 'Le titre est requis', 'taskModal.taskCreated': 'Tâche "{title}" créée', 'taskModal.taskTitlePlaceholder': 'ex. Relancer un prospect', 'taskModal.dueDate': 'Date d'échéance', 'taskModal.assignedTo': 'Assigné à', 'taskModal.selectTeamMember': 'Sélectionner un membre...', 'taskModal.descriptionPlaceholder': 'Envoyer des photos supplémentaires et planifier une visite.',
+
+  // Meeting modal
+  'meetingModal.title': 'Planifier une réunion', 'meetingModal.description': 'Créez une réunion dans le calendrier MEHANS.', 'meetingModal.schedule': 'Planifier', 'meetingModal.titleRequired': 'Le titre est requis', 'meetingModal.dateRequired': 'La date est requise', 'meetingModal.meetingCreated': 'Réunion "{title}" planifiée', 'meetingModal.meetingTitlePlaceholder': 'ex. Visite de bien', 'meetingModal.date': 'Date', 'meetingModal.time': 'Heure', 'meetingModal.duration': 'Durée (minutes)', 'meetingModal.durationPlaceholder': '30', 'meetingModal.meetingType': 'Type de réunion', 'meetingModal.location': 'Lieu', 'meetingModal.locationPlaceholder': 'Penthouse Skyline, Miami', 'meetingModal.attendeeName': 'Nom du participant', 'meetingModal.attendeePlaceholder': 'Nom du participant', 'meetingModal.connectLead': 'Lier le prospect', 'meetingModal.selectLead': 'Sélectionner un prospect...', 'meetingModal.connectContact': 'Lier le contact', 'meetingModal.selectContact': 'Sélectionner un contact...', 'meetingModal.assignedAgent': 'Agent assigné', 'meetingModal.selectAgent': 'Sélectionner un agent...', 'meetingModal.notesPlaceholder': 'Confirmer les arrangements de parking avec le concierge.',
+
+  // Languages
+  'lang.english': 'Anglais', 'lang.spanish': 'Espagnol', 'lang.french': 'Français', 'lang.arabic': 'Arabe', 'lang.mandarin': 'Mandarin', 'lang.hindi': 'Hindi', 'lang.portuguese': 'Portugais',
+
+  // Amenities
+  'amenity.pool': 'Piscine', 'amenity.gym': 'Salle de sport', 'amenity.garden': 'Jardin', 'amenity.garage': 'Garage', 'amenity.smartHome': 'Maison connectée', 'amenity.seaView': 'Vue mer', 'amenity.rooftop': 'Toit-terrasse', 'amenity.elevator': 'Ascenseur', 'amenity.security': 'Sécurité', 'amenity.concierge': 'Conciergerie', 'amenity.ac': 'Climatisation', 'amenity.heating': 'Chauffage',
+
+  // Tags
+  'tag.vip': 'VIP', 'tag.cashBuyer': 'Acheteur cash', 'tag.hotLead': 'Prospect chaud', 'tag.investor': 'Investisseur', 'tag.firstTimeBuyer': 'Premier achat',
 };
 
 const ar: Dict = {
   // Nav
-  'nav.overview': 'نظرة عامة',
+  'nav.overview': 'لوحة التحكم',
   'nav.leads': 'العملاء المحتملون',
   'nav.properties': 'العقارات',
-  'nav.pipeline': 'خط المعالجة',
+  'nav.pipeline': 'مسار الصفقات',
   'nav.deals': 'الصفقات',
   'nav.calendar': 'التقويم',
   'nav.tasks': 'المهام',
@@ -761,12 +1159,16 @@ const ar: Dict = {
   'nav.reports': 'التقارير',
   'nav.settings': 'الإعدادات',
   'nav.collapse': 'طي',
+  'nav.companies': 'الشركات',
+  'nav.contacts': 'جهات الاتصال',
+  'nav.team': 'الفريق',
+  'nav.automations': 'الأتمتة',
 
   // Navbar
-  'navbar.search': 'البحث عن عملاء، صفقات، عقارات...',
+  'navbar.search': 'ابحث عن عملاء، صفقات، عقارات...',
   'navbar.searchShort': 'بحث...',
-  'navbar.searchPlaceholder': 'البحث عن عملاء، عقارات، صفقات، مهام، اجتماعات...',
-  'navbar.searchStart': 'ابدأ الكتابة للبحث في نظام إدارة العلاقات',
+  'navbar.searchPlaceholder': 'ابحث عن عملاء، عقارات، صفقات، مهام، اجتماعات...',
+  'navbar.searchStart': 'ابدأ الكتابة للبحث في جميع أنحاء النظام',
   'navbar.searchNoResults': 'لا توجد نتائج',
   'navbar.quickAdd': 'إضافة سريعة',
   'navbar.newLead': 'عميل محتمل جديد',
@@ -777,10 +1179,16 @@ const ar: Dict = {
   'navbar.notifications': 'الإشعارات',
   'navbar.markAllRead': 'تحديد الكل كمقروء',
   'navbar.marking': 'جاري التحديد...',
-  'navbar.noNotifications': 'لا توجد إشعارات',
+  'navbar.noNotifications': 'لا توجد إشعارات بعد',
   'navbar.aiCopilot': 'مساعد الذكاء الاصطناعي',
   'navbar.profile': 'الملف الشخصي',
   'navbar.signOut': 'تسجيل الخروج',
+  'navbar.allNotificationsRead': 'تم تحديد جميع الإشعارات كمقروءة',
+  'navbar.markReadFailed': 'فشل تحديد الإشعارات كمقروءة',
+  'navbar.signOutFailed': 'تعذر تسجيل الخروج',
+  'navbar.workspaceUser': 'مستخدم مساحة العمل',
+  'navbar.enterpriseWorkspace': 'مساحة عمل مؤسسية',
+  'navbar.language': 'اللغة',
 
   // Common
   'common.save': 'حفظ التغييرات',
@@ -807,57 +1215,67 @@ const ar: Dict = {
   'common.role': 'الدور',
   'common.actions': 'إجراءات',
   'common.viewAll': 'عرض الكل',
-  'common.created': 'تم الإنشاء',
-  'common.updated': 'تم التحديث',
+  'common.created': 'تاريخ الإنشاء',
+  'common.updated': 'تاريخ التحديث',
+  'common.unassigned': 'غير مُسند',
+  'common.na': 'غير متاح',
+  'common.vsLastMonth': 'مقارنة بالشهر الماضي',
+  'common.select': 'اختر...',
+  'common.addTag': 'إضافة وسم...',
+  'common.selectDate': 'اختر التاريخ',
+  'common.uploadFile': 'رفع ملف',
+  'common.dragDrop': 'اسحب وأفلت أو انقر للتصفح',
+  'common.preview': 'معاينة',
+  'common.searchPrompt': 'بحث...',
 
   // Dashboard
-  'dashboard.title': 'نظرة عامة',
-  'dashboard.description': 'إليك ما يحدث في وكالتك اليوم.',
+  'dashboard.title': 'لوحة التحكم',
+  'dashboard.description': 'إليك ما يجري في وكالتك اليوم.',
   'dashboard.revenue': 'الإيرادات',
-  'dashboard.pipeline': 'خط المعالجة',
-  'dashboard.conversion': 'التحويل',
+  'dashboard.pipeline': 'مسار الصفقات',
+  'dashboard.conversion': 'معدل التحويل',
   'dashboard.appointments': 'المواعيد',
   'dashboard.tasks': 'المهام',
   'dashboard.properties': 'العقارات',
   'dashboard.revenueOverview': 'نظرة عامة على الإيرادات',
-  'dashboard.leadSources': 'مصادر العملاء',
-  'dashboard.pipelineValue': 'قيمة خط المعالجة',
+  'dashboard.leadSources': 'مصادر العملاء المحتملين',
+  'dashboard.pipelineValue': 'قيمة مسار الصفقات',
   'dashboard.salesFunnel': 'قمع المبيعات',
   'dashboard.recentActivity': 'النشاط الأخير',
   'dashboard.upcomingMeetings': 'الاجتماعات القادمة',
   'dashboard.viewCalendar': 'عرض التقويم',
   'dashboard.aiInsights': 'رؤى الذكاء الاصطناعي',
-  'dashboard.aiPoweredBy': 'مدعوم بواسطة MEHANS AI',
-  'dashboard.analyzing': 'جاري تحليل بيانات نظام إدارة العلاقات...',
-  'dashboard.addLeadsForInsights': 'أضف عملاء وصفقات للحصول على رؤى الذكاء الاصطناعي.',
+  'dashboard.aiPoweredBy': 'مدعوم بـ MEHANS AI',
+  'dashboard.analyzing': 'جاري تحليل بيانات النظام...',
+  'dashboard.addLeadsForInsights': 'أضف عملاء محتملين وصفقات للحصول على رؤى الذكاء الاصطناعي.',
   'dashboard.today': 'اليوم',
   'dashboard.thisWeek': 'هذا الأسبوع',
   'dashboard.thisMonth': 'هذا الشهر',
   'dashboard.thisQuarter': 'هذا الربع',
-  'dashboard.allTime': 'كل الوقت',
+  'dashboard.allTime': 'كل الفترات',
   'dashboard.monthlyRevenueTarget': 'الإيرادات الشهرية مقارنة بالهدف',
   'dashboard.revenueLabel': 'الإيرادات',
   'dashboard.targetLabel': 'الهدف',
   'dashboard.leadSourcesDescription': 'مصادر العملاء المحتملين',
-  'dashboard.pipelineOverTime': 'إجمالي قيمة خط الصفقات بمرور الوقت (مليون)',
+  'dashboard.pipelineOverTime': 'إجمالي قيمة مسار الصفقات عبر الزمن (مليون)',
   'dashboard.teamPerformance': 'أداء الفريق',
   'dashboard.thisQuarterBadge': 'هذا الربع',
   'dashboard.dealsMetric': 'الصفقات',
   'dashboard.revenueMetric': 'الإيرادات',
   'dashboard.noMeetings': 'لا توجد اجتماعات قادمة',
-  'dashboard.noActivity': 'لا يوجد نشاط حديث',
+  'dashboard.noActivity': 'لا يوجد نشاط أخير',
   'dashboard.priorities': 'أولويات اليوم',
-  'dashboard.prioritiesDescription': 'أفضل الإجراءات التالية من بيانات CRM الحقيقية',
+  'dashboard.prioritiesDescription': 'أفضل الإجراءات التالية من بياناتك الحية',
   'dashboard.noPriorities': 'لا توجد متابعات عاجلة مسجلة اليوم',
 
   // Leads
   'leads.title': 'العملاء المحتملون',
-  'leads.description': 'إدارة وتأهيل العملاء المحتملين الواردة',
+  'leads.description': 'إدارة وتأهيل العملاء المحتملين الواردين',
   'leads.newLead': 'عميل محتمل جديد',
   'leads.score': 'النتيجة',
   'leads.budget': 'الميزانية',
   'leads.source': 'المصدر',
-  'leads.assignedTo': 'مسند إلى',
+  'leads.assignedTo': 'مُسند إلى',
   'leads.propertyInterest': 'اهتمام عقاري',
   'leads.tags': 'الوسوم',
   'leads.notes': 'ملاحظات',
@@ -867,21 +1285,21 @@ const ar: Dict = {
   'leads.empty': 'لا يوجد عملاء محتملون',
   'leads.emptyHint': 'أنشئ أول عميل محتمل للبدء',
   'leads.nextBestAction': 'أفضل إجراء تالٍ',
-  'leads.actionNegotiation': 'تواصل مع {name} اليوم بشأن التفاوض الحالي.',
-  'leads.actionNew': 'تأهل من {name}: اسأل عن الجدول الزمني والميزانية والمنطقة المفضلة.',
-  'leads.actionVisit': 'تابع مع {name} بعد المعاينة المجدولة.',
+  'leads.actionNegotiation': 'تواصل مع {name} اليوم بشأن التفاوض الجاري.',
+  'leads.actionNew': 'أهّل {name}: اسأل عن الجدول الزمني والميزانية والمنطقة المفضلة.',
+  'leads.actionVisit': 'تابع {name} بعد المعاينة المجدولة.',
   'leads.actionQualified': 'أرسل إلى {name} العقارات المتاحة المطابقة واقترح معاينة.',
-  'leads.actionGeneric': 'تابع مع {name} وأكد الخطوة التالية.',
+  'leads.actionGeneric': 'تابع {name} وأكّد الخطوة التالية.',
 
   // Properties
   'properties.title': 'العقارات',
-  'properties.description': 'تصفح وإدارة قوائم العقارات الخاصة بك',
+  'properties.description': 'تصفّح وإدارة قوائم العقارات',
   'properties.newProperty': 'عقار جديد',
   'properties.price': 'السعر',
   'deals.value': 'قيمة الصفقة',
   'properties.type': 'النوع',
   'properties.bedrooms': 'غرف النوم',
-  'properties.bathrooms': 'الحمامات',
+  'properties.bathrooms': 'دورات المياه',
   'properties.area': 'المساحة',
   'properties.location': 'الموقع',
   'properties.city': 'المدينة',
@@ -907,17 +1325,17 @@ const ar: Dict = {
   'calendar.syncSuccess': 'تمت مزامنة التقويم مع Google Calendar.',
   'calendar.syncFailed': 'فشلت مزامنة Google Calendar.',
   'calendar.googleConnected': 'تم ربط Google Calendar بنجاح.',
-  'calendar.authWait': 'يرجى الانتظار قليلاً والمحاولة مرة أخرى.',
+  'calendar.authWait': 'يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.',
   'calendar.connectFailed': 'تعذر بدء ربط Google Calendar.',
   'calendar.noMeetings': 'لا توجد اجتماعات مجدولة',
 
   // Settings
   'settings.title': 'الإعدادات',
-  'settings.description': 'إدارة تكوين مساحة العمل الخاصة بك',
+  'settings.description': 'إدارة إعدادات مساحة العمل',
   'settings.organization': 'المؤسسة',
   'settings.users': 'المستخدمون',
   'settings.permissions': 'الأذونات',
-  'settings.integrations': 'التكاملات',
+  'settings.integrations': 'الربط',
   'settings.apiKeys': 'مفاتيح API',
   'settings.organizationDetails': 'تفاصيل المؤسسة',
   'settings.orgName': 'اسم المؤسسة',
@@ -933,16 +1351,16 @@ const ar: Dict = {
   'settings.noUsers': 'لا يوجد مستخدمون. ادعُ أعضاء الفريق للبدء.',
   'settings.saved': 'تم حفظ إعدادات المؤسسة',
   'settings.saveFailed': 'فشل حفظ الإعدادات',
-  'settings.workspaceLoadFailed': 'تعذر تحميل ملف مساحة العمل هذه.',
-  'settings.workspaceUnavailable': 'ملف مساحة العمل هذه غير متاح بعد.',
+  'settings.workspaceLoadFailed': 'تعذر تحميل ملف تعريف مساحة العمل هذه.',
+  'settings.workspaceUnavailable': 'ملف تعريف مساحة العمل هذه غير متاح بعد.',
   'settings.companyInfo': 'معلومات الشركة',
   'settings.agencyName': 'اسم الوكالة',
   'settings.address': 'العنوان',
   'settings.city': 'المدينة',
   'settings.country': 'الدولة',
-  'settings.uploadLogo': 'تحميل الشعار',
-  'settings.logoUploaded': 'تم تحميل الشعار بنجاح',
-  'settings.logoUploadFailed': 'فشل تحميل الشعار',
+  'settings.uploadLogo': 'رفع الشعار',
+  'settings.logoUploaded': 'تم رفع الشعار بنجاح',
+  'settings.logoUploadFailed': 'فشل رفع الشعار',
   'settings.logoInvalidFile': 'يرجى اختيار ملف صورة',
   'settings.logoTooLarge': 'يجب أن يكون حجم الشعار أقل من 2 ميجابايت',
   'settings.unnamedAgency': 'وكالة بدون اسم',
@@ -960,8 +1378,8 @@ const ar: Dict = {
   'settings.create': 'إنشاء',
   'settings.edit': 'تعديل',
   'settings.delete': 'حذف',
-  'settings.disconnectFailed': 'فشل قطع اتصال التكامل',
-  'settings.noIntegrations': 'لا توجد تكاملات مكونة.',
+  'settings.disconnectFailed': 'فشل قطع اتصال الربط',
+  'settings.noIntegrations': 'لا يوجد ربط مُعد.',
   'settings.nameApiKey': 'يرجى تسمية مفتاح API الخاص بك',
   'settings.apiKeyCreated': 'تم إنشاء مفتاح API',
   'settings.apiKeyCreateFailed': 'فشل إنشاء مفتاح API',
@@ -982,31 +1400,31 @@ const ar: Dict = {
   'settings.agent': 'وكيل',
   'settings.viewer': 'مشاهد',
   'settings.modules': 'وحدات',
-  'settings.n8nLoadFailed': 'فشل تحميل تكوين n8n',
+  'settings.whatsappDescription': 'إرسال رسائل إلى العملاء المحتملين',
+  'settings.integration': 'ربط',
+  'settings.connected': 'متصل',
+  'settings.manage': 'إدارة',
+  'settings.connect': 'ربط',
+  'settings.webhooks': 'ويب هوك',
+  'settings.n8nActionWebhook': 'ويب هوك إجراءات n8n (n8n ← CRM)',
+  'settings.n8nActionWebhookHint': 'يرسل n8n الإجراءات إلى هذا العنوان. يتطلب سر الويب هوك.',
+  'settings.crmEventDispatch': 'إرسال أحداث CRM (CRM ← n8n)',
+  'settings.crmEventDispatchHint': 'تُرسل أحداث CRM إلى عنوان ويب هوك n8n. اضبطه في الأتمتة.',
+  'settings.n8nEngine': 'محرك أتمتة n8n',
+  'settings.n8nEngineHint': 'اربط n8n لتشغيل أتمتة CRM.',
+  'settings.n8nWebhookUrl': 'عنوان ويب هوك n8n',
+  'settings.n8nWebhookHint': 'تُرسل أحداث CRM إلى هذا العنوان. حافظ على سريته.',
+  'settings.n8nApiUrl': 'عنوان API لـ n8n (اختياري)',
+  'settings.webhookSecret': 'سر الويب هوك',
+  'settings.webhookSecretHint': 'يُرسل كسر يجب على n8n التحقق منه.',
+  'settings.availableWebhookEvents': 'أحداث الويب هوك المتاحة',
+  'settings.availableWebhookEventsHint': 'استخدم هذه الأحداث كمشغلات في مسارات عمل n8n.',
+  'settings.eventNewWhatsapp': 'رسالة واتساب جديدة', 'settings.eventOutgoingWhatsapp': 'رسالة واتساب صادرة', 'settings.eventNewConversation': 'محادثة واتساب جديدة', 'settings.eventConnectionChange': 'تغيّر اتصال واتساب', 'settings.eventLeadCreated': 'إنشاء عميل محتمل', 'settings.eventLeadInactive': 'عميل محتمل غير نشط (48 ساعة)', 'settings.eventDealWon': 'صفقة رابحة', 'settings.eventDealLost': 'صفقة خاسرة', 'settings.eventMeetingCreated': 'إنشاء موعد', 'settings.eventMeetingUpdated': 'تحديث موعد', 'settings.eventMeetingCancelled': 'إلغاء موعد', 'settings.eventMeetingCompleted': 'إكمال موعد',
+  'settings.n8nLoadFailed': 'فشل تحميل إعدادات n8n',
   'settings.n8nSaved': 'تم حفظ إعدادات n8n',
   'settings.n8nSaveFailed': 'فشل حفظ إعدادات n8n',
   'settings.testFailed': 'فشل الاختبار',
   'settings.testConnection': 'اختبار الاتصال',
-  'settings.whatsappDescription': 'إرسال رسائل إلى العملاء المحتملين',
-  'settings.integration': 'تكامل',
-  'settings.connected': 'متصل',
-  'settings.manage': 'إدارة',
-  'settings.connect': 'اتصال',
-  'settings.webhooks': 'خطافات الويب',
-  'settings.n8nActionWebhook': 'خطاف إجراءات n8n (n8n ← CRM)',
-  'settings.n8nActionWebhookHint': 'يرسل n8n الإجراءات إلى هذا العنوان ويتطلب سر الخطاف.',
-  'settings.crmEventDispatch': 'إرسال أحداث CRM (CRM ← n8n)',
-  'settings.crmEventDispatchHint': 'ترسل أحداث CRM إلى عنوان n8n. قم بإعداده في الأتمتة.',
-  'settings.n8nEngine': 'محرك أتمتة n8n',
-  'settings.n8nEngineHint': 'اربط n8n لتشغيل أتمتة CRM.',
-  'settings.n8nWebhookUrl': 'عنوان خطاف n8n',
-  'settings.n8nWebhookHint': 'ترسل أحداث CRM إلى هذا العنوان. حافظ على سريته.',
-  'settings.n8nApiUrl': 'عنوان API لـ n8n (اختياري)',
-  'settings.webhookSecret': 'سر خطاف الويب',
-  'settings.webhookSecretHint': 'يُرسل كسر يجب على n8n التحقق منه.',
-  'settings.availableWebhookEvents': 'أحداث خطاف الويب المتاحة',
-  'settings.availableWebhookEventsHint': 'استخدم هذه الأحداث كمشغلات في مسارات عمل n8n.',
-  'settings.eventNewWhatsapp': 'رسالة واتساب جديدة', 'settings.eventOutgoingWhatsapp': 'رسالة واتساب صادرة', 'settings.eventNewConversation': 'محادثة واتساب جديدة', 'settings.eventConnectionChange': 'تغير اتصال واتساب', 'settings.eventLeadCreated': 'تم إنشاء عميل محتمل', 'settings.eventLeadInactive': 'عميل محتمل غير نشط (48 ساعة)', 'settings.eventDealWon': 'صفقة مكسوبة', 'settings.eventDealLost': 'صفقة خاسرة', 'settings.eventMeetingCreated': 'تم إنشاء موعد', 'settings.eventMeetingUpdated': 'تم تحديث الموعد', 'settings.eventMeetingCancelled': 'تم إلغاء الموعد', 'settings.eventMeetingCompleted': 'تم إكمال الموعد',
 
   // Auth
   'auth.signIn': 'تسجيل الدخول',
@@ -1018,24 +1436,33 @@ const ar: Dict = {
   'auth.createAccount': 'أنشئ حسابك',
   'auth.noAccount': 'ليس لديك حساب؟',
   'auth.haveAccount': 'لديك حساب بالفعل؟',
+  'auth.fullName': 'الاسم الكامل',
+  'auth.continueWithGoogle': 'المتابعة عبر Google',
+  'auth.or': 'أو',
+  'auth.realEstate': 'العقارات',
+  'auth.nameRequired': 'يرجى إدخال اسمك الكامل',
+  'auth.emailRequired': 'يرجى إدخال بريدك الإلكتروني',
+  'auth.emailInvalid': 'يرجى إدخال عنوان بريد إلكتروني صحيح',
+  'auth.passwordRequired': 'يرجى إدخال كلمة المرور',
+  'auth.passwordTooShort': 'يجب أن تكون كلمة المرور 6 أحرف على الأقل',
+  'auth.accountCreated': 'تم إنشاء الحساب. يمكنك تسجيل الدخول الآن.',
+  'auth.unableToContinue': 'تعذر المتابعة',
 
   // Time
   'time.justNow': 'الآن',
   'time.minutesAgo': 'منذ {n} د',
   'time.hoursAgo': 'منذ {n} س',
   'time.daysAgo': 'منذ {n} ي',
+
+  // Pages
   'page.analytics': 'التحليلات',
   'page.automations': 'الأتمتة',
   'page.companies': 'الشركات',
   'page.contacts': 'جهات الاتصال',
   'page.team': 'الفريق',
   'page.aiAssistant': 'مساعد الذكاء الاصطناعي',
-  'page.pipeline': 'خط المعالجة',
+  'page.pipeline': 'مسار الصفقات',
   'page.reports': 'التقارير',
-  'analytics.leadsGenerated': 'العملاء المحتملون المُنشأون',
-  'team.members': 'أعضاء الفريق',
-  'team.totalDeals': 'إجمالي الصفقات',
-  'team.avgRevenue': 'متوسط الإيرادات',
   'page.whatsapp': 'واتساب',
   'page.tasks': 'المهام',
   'page.meetings': 'الاجتماعات',
@@ -1043,8 +1470,8 @@ const ar: Dict = {
   'page.contactsDescription': 'إدارة جهات الاتصال والعلاقات',
   'page.companiesDescription': 'إدارة الشركات في شبكتك',
   'page.teamDescription': 'إدارة أعضاء فريقك',
-  'page.pipelineDescription': 'نقل الصفقات بين المراحل',
-  'page.analyticsDescription': 'رؤى عميقة حول أداء عملك',
+  'page.pipelineDescription': 'اسحب وأفلت الصفقات بين المراحل',
+  'page.analyticsDescription': 'رؤى عميقة في أداء عملك',
   'page.reportsDescription': 'إنشاء وتنزيل تقارير الأعمال',
   'page.whatsappDescription': 'إدارة المحادثات من رقم عملك المتصل',
   'page.aiAssistantDescription': 'نظام مبيعات عقاري مدعوم بالذكاء الاصطناعي',
@@ -1053,30 +1480,105 @@ const ar: Dict = {
   'page.meetingsDescription': 'جدولة وإدارة اجتماعاتك',
   'page.dealsDescription': 'تتبع وإدارة فرص المبيعات',
 
-  // مساعد الذكاء الاصطناعي
+  // AI Assistant
   'ai.chat': 'محادثة', 'ai.insights': 'رؤى', 'ai.generate': 'إنشاء',
-  'ai.welcomeMessage': 'أنا مساعد MEHANS الذكي. يمكنني مساعدتك في تأهيل العملاء المحتملين، وإنشاء رسائل البريد الإلكتروني وواتساب، وتحليل خط المبيعات، واقتراح أفضل الخطوات التالية. كيف يمكنني مساعدتك اليوم؟',
+  'ai.welcomeMessage': 'أنا مساعد MEHANS الذكي. يمكنني مساعدتك في تأهيل العملاء المحتملين، وإنشاء رسائل البريد الإلكتروني وواتساب، وتحليل مسار الصفقات، واقتراح أفضل الإجراءات التالية. كيف يمكنني مساعدتك اليوم؟',
   'ai.placeholder': 'اسأل الذكاء الاصطناعي أي شيء...', 'ai.leadScoring': 'تقييم العملاء بالذكاء الاصطناعي', 'ai.suggestedActions': 'الإجراءات المقترحة',
   'ai.loadingScores': 'جاري تحميل التقييمات…', 'ai.unableLoadScores': 'تعذر تحميل تقييمات العملاء.', 'ai.noLeadsScored': 'لم يتم تقييم أي عملاء بعد.', 'ai.aiScore': 'تقييم الذكاء الاصطناعي',
   'ai.unableLoadActions': 'تعذر تحميل الإجراءات.', 'ai.addLeadsActions': 'أضف عملاء محتملين للحصول على إجراءات مقترحة.', 'ai.noHighPriority': 'لا يوجد عملاء ذوو أولوية عالية بعد.',
-  'ai.actionCall': 'اتصل بـ {name} (تفاوض)', 'ai.actionEmail': 'أرسل بريداً إلى {name} (عميل جديد)', 'ai.actionWhatsapp': 'واتساب مع {name}', 'ai.actionFollowUp': 'متابعة مع {name}',
+  'ai.actionCall': 'اتصل بـ {name} (تفاوض)', 'ai.actionEmail': 'أرسل بريداً إلى {name} (عميل جديد)', 'ai.actionWhatsapp': 'واتساب مع {name}', 'ai.actionFollowUp': 'متابعة {name}',
   'ai.followupEmail': 'بريد متابعة', 'ai.followupEmailDesc': 'إنشاء بريد متابعة مخصص لأهم عميل محتمل لديك',
   'ai.whatsappMessage': 'رسالة واتساب', 'ai.whatsappMessageDesc': 'إنشاء رسالة واتساب للعميل الأكثر نشاطاً',
   'ai.leadSummary': 'ملخص العميل المحتمل', 'ai.leadSummaryDesc': 'ملخص تأهيل العميل مدعوم بالذكاء الاصطناعي', 'ai.salesInsights': 'رؤى المبيعات', 'ai.salesInsightsDesc': 'الحصول على رؤى عملية لأداء المبيعات',
-  'ai.previewEmail': 'معاينة: بريد المتابعة', 'ai.actionPrefix': 'الإجراء: {action}', 'ai.contentGenerated': 'تم إنشاء المحتوى بالذكاء الاصطناعي', 'ai.selectInsights': 'اختر «رؤى» لتحليل بيانات نظام إدارة العلاقات الحالي.', 'ai.selectGenerate': 'اختر إجراء إنشاء لإنتاج محتوى من بيانات نظام إدارة العلاقات.',
+  'ai.previewEmail': 'معاينة: بريد المتابعة', 'ai.actionPrefix': 'الإجراء: {action}', 'ai.contentGenerated': 'تم إنشاء المحتوى بالذكاء الاصطناعي', 'ai.selectInsights': 'اختر «رؤى» لتحليل بياناتك الحالية.', 'ai.selectGenerate': 'اختر إجراء إنشاء لإنتاج محتوى من بياناتك.',
   'ai.unableReachAI': 'تعذر الوصول إلى خدمة الذكاء الاصطناعي', 'ai.unableLoadInsights': 'تعذر تحميل رؤى الذكاء الاصطناعي', 'ai.unableGenerate': 'تعذر إنشاء المحتوى', 'ai.copied': 'تم النسخ إلى الحافظة',
   'ai.suggestion1': 'أهّل العميل المحتمل الأعلى أولوية. اعرض الحقائق المعروفة والمعلومات الناقصة والنية والاعتراضات والإجراء التالي.',
   'ai.suggestion2': 'اعثر على العقارات المتاحة التي تطابق العميل المحتمل الأعلى أولوية واشرح سبب مطابقة كل عقار.',
   'ai.suggestion3': 'أي العملاء المحتملين ينتظرون منا إجراءً اليوم؟ اقترح أفضل إجراء تالٍ من النشاط الفعلي.',
   'ai.suggestion4': 'اكتب رسالة متابعة احترافية عبر واتساب للمحادثة المحددة. لا ترسلها.',
-  'analytics.last8Months': 'آخر 8 أشهر', 'analytics.totalRevenue': 'إجمالي الإيرادات', 'analytics.dealsClosed': 'الصفقات المغلقة', 'analytics.avgDealSize': 'متوسط حجم الصفقة', 'analytics.winRate': 'نسبة النجاح',
-  'analytics.revenueTrend': 'اتجاه الإيرادات', 'analytics.monthlyRevenue': 'الإيرادات الشهرية بمرور الوقت', 'analytics.dealsCreatedVsWon': 'الصفقات: المنشأة مقابل المكسوبة', 'analytics.monthlyDealFlow': 'تدفق الصفقات الشهري',
+
+  // Analytics
+  'analytics.last8Months': 'آخر 8 أشهر', 'analytics.totalRevenue': 'إجمالي الإيرادات', 'analytics.dealsClosed': 'الصفقات المغلقة', 'analytics.avgDealSize': 'متوسط حجم الصفقة', 'analytics.winRate': 'نسبة الفوز',
+  'analytics.revenueTrend': 'اتجاه الإيرادات', 'analytics.monthlyRevenue': 'الإيرادات الشهرية عبر الزمن', 'analytics.dealsCreatedVsWon': 'الصفقات: المنشأة مقابل الرابحة', 'analytics.monthlyDealFlow': 'تدفق الصفقات الشهري',
   'analytics.leadSources': 'مصادر العملاء المحتملين', 'analytics.distributionChannel': 'التوزيع حسب القناة', 'analytics.propertyTypes': 'أنواع العقارات', 'analytics.listingsByCategory': 'القوائم حسب الفئة',
-  'analytics.conversionRate': 'معدل التحويل', 'analytics.leadToClose': 'من العميل إلى الإغلاق', 'analytics.industryAvg': 'متوسط القطاع', 'analytics.yourRate': 'معدلك', 'analytics.responseTime': 'وقت الاستجابة', 'analytics.avgFirstResponse': 'متوسط الاستجابة الأولى (بالساعات) حسب اليوم', 'analytics.teamLeaderboard': 'ترتيب الفريق', 'analytics.revenueByAgent': 'إيرادات الوكلاء هذا الربع', 'analytics.noTeamMembers': 'لم يتم العثور على أعضاء الفريق.', 'analytics.records': 'السجلات', 'analytics.closedDeals': 'الصفقات المغلقة', 'analytics.wonDeals': 'الصفقات المكسوبة',
+  'analytics.conversionRate': 'معدل التحويل', 'analytics.leadToClose': 'من العميل إلى الإغلاق', 'analytics.industryAvg': 'متوسط القطاع', 'analytics.yourRate': 'معدلك', 'analytics.responseTime': 'وقت الاستجابة', 'analytics.avgFirstResponse': 'متوسط الاستجابة الأولى (بالساعات) حسب اليوم', 'analytics.teamLeaderboard': 'ترتيب الفريق', 'analytics.revenueByAgent': 'إيرادات الوكلاء هذا الربع', 'analytics.noTeamMembers': 'لم يتم العثور على أعضاء الفريق.', 'analytics.records': 'السجلات', 'analytics.closedDeals': 'الصفقات المغلقة', 'analytics.wonDeals': 'الصفقات الرابحة', 'analytics.leadsGenerated': 'العملاء المحتملون المُنشأون',
+
+  // Team
+  'team.members': 'أعضاء الفريق', 'team.totalDeals': 'إجمالي الصفقات', 'team.avgRevenue': 'متوسط الإيرادات',
+  'team.active': 'نشط', 'team.away': 'غائب', 'team.offline': 'غير متصل',
+  'team.member': 'العضو', 'team.deals': 'الصفقات', 'team.revenue': 'الإيرادات', 'team.performance': 'الأداء',
+  'team.searchMembers': 'ابحث عن أعضاء الفريق...', 'team.noMembers': 'لم يتم العثور على أعضاء.', 'team.noMembersMatch': 'لا يوجد أعضاء يطابقون بحثك.', 'team.inviteOpened': 'تم فتح نموذج دعوة عضو',
+
+  // Property types
   'property.apartments': 'شقق', 'property.villas': 'فلل', 'property.penthouses': 'بنتهاوس', 'property.townhouses': 'منازل متلاصقة', 'property.commercial': 'تجاري',
+  'property.apartment': 'شقة', 'property.villa': 'فيلا', 'property.penthouse': 'بنتهاوس', 'property.townhouse': 'منزل متلاصق', 'property.land': 'أرض',
+  'property.draft': 'مسودة', 'property.available': 'متاح', 'property.reserved': 'محجوز', 'property.sold': 'مباع', 'property.rented': 'مؤجر', 'property.offMarket': 'سحب من السوق',
+
+  // Months
   'month.jan': 'يناير', 'month.feb': 'فبراير', 'month.mar': 'مارس', 'month.apr': 'أبريل', 'month.may': 'مايو', 'month.jun': 'يونيو', 'month.jul': 'يوليو', 'month.aug': 'أغسطس', 'month.sep': 'سبتمبر', 'month.oct': 'أكتوبر', 'month.nov': 'نوفمبر', 'month.dec': 'ديسمبر',
+
+  // Days
   'day.mon': 'الإثنين', 'day.tue': 'الثلاثاء', 'day.wed': 'الأربعاء', 'day.thu': 'الخميس', 'day.fri': 'الجمعة', 'day.sat': 'السبت', 'day.sun': 'الأحد',
-  'dashboard.priorityOverdueTask': 'مهمة متأخرة: {title}', 'dashboard.priorityMeetingToday': 'اجتماع اليوم: {title}', 'dashboard.priorityHotLead': 'عميل محتمل مهم: {name}', 'dashboard.priorityFollowUp': 'متابعة مع {name}',
+
+  // Dashboard priorities
+  'dashboard.priorityOverdueTask': 'مهمة متأخرة: {title}', 'dashboard.priorityMeetingToday': 'اجتماع اليوم: {title}', 'dashboard.priorityHotLead': 'عميل محتمل ساخن: {name}', 'dashboard.priorityFollowUp': 'متابعة {name}',
+
+  // Pipeline stages
+  'stage.newLead': 'عميل جديد', 'stage.qualified': 'مؤهل', 'stage.visitScheduled': 'معاينة مجدولة', 'stage.negotiation': 'تفاوض', 'stage.won': 'رابحة', 'stage.lost': 'خاسرة',
+
+  // Lead sources
+  'source.website': 'الموقع الإلكتروني', 'source.referral': 'إحالة', 'source.socialMedia': 'وسائل التواصل', 'source.walkIn': 'زيارة مباشرة', 'source.portal': 'بوابة', 'source.coldCall': 'اتصال بارد',
+
+  // Lead statuses
+  'leadStatus.new': 'جديد', 'leadStatus.qualified': 'مؤهل', 'leadStatus.visitScheduled': 'معاينة مجدولة', 'leadStatus.negotiation': 'تفاوض', 'leadStatus.won': 'رابح', 'leadStatus.lost': 'خاسر',
+
+  // Task priorities
+  'taskPriority.low': 'منخفضة', 'taskPriority.medium': 'متوسطة', 'taskPriority.high': 'عالية', 'taskPriority.urgent': 'عاجلة',
+
+  // Task statuses
+  'taskStatus.todo': 'للقيام', 'taskStatus.inProgress': 'قيد التنفيذ', 'taskStatus.done': 'مكتملة', 'taskStatus.allTasks': 'جميع المهام', 'taskStatus.noTasks': 'لا توجد مهام', 'taskStatus.completed': 'تم إكمال المهمة "{title}"', 'taskStatus.updateFailed': 'فشل تحديث المهمة. حاول مرة أخرى.', 'taskStatus.couldntLoad': 'تعذر تحميل المهام',
+
+  // Meeting types
+  'meetingType.videoCall': 'مكالمة فيديو', 'meetingType.zoom': 'Zoom', 'meetingType.inPerson': 'حضوري', 'meetingType.phoneCall': 'مكالمة هاتفية', 'meetingType.propertyVisit': 'معاينة عقار',
+
+  // Companies
+  'companies.newCompany': 'شركة جديدة', 'companies.searchCompanies': 'ابحث عن شركات...', 'companies.noCompanies': 'لا توجد شركات.', 'companies.noCompaniesMatch': 'لا توجد شركات تطابق بحثك.', 'companies.contact': 'جهة الاتصال', 'companies.value': 'القيمة', 'companies.lastContact': 'آخر تواصل', 'companies.formOpened': 'تم فتح نموذج شركة جديدة',
+
+  // Contacts
+  'contacts.searchContacts': 'ابحث عن جهات الاتصال...', 'contacts.couldntLoad': 'تعذر تحميل جهات الاتصال', 'contacts.noContacts': 'لا توجد جهات اتصال', 'contacts.tryDifferentSearch': 'جرّب مصطلحاً آخر للبحث.', 'contacts.createFirst': 'أنشئ أول جهة اتصال للبدء.', 'contacts.dealValue': 'قيمة الصفقة',
+
+  // Pipeline page
+  'pipeline.dropDealsHere': 'أفلت الصفقات هنا', 'pipeline.noDealsYet': 'لا توجد صفقات', 'pipeline.createFirstDeal': 'أنشئ أول صفقة للبدء', 'pipeline.dealMoved': 'تم نقل "{title}" إلى {stage}', 'pipeline.updateFailed': 'فشل تحديث مرحلة الصفقة. حاول مرة أخرى.', 'pipeline.newDealOpened': 'تم فتح نموذج صفقة جديدة',
+
+  // Modals
+  'modal.cancel': 'إلغاء', 'modal.save': 'حفظ', 'modal.failedToSave': 'فشل الحفظ. حاول مرة أخرى.', 'modal.failedToSaveDb': 'فشل الحفظ. تحقق من اتصال قاعدة البيانات وحاول مرة أخرى.',
+
+  // Lead modal
+  'leadModal.title': 'عميل محتمل جديد', 'leadModal.description': 'تسجيل عميل محتمل جديد في مسار الصفقات.', 'leadModal.saveLead': 'حفظ العميل', 'leadModal.firstNameRequired': 'الاسم الأول مطلوب', 'leadModal.leadCreated': 'تم إنشاء العميل {name}', 'leadModal.contactInfo': 'معلومات الاتصال', 'leadModal.dealInfo': 'معلومات الصفقة', 'leadModal.additional': 'معلومات إضافية', 'leadModal.leadSource': 'مصدر العميل', 'leadModal.leadStatus': 'الحالة', 'leadModal.leadScore': 'تقييم العميل', 'leadModal.assignedAgent': 'الوكيل المُسند', 'leadModal.selectAgent': 'اختر وكيل...', 'leadModal.propertyInterestPlaceholder': 'شقة 3 غرف نوم', 'leadModal.budgetPlaceholder': '2,500,000', 'leadModal.scorePlaceholder': '0–100، حسب التأهيل', 'leadModal.tagsPlaceholder': 'إضافة وسوم...', 'leadModal.notesPlaceholder': 'يبحث عن شقة 3 غرف نوم...', 'leadModal.whatsapp': 'واتساب',
+
+  // Contact modal
+  'contactModal.title': 'جهة اتصال جديدة', 'contactModal.description': 'إضافة شخص أو عميل إلى النظام.', 'contactModal.saveContact': 'حفظ جهة الاتصال', 'contactModal.firstNameRequired': 'الاسم الأول مطلوب', 'contactModal.contactCreated': 'تم إنشاء جهة الاتصال {name}', 'contactModal.company': 'الشركة', 'contactModal.whatsapp': 'واتساب', 'contactModal.notesPlaceholder': 'صانع قرار رئيسي...',
+
+  // Deal modal
+  'dealModal.title': 'صفقة جديدة', 'dealModal.description': 'إنشاء صفقة بربط عميل محتمل وجهة اتصال وعقار.', 'dealModal.saveDeal': 'حفظ الصفقة', 'dealModal.titleRequired': 'العنوان مطلوب', 'dealModal.dealCreated': 'تم إنشاء الصفقة "{title}"', 'dealModal.dealTitle': 'عنوان الصفقة', 'dealModal.dealTitlePlaceholder': 'مثال: بيع شقة — وسط المدينة', 'dealModal.connectLead': 'ربط عميل محتمل', 'dealModal.selectLead': 'اختر عميلاً...', 'dealModal.connectContact': 'ربط جهة اتصال', 'dealModal.selectContact': 'اختر جهة اتصال...', 'dealModal.connectProperty': 'ربط عقار', 'dealModal.selectProperty': 'اختر عقاراً...', 'dealModal.dealValue': 'قيمة الصفقة', 'dealModal.dealValuePlaceholder': '4,200,000', 'dealModal.expectedCloseDate': 'تاريخ الإغلاق المتوقع', 'dealModal.pipelineStage': 'مرحلة المسار', 'dealModal.probability': 'احتمالية الإتمام (%)', 'dealModal.probabilityPlaceholder': '0–100، حسب المرحلة', 'dealModal.notesPlaceholder': 'مشتري نقدي، مستعد للإغلاق سريعاً.',
+
+  // Property modal
+  'propertyModal.title': 'عقار جديد', 'propertyModal.description': 'إضافة عقار بالصور والتفاصيل الكاملة.', 'propertyModal.saveDraft': 'حفظ كمسودة', 'propertyModal.publishProperty': 'نشر العقار', 'propertyModal.titleRequired': 'العنوان مطلوب', 'propertyModal.addressRequired': 'العنوان مطلوب', 'propertyModal.propertyCreated': 'تم إنشاء العقار "{title}"', 'propertyModal.photoGallery': 'معرض الصور', 'propertyModal.uploadPhotos': 'رفع صور', 'propertyModal.cover': 'الغلاف', 'propertyModal.propertyTitle': 'العنوان', 'propertyModal.titlePlaceholder': 'بنتهاوس سكايلين', 'propertyModal.address': 'العنوان', 'propertyModal.addressPlaceholder': '1200 Brickell Ave, PH-2', 'propertyModal.cityPlaceholder': 'ميامي، فلوريدا', 'propertyModal.country': 'الدولة', 'propertyModal.countryPlaceholder': 'الولايات المتحدة', 'propertyModal.propertyType': 'نوع العقار', 'propertyModal.pricePlaceholder': '4,200,000', 'propertyModal.bedroomsPlaceholder': '4', 'propertyModal.bathroomsPlaceholder': '5', 'propertyModal.surface': 'المساحة (قدم²)', 'propertyModal.surfacePlaceholder': '4200', 'propertyModal.agent': 'الوكيل', 'propertyModal.selectAgent': 'اختر وكيل...', 'propertyModal.amenities': 'المرافق', 'propertyModal.amenitiesPlaceholder': 'إضافة مرفق...', 'propertyModal.description': 'الوصف', 'propertyModal.descriptionPlaceholder': 'عقار مميز', 'propertyModal.showFeatured': 'إظهار هذا العقار في الأقسام المميزة عبر النظام',
+
+  // Task modal
+  'taskModal.title': 'مهمة جديدة', 'taskModal.description': 'إسناد مهمة إليك أو إلى عضو في الفريق.', 'taskModal.saveTask': 'حفظ المهمة', 'taskModal.titleRequired': 'العنوان مطلوب', 'taskModal.taskCreated': 'تم إنشاء المهمة "{title}"', 'taskModal.taskTitlePlaceholder': 'مثال: متابعة عميل محتمل', 'taskModal.dueDate': 'تاريخ الاستحقاق', 'taskModal.assignedTo': 'مُسند إلى', 'taskModal.selectTeamMember': 'اختر عضواً...', 'taskModal.descriptionPlaceholder': 'إرسال صور إضافية وجدولة معاينة.',
+
+  // Meeting modal
+  'meetingModal.title': 'جدولة اجتماع', 'meetingModal.description': 'إنشاء اجتماع في تقويم MEHANS.', 'meetingModal.schedule': 'جدولة', 'meetingModal.titleRequired': 'العنوان مطلوب', 'meetingModal.dateRequired': 'التاريخ مطلوب', 'meetingModal.meetingCreated': 'تم جدولة الاجتماع "{title}"', 'meetingModal.meetingTitlePlaceholder': 'مثال: معاينة عقار', 'meetingModal.date': 'التاريخ', 'meetingModal.time': 'الوقت', 'meetingModal.duration': 'المدة (دقيقة)', 'meetingModal.durationPlaceholder': '30', 'meetingModal.meetingType': 'نوع الاجتماع', 'meetingModal.location': 'الموقع', 'meetingModal.locationPlaceholder': 'بنتهاوس سكايلين، ميامي', 'meetingModal.attendeeName': 'اسم الحاضر', 'meetingModal.attendeePlaceholder': 'اسم الحاضر', 'meetingModal.connectLead': 'ربط عميل محتمل', 'meetingModal.selectLead': 'اختر عميلاً...', 'meetingModal.connectContact': 'ربط جهة اتصال', 'meetingModal.selectContact': 'اختر جهة اتصال...', 'meetingModal.assignedAgent': 'الوكيل المُسند', 'meetingModal.selectAgent': 'اختر وكيل...', 'meetingModal.notesPlaceholder': 'تأكيد ترتيبات الوقوف مع إدارة المبنى.',
+
+  // Languages
+  'lang.english': 'الإنجليزية', 'lang.spanish': 'الإسبانية', 'lang.french': 'الفرنسية', 'lang.arabic': 'العربية', 'lang.mandarin': 'الماندرين', 'lang.hindi': 'الهندية', 'lang.portuguese': 'البرتغالية',
+
+  // Amenities
+  'amenity.pool': 'مسبح', 'amenity.gym': 'صالة رياضية', 'amenity.garden': 'حديقة', 'amenity.garage': 'كراج', 'amenity.smartHome': 'منزل ذكي', 'amenity.seaView': 'إطلالة بحرية', 'amenity.rooftop': 'سطح', 'amenity.elevator': 'مصعد', 'amenity.security': 'أمن', 'amenity.concierge': 'كونسيرج', 'amenity.ac': 'تكييف', 'amenity.heating': 'تدفئة',
+
+  // Tags
+  'tag.vip': 'VIP', 'tag.cashBuyer': 'مشتري نقدي', 'tag.hotLead': 'عميل ساخن', 'tag.investor': 'مستثمر', 'tag.firstTimeBuyer': 'مشتري لأول مرة',
 };
 
 export const dictionaries: Record<Locale, Dict> = { en, fr, ar };

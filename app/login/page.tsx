@@ -22,11 +22,11 @@ export default function LoginPage() {
   const redirectTo = searchParams.get('redirect') ?? '/';
 
   const validate = (): string | null => {
-    if (mode === 'sign-up' && !name.trim()) return 'Please enter your full name';
-    if (!email.trim()) return 'Please enter your email';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Please enter a valid email address';
-    if (!password) return 'Please enter your password';
-    if (password.length < 6) return 'Password must be at least 6 characters';
+    if (mode === 'sign-up' && !name.trim()) return t('auth.nameRequired');
+    if (!email.trim()) return t('auth.emailRequired');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return t('auth.emailInvalid');
+    if (!password) return t('auth.passwordRequired');
+    if (password.length < 6) return t('auth.passwordTooShort');
     return null;
   };
 
@@ -59,7 +59,7 @@ export default function LoginPage() {
         });
         if (error) throw error;
         if (!data.session) {
-          toast.success('Account created. You can sign in now.');
+          toast.success(t('auth.accountCreated'));
           setMode('sign-in');
           setPassword('');
         } else {
@@ -71,7 +71,7 @@ export default function LoginPage() {
         router.replace(redirectTo);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to continue';
+      const message = error instanceof Error ? error.message : t('auth.unableToContinue');
       toast.error(message);
     } finally {
       setSaving(false);
@@ -85,19 +85,19 @@ export default function LoginPage() {
       <div className="w-full max-w-md rounded-3xl border border-border bg-bg-secondary p-6 shadow-modal sm:p-10">
         <div className="mb-8 flex justify-center"><MehansLogo height={48} /></div>
         <div className="mb-8 text-center">
-          <p className="eyebrow text-gold">MEHANS REAL ESTATE</p>
+          <p className="eyebrow text-gold">MEHANS {t('auth.realEstate')}</p>
           <h1 className="mt-3 font-serif text-3xl font-medium text-text-primary">{mode === 'sign-in' ? t('auth.welcome') : t('auth.createAccount')}</h1>
           <p className="mt-2 text-sm text-text-muted">{mode === 'sign-in' ? t('auth.signInToContinue') : t('auth.createAccount')}</p>
         </div>
         <button type="button" onClick={signInWithGoogle} disabled={busy} className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-bg-elevated py-3 text-sm font-medium text-text-primary transition-colors hover:border-gold-border disabled:opacity-60">
           {googleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="text-base font-bold">G</span>}
-          Continue with Google
+          {t('auth.continueWithGoogle')}
         </button>
-        <div className="mb-4 flex items-center gap-3 text-[10px] uppercase tracking-[0.16em] text-text-muted"><span className="h-px flex-1 bg-border" />or<span className="h-px flex-1 bg-border" /></div>
+        <div className="mb-4 flex items-center gap-3 text-[10px] uppercase tracking-[0.16em] text-text-muted"><span className="h-px flex-1 bg-border" />{t('auth.or')}<span className="h-px flex-1 bg-border" /></div>
         <form onSubmit={submit} className="space-y-4">
           {mode === 'sign-up' && (
             <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-text-secondary">Full name</span>
+              <span className="mb-1.5 block text-xs font-medium text-text-secondary">{t('auth.fullName')}</span>
               <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-elevated px-3">
                 <UserRound className="h-4 w-4 text-text-muted" />
                 <input required value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-transparent py-3 text-sm text-text-primary outline-none" />
@@ -105,21 +105,21 @@ export default function LoginPage() {
             </label>
           )}
           <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-text-secondary">Email</span>
+            <span className="mb-1.5 block text-xs font-medium text-text-secondary">{t('common.email')}</span>
             <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-elevated px-3">
               <Mail className="h-4 w-4 text-text-muted" />
               <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-transparent py-3 text-sm text-text-primary outline-none" />
             </div>
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-text-secondary">Password</span>
+            <span className="mb-1.5 block text-xs font-medium text-text-secondary">{t('auth.password')}</span>
             <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-elevated px-3">
               <LockKeyhole className="h-4 w-4 text-text-muted" />
               <input required minLength={6} type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-transparent py-3 text-sm text-text-primary outline-none" />
             </div>
           </label>
           <button disabled={busy} className="btn btn-gold btn-lg w-full justify-center">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{mode === 'sign-in' ? 'Sign in' : 'Create account'} <ArrowRight className="h-4 w-4" /></>}
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{mode === 'sign-in' ? t('auth.signIn') : t('auth.signUp')} <ArrowRight className="h-4 w-4" /></>}
           </button>
         </form>
         <button onClick={() => { setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in'); setPassword(''); }} className="mt-6 w-full text-center text-xs text-text-muted transition-colors hover:text-gold">
