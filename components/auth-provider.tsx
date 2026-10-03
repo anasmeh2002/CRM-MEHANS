@@ -19,6 +19,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const activateInvitation = useCallback(async (nextSession: Session | null) => {
+    if (!nextSession?.user) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const invitationId = params.get('invitation_id');
+    if (!invitationId) return;
+
+    const { data: freshSessionData } = await supabase.auth.getSession();
+    const activeSession = freshSessionData.session ?? nextSession;
+    if (!activeSession.access_token) return;
+
+    try {
+      const response = await fetch('/api/invitations/activate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + activeSession.access_token,
+        },
+        body: JSON.stringify({ invitation_id: invitationId }),
+      });
+
+      if (response.ok) {
+        params.delete('invitation_id');
+        const cleanQuery = params.toString();
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname +
+            (cleanQuery ? '?' + cleanQuery : '') +
+            window.location.hash
+        );
+        router.refresh();
+      }
+    } catch {
+      // Retry on the next auth/session event or page load.
+    }
+  }, [router]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -45,22 +83,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(nextSession);
       setLoading(false);
 
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        (async () => {
-          if (event === 'SIGNED_IN' && nextSession?.user) {
-            try {
-              await fetch('/api/invitations/activate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: nextSession.user.id, email: nextSession.user.email }),
-              });
-            } catch { /* non-critical */ }
-          }
-          if (event === 'SIGNED_OUT') {
-            await router.replace('/login');
-            router.refresh();
-          }
-        })();
+      if (event === 'SIGNED_IN') {
+        void activateInvitation(nextSession);
+      }
+
+      if (event === 'SIGNED_OUT') {
+        void router.replace('/login').then(() => router.refresh());
       }
     });
 
@@ -68,7 +96,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       listener.subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, activateInvitation]);
+
+  useEffect(() => {
+    if (!loading && session) {
+      void activateInvitation(session);
+    }
+  }, [loading, session, activateInvitation]);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
