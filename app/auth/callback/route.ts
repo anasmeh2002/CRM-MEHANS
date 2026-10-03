@@ -11,11 +11,22 @@ function getAppUrl(request: NextRequest): string {
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
-  const next = requestUrl.searchParams.get('next') ?? '/';
+  const invitationId = requestUrl.searchParams.get('invitation_id');
+  const nextParam = requestUrl.searchParams.get('next') ?? '/';
   const appUrl = getAppUrl(request);
 
+  const nextPath =
+    nextParam.startsWith('/') && !nextParam.startsWith('//')
+      ? nextParam
+      : '/';
+
   if (code) {
-    const response = NextResponse.redirect(appUrl + next);
+    const responseUrl = new URL(nextPath, appUrl);
+    if (invitationId) {
+      responseUrl.searchParams.set('invitation_id', invitationId);
+    }
+
+    const response = NextResponse.redirect(responseUrl.toString());
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -30,12 +41,16 @@ export async function GET(request: NextRequest) {
         },
       }
     );
+
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
-      return NextResponse.redirect(`${appUrl}/login?error=${encodeURIComponent(error.message)}`);
+      return NextResponse.redirect(
+        appUrl + '/login?error=' + encodeURIComponent(error.message)
+      );
     }
+
     return response;
   }
 
-  return NextResponse.redirect(`${appUrl}/login`);
+  return NextResponse.redirect(appUrl + '/login');
 }
