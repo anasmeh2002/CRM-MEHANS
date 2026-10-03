@@ -86,6 +86,15 @@ export async function POST(request: NextRequest) {
           notes: typeof notes === 'string' ? notes : null,
         }).select('id').single();
         if (error) throw error;
+        const leadSource = typeof source === 'string' ? source : 'whatsapp';
+        await sb.from('notifications').insert({
+          title: 'New Lead',
+          description: `A new lead was added from ${leadSource}.`,
+          type: 'lead',
+          record_type: 'lead',
+          record_id: data.id,
+          read: false,
+        });
         return NextResponse.json({ success: true, lead_id: data.id }, { headers: corsHeaders });
       }
 
@@ -108,7 +117,7 @@ export async function POST(request: NextRequest) {
       }
 
       case 'send_notification': {
-        const { title, description, record_type, record_id } = body.data;
+        const { title, description, record_type, record_id, user_id } = body.data;
         if (!title) {
           return NextResponse.json({ success: false, error: 'title required' }, { status: 400, headers: corsHeaders });
         }
@@ -118,6 +127,7 @@ export async function POST(request: NextRequest) {
           type: 'automation',
           record_type: typeof record_type === 'string' ? record_type : null,
           record_id: typeof record_id === 'string' ? record_id : null,
+          user_id: typeof user_id === 'string' ? user_id : null,
           read: false,
         }).select('id').single();
         if (error) throw error;

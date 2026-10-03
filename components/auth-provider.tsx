@@ -45,10 +45,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(nextSession);
       setLoading(false);
 
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
         (async () => {
-          await router.replace('/login');
-          router.refresh();
+          if (event === 'SIGNED_IN' && nextSession?.user) {
+            try {
+              await fetch('/api/invitations/activate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: nextSession.user.id, email: nextSession.user.email }),
+              });
+            } catch { /* non-critical */ }
+          }
+          if (event === 'SIGNED_OUT') {
+            await router.replace('/login');
+            router.refresh();
+          }
         })();
       }
     });

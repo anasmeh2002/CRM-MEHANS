@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import {
   fetchAgency, updateAgency, uploadAgencyLogo,
-  fetchProfiles, updateProfileRole, deactivateProfile, createProfile,
+  fetchProfiles, updateProfileRole, deactivateProfile, createProfile, reactivateProfile,
   fetchRolePermissions, updateRolePermission,
   fetchIntegrations,
   fetchApiKeys, createApiKey, revokeApiKey,
@@ -309,7 +309,17 @@ function UsersTab() {
     }
     setSaving(true);
     try {
-      await createProfile({ name: inviteName, email: inviteEmail, role: inviteRole });
+      const result = await createProfile({ name: inviteName, email: inviteEmail, role: inviteRole });
+      if (!result.success) {
+        if (result.error === 'already_active') {
+          toast.error(t('settings.userAlreadyActive'));
+        } else if (result.error === 'already_invited') {
+          toast.error(t('settings.userAlreadyInvited'));
+        } else {
+          toast.error(t('settings.inviteFailed'));
+        }
+        return;
+      }
       toast.success(t('settings.inviteSuccess', { name: inviteName }));
       setInviteName('');
       setInviteEmail('');
@@ -340,6 +350,16 @@ function UsersTab() {
       refetch();
     } catch {
       toast.error(t('settings.deactivateFailed'));
+    }
+  };
+
+  const handleReactivate = async (id: string) => {
+    try {
+      await reactivateProfile(id);
+      toast.success(t('settings.userReactivated'));
+      refetch();
+    } catch {
+      toast.error(t('settings.reactivateFailed'));
     }
   };
 
@@ -379,13 +399,19 @@ function UsersTab() {
       )}
 
       <div className="space-y-2">
-        {(users ?? []).map((user) => (
+        {(users ?? []).map((user) => {
+          const statusKey = user.status === 'away' ? 'invited' : user.status === 'offline' ? 'inactive' : 'active';
+          const isInactive = user.status === 'offline';
+          return (
           <div key={user.id} className="flex items-center gap-3 rounded-xl border border-border bg-bg-elevated p-3.5">
             <Avatar name={user.name} size="md" color={user.avatarColor} />
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-text-primary">{user.name}</p>
-              <p className="text-xs text-text-muted">{user.email}</p>
+              <p className="text-xs text-text-muted truncate">{user.email}</p>
             </div>
+            <Badge variant={statusKey === 'active' ? 'success' : statusKey === 'invited' ? 'gold' : 'neutral'}>
+              {t(`settings.${statusKey}`)}
+            </Badge>
             <select
               value={user.role}
               onChange={(e) => handleRoleChange(user.id, e.target.value)}
@@ -397,14 +423,25 @@ function UsersTab() {
               <option value="agent">{t('settings.agent')}</option>
             </select>
             <Badge variant={user.role === 'admin' || user.role === 'owner' ? 'gold' : 'neutral'}>{t(`settings.${user.role}`)}</Badge>
-            <button
-              onClick={() => handleDeactivate(user.id)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition-colors hover:border-error hover:text-error"
-            >
-              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
-            </button>
+            {isInactive ? (
+              <button
+                onClick={() => handleReactivate(user.id)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition-colors hover:border-gold-border hover:text-gold"
+                title={t('settings.reactivate')}
+              >
+                <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
+              </button>
+            ) : (
+              <button
+                onClick={() => handleDeactivate(user.id)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition-colors hover:border-error hover:text-error"
+              >
+                <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+              </button>
+            )}
           </div>
-        ))}
+          );
+        })}
         {(users ?? []).length === 0 && (
           <p className="py-8 text-center text-sm text-text-muted">{t('settings.noUsers')}</p>
         )}

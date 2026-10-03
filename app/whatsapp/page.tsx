@@ -33,6 +33,7 @@ import {
 } from '@/lib/whatsapp';
 import { askAI } from '@/lib/ai';
 import { cn } from '@/lib/utils';
+import { createNotification } from '@/lib/data';
 
 function formatTime(value: string | null, locale: string): string {
   if (!value) return '';
@@ -260,6 +261,14 @@ export default function WhatsAppPage() {
         }
         return updated;
       });
+      if (!newMsg.from_me && newMsg.sender_name) {
+        void createNotification({
+          title: 'New WhatsApp Message',
+          description: `New message received from ${newMsg.sender_name}.`,
+          type: 'whatsapp',
+          record_type: 'whatsapp',
+        });
+      }
     });
 
     return () => { active = false; unsubscribe(); };

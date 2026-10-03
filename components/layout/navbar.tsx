@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Bell, Plus, ChevronDown, Command, User, Settings, LogOut, Check, Menu,
   Users, Home, TrendingUp, CheckSquare, CalendarClock, Loader2, Sparkles,
+  MessageSquare, AlertCircle, Trophy, UserPlus, Zap, FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,22 @@ import {
   globalSearch, type SearchResult, type NotificationRow,
   fetchAgency, type AgencyProfile,
 } from '@/lib/data';
+import { supabase } from '@/lib/supabase';
+
+const notifIconMap: Record<string, typeof Bell> = {
+  lead: Users,
+  task: CheckSquare,
+  meeting: CalendarClock,
+  deal: TrendingUp,
+  whatsapp: MessageSquare,
+  team: UserPlus,
+  automation: Zap,
+  property: Home,
+};
+
+function notifIcon(type: string): typeof Bell {
+  return notifIconMap[type] ?? Bell;
+}
 
 const quickActions = [
   { id: 'lead', labelKey: 'navbar.newLead', icon: Users, modal: 'lead' as const },
@@ -58,6 +75,20 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [markingRead, setMarkingRead] = useState(false);
+
+  // Realtime notification subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('notifications-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, () => {
+        refetchNotifs();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications' }, () => {
+        refetchNotifs();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [refetchNotifs]);
 
   const refs = {
     search: useRef<HTMLDivElement>(null),
@@ -123,7 +154,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
       } catch { /* ignore */ }
     }
     setNotifOpen(false);
-    if (notif.record_type && notif.record_id) {
+    if (notif.record_type) {
       const routeMap: Record<string, string> = {
         lead: '/leads',
         property: '/properties',
@@ -131,6 +162,8 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
         task: '/tasks',
         meeting: '/meetings',
         contact: '/contacts',
+        whatsapp: '/whatsapp',
+        member: '/settings',
       };
       const route = routeMap[notif.record_type];
       if (route) router.push(route);
@@ -303,20 +336,26 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
                   {notifications.length === 0 ? (
                     <div className="px-3 py-8 text-center text-[12px] text-text-muted">{t('navbar.noNotifications')}</div>
                   ) : (
-                    notifications.map((n) => (
-                      <button
-                        key={n.id}
-                        onClick={() => handleNotifClick(n)}
-                        className={cn('flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-start transition-colors hover:bg-bg-hover', !n.read && 'bg-gold-bg')}
-                      >
-                        <div className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', !n.read ? 'bg-gold' : 'bg-transparent border border-border-strong')} />
-                        <div className="flex-1">
-                          <div className="text-[13px] font-medium text-text-primary">{n.title}</div>
-                          {n.description && <div className="text-[12px] text-text-secondary">{n.description}</div>}
-                          <div className="mt-1 text-[11px] text-text-muted">{timeAgo(n.created_at, t)}</div>
-                        </div>
-                      </button>
-                    ))
+                    notifications.map((n) => {
+                      const Icon = notifIcon(n.type);
+                      return (
+                        <button
+                          key={n.id}
+                          onClick={() => handleNotifClick(n)}
+                          className={cn('flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-start transition-colors hover:bg-bg-hover', !n.read && 'bg-gold-bg')}
+                        >
+                          <div className={cn('mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg', !n.read ? 'bg-gold-bg text-gold' : 'bg-bg-secondary text-text-muted')}>
+                            <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[13px] font-medium text-text-primary truncate">{n.title}</div>
+                            {n.description && <div className="text-[12px] text-text-secondary line-clamp-2">{n.description}</div>}
+                            <div className="mt-1 text-[11px] text-text-muted">{timeAgo(n.created_at, t)}</div>
+                          </div>
+                          {!n.read && <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-gold" />}
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               </motion.div>

@@ -39,6 +39,8 @@ export interface NotificationRow {
   record_id: string | null;
   read: boolean;
   created_at: string;
+  user_id: string | null;
+  agency_id: string | null;
 }
 
 export interface ApiKeyRow {
@@ -272,6 +274,7 @@ export async function fetchLeads(): Promise<Lead[]> {
 
 export async function createLead(input: Partial<Lead>): Promise<Lead | null> {
   void dispatchAutomationEvent('lead.created', { lead: input });
+  const source = input.source ?? 'manual';
   const payload: Record<string, unknown> = {
     first_name: input.first_name,
     last_name: input.last_name,
@@ -294,6 +297,14 @@ export async function createLead(input: Partial<Lead>): Promise<Lead | null> {
   };
   const { data, error } = await db().from('leads').insert(payload).select('*, assigned_agent:profiles!assigned_to(*)').single();
   if (error) { console.error('[data] createLead failed', error); return null; }
+  void createNotification({
+    title: 'New Lead',
+    description: `A new lead was added from ${source}.`,
+    type: 'lead',
+    record_type: 'lead',
+    record_id: data.id,
+    user_id: input.assigned_agent_id ?? undefined,
+  });
   return mapLead(data);
 }
 
@@ -314,6 +325,17 @@ export async function updateLead(id: string, patch: Partial<Lead>): Promise<Lead
   if (patch.property_interest !== undefined) dbPatch.interested_in = patch.property_interest;
   const { data, error } = await db().from('leads').update(dbPatch).eq('id', id).select('*, assigned_agent:profiles!assigned_to(*)').single();
   if (error) { console.error('[data] updateLead failed', error); return null; }
+  if (patch.assigned_agent_id) {
+    const leadName = [data.first_name, data.last_name].filter(Boolean).join(' ') || 'Lead';
+    void createNotification({
+      title: 'Lead Assigned',
+      description: `${leadName} was assigned to you.`,
+      type: 'lead',
+      record_type: 'lead',
+      record_id: id,
+      user_id: patch.assigned_agent_id,
+    });
+  }
   if (patch.status === 'qualified') void dispatchAutomationEvent('lead.qualified', { lead_id: id, status: patch.status });
   return mapLead(data);
 }
@@ -413,6 +435,15 @@ export async function fetchDeals(): Promise<Deal[]> {
 }
 
 export async function createDeal(input: Partial<Deal>): Promise<Deal | null> {
+  if (input.owner_id) {
+    void createNotification({
+      title: 'Deal Assigned',
+      description: `Deal "${input.title ?? 'Deal'}" was assigned to you.`,
+      type: 'deal',
+      record_type: 'deal',
+      user_id: input.owner_id,
+    });
+  }
   const payload: Record<string, unknown> = {
     title: input.title,
     lead_id: input.lead_id ?? null,
@@ -444,8 +475,42 @@ export async function updateDeal(id: string, patch: Partial<Deal>): Promise<Deal
   if (patch.notes !== undefined) dbPatch.notes = patch.notes;
   const { data, error } = await db().from('deals').update(dbPatch).eq('id', id).select('*, lead:leads(*), contact:contacts(*), property:properties(*), owner:profiles!owner_id(*)').single();
   if (error) { console.error('[data] updateDeal failed', error); return null; }
-  if (patch.stage === 'won') void dispatchAutomationEvent('deal.won', { deal_id: id, stage: 'won' });
-  if (patch.stage === 'lost') void dispatchAutomationEvent('deal.lost', { deal_id: id, stage: 'lost' });
+  if (patch.stage === 'won') {
+    void dispatchAutomationEvent('deal.won', { deal_id: id, stage: 'won' });
+    if (data.owner_id) {
+      void createNotification({
+        title: 'Deal Won',
+        description: `Deal "${data.title ?? 'Deal'}" was won!`,
+        type: 'deal',
+        record_type: 'deal',
+        record_id: id,
+        user_id: data.owner_id,
+      });
+    }
+  }
+  if (patch.stage === 'lost') {
+    void dispatchAutomationEvent('deal.lost', { deal_id: id, stage: 'lost' });
+    if (data.owner_id) {
+      void createNotification({
+        title: 'Deal Lost',
+        description: `Deal "${data.title ?? 'Deal'}" was lost.`,
+        type: 'deal',
+        record_type: 'deal',
+        record_id: id,
+        user_id: data.owner_id,
+      });
+    }
+  }
+  if (patch.owner_id && patch.owner_id !== data.owner_id) {
+    void createNotification({
+      title: 'Deal Assigned',
+      description: `Deal "${data.title ?? 'Deal'}" was assigned to you.`,
+      type: 'deal',
+      record_type: 'deal',
+      record_id: id,
+      user_id: patch.owner_id,
+    });
+  }
   return mapDeal(data);
 }
 
@@ -467,6 +532,15 @@ export async function fetchTasks(): Promise<Task[]> {
 }
 
 export async function createTask(input: Partial<Task>): Promise<Task | null> {
+  if (input.assignee_id) {
+    void createNotification({
+      title: 'Task Assigned',
+      description: `Task "${input.title ?? 'Untitled'}" was assigned to you.`,
+      type: 'task',
+      record_type: 'task',
+      user_id: input.assignee_id,
+    });
+  }
   const payload: Record<string, unknown> = {
     title: input.title,
     description: input.description,
@@ -514,6 +588,15 @@ export async function fetchMeetings(): Promise<Meeting[]> {
 }
 
 export async function createMeeting(input: Partial<Meeting>): Promise<Meeting | null> {
+  if (input.assigned_agent_id) {
+    void createNotification({
+      title: 'Meeting Scheduled',
+      description: `Meeting "${input.title ?? 'Meeting'}" was scheduled with you.`,
+      type: 'meeting',
+      record_type: 'meeting',
+      user_id: input.assigned_agent_id,
+    });
+  }
   const payload: Record<string, unknown> = {
     title: input.title,
     starts_at: input.starts_at ?? new Date().toISOString(),
@@ -895,6 +978,7 @@ export async function createNotification(input: {
   type?: string;
   record_type?: string;
   record_id?: string;
+  user_id?: string;
 }): Promise<NotificationRow | null> {
   const { data, error } = await supabase
     .from('notifications')
@@ -904,10 +988,14 @@ export async function createNotification(input: {
       type: input.type ?? 'info',
       record_type: input.record_type ?? null,
       record_id: input.record_id ?? null,
+      user_id: input.user_id ?? null,
     })
     .select('*')
     .maybeSingle();
-  if (error) throw error;
+  if (error) {
+    console.error('[data] createNotification failed', error);
+    return null;
+  }
   return data as NotificationRow | null;
 }
 
@@ -1023,17 +1111,25 @@ export async function fetchProfiles(): Promise<TeamMember[]> {
   return (data ?? []).map((row) => mapWorkspaceMember(row as WorkspaceMemberRow));
 }
 
-export async function createProfile(input: { name: string; email: string; role: string }): Promise<TeamMember | null> {
-  const { data: agency, error: agencyError } = await supabase.from('agencies').select('id').limit(1).maybeSingle();
-  if (agencyError) throw agencyError;
-  if (!agency) return null;
-  const { data, error } = await supabase
-    .from('workspace_members')
-    .insert({ workspace_id: agency.id, name: input.name.trim(), email: input.email.trim().toLowerCase(), role: input.role, status: 'invited' })
-    .select('*')
-    .maybeSingle();
-  if (error) throw error;
-  return data ? mapWorkspaceMember(data as WorkspaceMemberRow) : null;
+export async function createProfile(input: { name: string; email: string; role: string }): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data: session } = await supabase.auth.getSession();
+    const res = await fetch('/api/invitations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(session?.session?.access_token ? { Authorization: `Bearer ${session.session.access_token}` } : {}),
+      },
+      body: JSON.stringify({ name: input.name, email: input.email, role: input.role }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error ?? 'Invitation failed' };
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Network error' };
+  }
 }
 
 export async function updateProfileRole(id: string, role: string): Promise<boolean> {
@@ -1044,6 +1140,12 @@ export async function updateProfileRole(id: string, role: string): Promise<boole
 
 export async function deactivateProfile(id: string): Promise<boolean> {
   const { error } = await supabase.rpc('set_workspace_member_status', { p_member: id, p_status: 'inactive' });
+  if (error) throw error;
+  return true;
+}
+
+export async function reactivateProfile(id: string): Promise<boolean> {
+  const { error } = await supabase.rpc('set_workspace_member_status', { p_member: id, p_status: 'active' });
   if (error) throw error;
   return true;
 }
