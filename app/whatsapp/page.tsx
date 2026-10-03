@@ -34,14 +34,14 @@ import {
 import { askAI } from '@/lib/ai';
 import { cn } from '@/lib/utils';
 
-function formatTime(value: string | null): string {
+function formatTime(value: string | null, locale: string): string {
   if (!value) return '';
-  return new Date(value).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return new Date(value).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
 }
 
-function formatDate(value: string | null): string {
+function formatDate(value: string | null, locale: string): string {
   if (!value) return '';
-  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return new Date(value).toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
 const ACCEPTED_MEDIA = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -279,7 +279,7 @@ export default function WhatsAppPage() {
         cacheRef.current.set(selectedJid, { messages: dedupMessages([...older, ...cached.messages]), hasMore: more });
       }
     } catch {
-      toast.error('Unable to load older messages');
+      toast.error(t('toast.whatsappOlderFailed'));
     } finally {
       setLoadingMore(false);
     }
@@ -377,17 +377,17 @@ export default function WhatsAppPage() {
     autoSummaryTriggered.current = selectedJid;
     setAiHistory([]);
     setAiSuggestion(null);
-    aiSend('Provide a brief summary of this conversation and the lead\'s needs. Include any key details from the CRM context.');
+    aiSend(t('whatsapp.autoSummaryPrompt'));
   }, [selectedJid, aiOpen, crmContext, aiSend]);
 
   const aiQuickActions = useMemo(() => [
-    'Summarize Lead Needs',
-    'Draft Follow-up Reply',
-    'Suggest Property Match',
-    'Write a professional reply',
-    'Generate a CRM report',
-    'Reply in French',
-  ], []);
+    t('whatsapp.qaSummarizeLeadNeeds'),
+    t('whatsapp.qaDraftFollowup'),
+    t('whatsapp.qaSuggestPropertyMatch'),
+    t('whatsapp.qaWriteReply'),
+    t('whatsapp.qaGenerateReport'),
+    t('whatsapp.qaReplyInFrench'),
+  ], [t]);
 
   // Generate reply suggestions when conversation context is loaded
   const generateReplySuggestions = useCallback(async () => {
@@ -442,7 +442,7 @@ export default function WhatsAppPage() {
         setAttachment(null);
         setMessage('');
         setConversations((current) =>
-          current.map((c) => c.remote_jid === selected.remote_jid ? { ...c, last_message: attachment.mediatype === 'image' ? 'Photo' : attachment.file.name, last_message_timestamp: new Date().toISOString() } : c)
+          current.map((c) => c.remote_jid === selected.remote_jid ? { ...c, last_message: attachment.mediatype === 'image' ? t('whatsapp.photo') : attachment.file.name, last_message_timestamp: new Date().toISOString() } : c)
         );
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Unable to send media');
@@ -467,11 +467,11 @@ export default function WhatsAppPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_FILE_SIZE) {
-      toast.error('File is too large. Maximum size is 10 MB.');
+      toast.error(t('toast.fileTooLarge'));
       return;
     }
     if (!ACCEPTED_MEDIA.includes(file.type)) {
-      toast.error('Unsupported file type. Please select an image (JPEG, PNG, WebP, GIF) or document (PDF, Word, TXT).');
+      toast.error(t('toast.fileUnsupported'));
       return;
     }
     try {
@@ -480,7 +480,7 @@ export default function WhatsAppPage() {
       const preview = isImage ? `data:${file.type};base64,${base64}` : null;
       setAttachment({ file, base64, mediatype: isImage ? 'image' : 'document', mimetype: file.type, preview });
     } catch {
-      toast.error('Failed to read the selected file');
+      toast.error(t('toast.fileReadFailed'));
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -491,7 +491,7 @@ export default function WhatsAppPage() {
   };
 
   const startConnect = async () => {
-    if (!userId) { toast.error('You must be signed in to connect WhatsApp'); return; }
+    if (!userId) { toast.error(t('toast.whatsappSigninRequired')); return; }
     setQrStage('creating');
     setQrError('');
     setQrData(null);
@@ -499,8 +499,8 @@ export default function WhatsAppPage() {
       const { instanceName, qrCode } = await createEvolutionInstance(userId);
       if (!qrCode) {
         setQrStage('error');
-        setQrError('No QR code returned from Evolution API');
-        toast.error('No QR code returned from Evolution API');
+        setQrError(t('toast.whatsappNoQr'));
+        toast.error(t('toast.whatsappNoQr'));
         return;
       }
       setQrData(qrCode);
@@ -516,11 +516,11 @@ export default function WhatsAppPage() {
           await updateWhatsAppConnection(next);
           setConnection(next);
           connectionQuery.refetch();
-          toast.success('WhatsApp connected successfully');
+          toast.success(t('toast.whatsappConnected'));
         }
       }, 3000);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to connect to Evolution API';
+      const msg = error instanceof Error ? error.message : t('toast.whatsappConnectFailed');
       setQrStage('error');
       setQrError(msg);
       toast.error(msg);
@@ -537,11 +537,11 @@ export default function WhatsAppPage() {
       if (qr) { setQrData(qr); setQrStage('ready'); }
       else {
         setQrStage('error');
-        setQrError('No QR code returned from Evolution API');
-        toast.error('No QR code returned from Evolution API');
+        setQrError(t('toast.whatsappNoQr'));
+        toast.error(t('toast.whatsappNoQr'));
       }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to connect to Evolution API';
+      const msg = error instanceof Error ? error.message : t('toast.whatsappConnectFailed');
       setQrStage('error');
       setQrError(msg);
       toast.error(msg);
@@ -562,28 +562,28 @@ export default function WhatsAppPage() {
 
   const renderQrContent = () => {
     if (qrStage === 'creating') {
-      return <div className="flex flex-col items-center gap-2 text-text-muted"><Loader2 className="h-8 w-8 animate-spin" /><span className="text-xs">Creating instance & generating QR…</span></div>;
+      return <div className="flex flex-col items-center gap-2 text-text-muted"><Loader2 className="h-8 w-8 animate-spin" /><span className="text-xs">{t('whatsapp.creatingInstance')}</span></div>;
     }
     if (qrStage === 'ready' && qrData) {
       return (
         <>
           <img src={qrData.startsWith('data:') ? qrData : `data:image/png;base64,${qrData}`} alt="WhatsApp QR Code" className="h-48 w-48 rounded-lg" />
           <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-lg bg-bg-elevated px-2 py-1 text-[10px] text-text-muted">
-            <Loader2 className="h-3 w-3 animate-spin" /> Waiting for scan…
+            <Loader2 className="h-3 w-3 animate-spin" /> {t('whatsapp.waitingForScan')}
           </div>
         </>
       );
     }
     if (qrStage === 'checking') {
-      return <div className="flex flex-col items-center gap-2 text-text-muted"><Link2 className="h-8 w-8 text-gold" /><span className="text-xs">Linking device…</span></div>;
+      return <div className="flex flex-col items-center gap-2 text-text-muted"><Link2 className="h-8 w-8 text-gold" /><span className="text-xs">{t('whatsapp.linkingDevice')}</span></div>;
     }
     if (qrStage === 'linked') {
-      return <div className="flex flex-col items-center gap-2 text-success"><CheckCircle2 className="h-12 w-12" /><span className="text-xs">Device linked!</span></div>;
+      return <div className="flex flex-col items-center gap-2 text-success"><CheckCircle2 className="h-12 w-12" /><span className="text-xs">{t('whatsapp.deviceLinked')}</span></div>;
     }
     if (qrStage === 'error') {
-      return <div className="flex flex-col items-center gap-2 text-error"><AlertCircle className="h-8 w-8" /><span className="text-xs text-center px-4">{qrError || 'Failed to connect to Evolution API'}</span></div>;
+      return <div className="flex flex-col items-center gap-2 text-error"><AlertCircle className="h-8 w-8" /><span className="text-xs text-center px-4">{qrError || t('toast.whatsappConnectFailed')}</span></div>;
     }
-    return <div className="flex flex-col items-center gap-2 text-text-muted"><RefreshCw className="h-8 w-8" /><span className="text-xs">Click to generate QR code</span></div>;
+    return <div className="flex flex-col items-center gap-2 text-text-muted"><RefreshCw className="h-8 w-8" /><span className="text-xs">{t('whatsapp.clickToGenerate')}</span></div>;
   };
 
   const showConversationOnMobile = Boolean(selectedJid);
@@ -591,22 +591,22 @@ export default function WhatsAppPage() {
   return (
     <AppShell>
       <PageHeader title={t('page.whatsapp')} description={t('page.whatsappDescription')}>
-        <button onClick={() => setConnectOpen(true)} className="btn btn-outline btn-md"><Settings2 className="h-4 w-4" /> <span className="hidden sm:inline">{connection.connected ? 'Settings' : 'Connect'}</span></button>
+        <button onClick={() => setConnectOpen(true)} className="btn btn-outline btn-md"><Settings2 className="h-4 w-4" /> <span className="hidden sm:inline">{connection.connected ? t('common.settings') : t('common.connect')}</span></button>
       </PageHeader>
       <div className="mb-4 flex items-center justify-between rounded-2xl border border-border bg-bg-secondary px-4 py-3">
         <div className="flex items-center gap-3">
           <span className={cn('h-2.5 w-2.5 rounded-full', connection.connected ? 'bg-success' : 'bg-warning')} />
           <div>
-            <p className="text-sm font-medium text-text-primary">{connection.connected ? 'Connected' : 'Not connected'}</p>
-            <p className="hidden text-xs text-text-muted sm:block">{connection.connected ? `${connection.provider} · ${connection.instanceName}` : 'Connect a business number to manage WhatsApp conversations'}</p>
+            <p className="text-sm font-medium text-text-primary">{connection.connected ? t('whatsapp.connected') : t('whatsapp.notConnected')}</p>
+            <p className="hidden text-xs text-text-muted sm:block">{connection.connected ? `${connection.provider} · ${connection.instanceName}` : t('whatsapp.connectDescription')}</p>
           </div>
           {syncing && (
             <span className="ml-2 flex items-center gap-1.5 rounded-full bg-gold-bg px-2.5 py-1 text-[10px] font-medium text-gold">
-              <Loader2 className="h-3 w-3 animate-spin" /> Syncing…
+              <Loader2 className="h-3 w-3 animate-spin" /> {t('whatsapp.syncing')}
             </span>
           )}
         </div>
-        {!connection.connected && <button onClick={() => setConnectOpen(true)} className="text-xs font-medium text-gold hover:text-gold-soft">Set up <Link2 className="ml-1 inline h-3.5 w-3.5" /></button>}
+        {!connection.connected && <button onClick={() => setConnectOpen(true)} className="text-xs font-medium text-gold hover:text-gold-soft">{t('whatsapp.setUp')} <Link2 className="ml-1 inline h-3.5 w-3.5" /></button>}
       </div>
 
       <div className="flex h-[calc(100vh-270px)] min-h-[520px] gap-4 overflow-hidden">
@@ -619,22 +619,22 @@ export default function WhatsAppPage() {
           <div className="border-b border-border p-3">
             <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-elevated px-3 py-2">
               <Search className="h-4 w-4 shrink-0 text-text-muted" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search conversations" className="w-full bg-transparent text-base text-text-primary outline-none placeholder:text-text-muted" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('whatsapp.searchConversations')} className="w-full bg-transparent text-base text-text-primary outline-none placeholder:text-text-muted" />
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-2">
             {conversationsLoading ? <div className="flex justify-center py-10 text-text-muted"><Loader2 className="h-5 w-5 animate-spin" /></div>
-              : filtered.length === 0 ? <div className="p-6 text-center text-xs text-text-muted"><Plus className="mx-auto mb-2 h-5 w-5" />No WhatsApp conversations yet.</div>
+              : filtered.length === 0 ? <div className="p-6 text-center text-xs text-text-muted"><Plus className="mx-auto mb-2 h-5 w-5" />{t('whatsapp.noConversations')}</div>
               : filtered.map((conversation) => (
                 <button key={conversation.id} onClick={() => { setSelectedJid(conversation.remote_jid); setAiOpen(false); }} className={cn('flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors', selectedJid === conversation.remote_jid ? 'bg-gold-bg' : 'hover:bg-bg-elevated')}>
                   <Avatar name={conversation.display_name} color="#4A90D9" size="md" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-sm font-medium text-text-primary">{conversation.display_name}</p>
-                      <span className="shrink-0 text-[10px] text-text-muted">{formatDate(conversation.last_message_timestamp)}</span>
+                      <span className="shrink-0 text-[10px] text-text-muted">{formatDate(conversation.last_message_timestamp, locale)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-xs text-text-secondary">{conversation.last_message ?? 'No messages yet'}</p>
+                      <p className="truncate text-xs text-text-secondary">{conversation.last_message ?? t('whatsapp.noMessagesYet')}</p>
                       {conversation.unread_count > 0 && <span className="shrink-0 rounded-full bg-gold px-1.5 text-[10px] font-bold text-[#0D0D0F]">{conversation.unread_count}</span>}
                     </div>
                   </div>
@@ -651,8 +651,8 @@ export default function WhatsAppPage() {
           {!selected ? (
             <div className="flex flex-1 flex-col items-center justify-center text-center">
               <div className="mb-4 rounded-2xl bg-gold-bg p-4 text-gold"><Send className="h-6 w-6" /></div>
-              <h2 className="font-serif text-xl text-text-primary">Your conversations will appear here</h2>
-              <p className="mt-2 max-w-sm text-sm text-text-muted">Connect WhatsApp and store incoming conversations in this shared inbox.</p>
+              <h2 className="font-serif text-xl text-text-primary">{t('whatsapp.conversationsHere')}</h2>
+              <p className="mt-2 max-w-sm text-sm text-text-muted">{t('whatsapp.connectDescription')}</p>
             </div>
           ) : (
             <>
@@ -664,12 +664,12 @@ export default function WhatsAppPage() {
                   <Avatar name={selected.display_name} color="#4A90D9" size="md" />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-text-primary">{selected.display_name}</p>
-                    <p className="text-xs text-success">WhatsApp conversation</p>
+                    <p className="text-xs text-success">{t('whatsapp.conversation')}</p>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <button onClick={() => { setAiOpen(!aiOpen); if (!aiOpen) setAiSuggestion(null); }} className={cn('flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors', aiOpen ? 'bg-gold-bg text-gold' : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary')}>
-                    <Sparkles className="h-3.5 w-3.5" /> <span className="hidden sm:inline">AI Assistant</span>
+                    <Sparkles className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t('whatsapp.aiAssistant')}</span>
                   </button>
                   <button className="rounded-lg p-2 text-text-muted hover:bg-bg-elevated"><MoreVertical className="h-4 w-4" /></button>
                 </div>
@@ -682,21 +682,21 @@ export default function WhatsAppPage() {
                       <div className="mb-3 flex justify-center">
                         <button onClick={loadMore} disabled={loadingMore} className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-xs text-text-secondary hover:border-gold-border hover:text-gold disabled:opacity-50">
                           {loadingMore ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronUp className="h-3.5 w-3.5" />}
-                          {loadingMore ? 'Loading…' : 'Load older messages'}
+                          {loadingMore ? t('whatsapp.loading') : t('whatsapp.loadOlder')}
                         </button>
                       </div>
                     )}
-                    <div className="mx-auto mb-5 max-w-xs rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-center text-[11px] text-text-muted">Messages are delivered via Evolution API</div>
+                    <div className="mx-auto mb-5 max-w-xs rounded-lg border border-border bg-bg-elevated px-3 py-1.5 text-center text-[11px] text-text-muted">{t('whatsapp.deliveredVia')}</div>
                     {loadingMessages && messages.length === 0 ? <div className="flex justify-center py-10 text-text-muted"><Loader2 className="h-5 w-5 animate-spin" /></div>
                       : messagesError ? <p className="px-5 py-10 text-center text-xs text-error">{messagesError}</p>
-                      : messages.length === 0 ? <p className="py-10 text-center text-xs text-text-muted">No messages in this conversation yet.</p>
+                      : messages.length === 0 ? <p className="py-10 text-center text-xs text-text-muted">{t('whatsapp.noMessagesInConversation')}</p>
                       : <div className="space-y-2">{dedupMessages(messages).map((item) => (
                         <div key={item.id} className={cn('flex', item.from_me ? 'justify-end' : 'justify-start')}>
                           <div className={cn('max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm sm:max-w-[72%]', item.from_me ? 'rounded-br-sm bg-gold-bg text-text-primary' : 'rounded-bl-sm bg-bg-elevated text-text-primary')}>
-                            {item.message_type === 'image' && <p className="mb-1 italic text-text-muted">[Image]</p>}
-                            {item.message_type === 'document' && <p className="mb-1 italic text-text-muted">[Document]</p>}
+                            {item.message_type === 'image' && <p className="mb-1 italic text-text-muted">[{t('whatsapp.image')}]</p>}
+                            {item.message_type === 'document' && <p className="mb-1 italic text-text-muted">[{t('whatsapp.document')}]</p>}
                             <p className="whitespace-pre-wrap break-words">{item.text || ''}</p>
-                            <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-text-muted">{formatTime(item.timestamp)}{item.from_me && <CheckCheck className="h-3 w-3 text-info" />}</div>
+                            <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-text-muted">{formatTime(item.timestamp, locale)}{item.from_me && <CheckCheck className="h-3 w-3 text-info" />}</div>
                           </div>
                         </div>
                       ))}</div>}
@@ -723,10 +723,10 @@ export default function WhatsAppPage() {
                   <footer className="border-t border-border p-2 sm:p-3">
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <input ref={fileInputRef} type="file" onChange={handleFileSelect} accept={ACCEPTED_MEDIA.join(',')} className="hidden" />
-                      <button onClick={() => fileInputRef.current?.click()} disabled={sending} className="shrink-0 rounded-lg p-2 text-text-muted hover:bg-bg-elevated disabled:opacity-50" title="Attach image or document">
+                      <button onClick={() => fileInputRef.current?.click()} disabled={sending} className="shrink-0 rounded-lg p-2 text-text-muted hover:bg-bg-elevated disabled:opacity-50" title={t('whatsapp.attachFile')}>
                         <Paperclip className="h-4 w-4" />
                       </button>
-                      <input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} placeholder={attachment ? 'Add a caption...' : 'Type a message...'} className="min-w-0 flex-1 rounded-xl border border-border bg-bg-elevated px-3 py-2.5 text-base text-text-primary outline-none focus:border-gold-border" />
+                      <input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} placeholder={attachment ? t('whatsapp.addCaption') : t('whatsapp.typeMessage')} className="min-w-0 flex-1 rounded-xl border border-border bg-bg-elevated px-3 py-2.5 text-base text-text-primary outline-none focus:border-gold-border" />
                       <button disabled={sending || (!message.trim() && !attachment)} onClick={handleSend} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold text-[#0D0D0F] hover:bg-gold-soft disabled:opacity-60">{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button>
                     </div>
                   </footer>
@@ -737,7 +737,7 @@ export default function WhatsAppPage() {
                     <div className="flex items-center justify-between border-b border-border p-3">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-4 w-4 text-gold" />
-                        <span className="text-sm font-medium text-text-primary">AI Assistant</span>
+                        <span className="text-sm font-medium text-text-primary">{t('whatsapp.aiAssistant')}</span>
                       </div>
                       <button onClick={() => setAiOpen(false)} className="rounded-lg p-1 text-text-muted hover:bg-bg-secondary">
                         <X className="h-4 w-4" />
@@ -747,10 +747,10 @@ export default function WhatsAppPage() {
                       {/* Context indicator */}
                       {crmContext && (
                         <div className="mb-3 rounded-lg border border-border bg-bg-secondary px-3 py-2">
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-gold">Active Context</p>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gold">{t('whatsapp.activeContext')}</p>
                           <p className="mt-1 text-[11px] text-text-secondary">
-                            {crmContext.contactName} · {crmContext.phoneNumber ?? 'Unknown'}
-                            {crmContext.lead ? ` · Lead: ${crmContext.lead.status ?? 'new'}` : ' · No lead found'}
+                            {crmContext.contactName} · {crmContext.phoneNumber ?? t('whatsapp.unknown')}
+                            {crmContext.lead ? ` · ${t('whatsapp.lead')}: ${crmContext.lead.status ?? 'new'}` : ` · ${t('whatsapp.noLeadFound')}`}
                           </p>
                         </div>
                       )}
@@ -762,15 +762,15 @@ export default function WhatsAppPage() {
                       )}
                       {!replyLoading && replySuggestions.length > 0 && (
                         <div className="mb-3 space-y-2">
-                          <p className="text-[10px] font-medium uppercase tracking-wide text-gold">Reply Suggestions</p>
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gold">{t('whatsapp.replySuggestions')}</p>
                           {replySuggestions.map((reply, i) => (
                             <div key={i} className="rounded-xl border border-border bg-bg-secondary p-2.5">
                               <p className="whitespace-pre-wrap text-[11px] text-text-secondary">{reply}</p>
                               <button
-                                onClick={() => { setMessage(reply); toast.success('Added to composer'); }}
+                                onClick={() => { setMessage(reply); toast.success(t('toast.whatsappAddedToComposer')); }}
                                 className="mt-2 rounded-lg border border-border bg-bg-elevated px-2.5 py-1 text-[10px] font-medium text-gold transition-colors hover:border-gold-border"
                               >
-                                Use Reply
+                                {t('whatsapp.useReply')}
                               </button>
                             </div>
                           ))}
@@ -779,7 +779,7 @@ export default function WhatsAppPage() {
                       {/* Quick actions - contextual */}
                       {aiHistory.length === 0 && !aiSuggestion && !aiLoading && (
                         <div className="space-y-2">
-                          <p className="text-xs text-text-muted">Quick actions:</p>
+                          <p className="text-xs text-text-muted">{t('whatsapp.quickActions')}:
                           {aiQuickActions.map((action) => (
                             <button key={action} onClick={() => aiSend(action)} disabled={aiLoading} className="block w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-left text-xs text-text-secondary transition-colors hover:border-gold-border hover:text-gold disabled:opacity-50">
                               {action}
@@ -794,16 +794,16 @@ export default function WhatsAppPage() {
                       ))}
                       {aiLoading && (
                         <div className="flex items-center gap-2 py-2 text-xs text-text-muted">
-                          <Loader2 className="h-4 w-4 animate-spin" /> Generating…
+                          <Loader2 className="h-4 w-4 animate-spin" /> {t('whatsapp.generating')}
                         </div>
                       )}
                       {aiSuggestion && (
                         <div className="mt-3 rounded-xl border border-gold-border bg-gold-bg p-3">
-                          <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-gold">AI Suggestion</p>
+                          <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-gold">{t('whatsapp.aiSuggestion')}</p>
                           <p className="whitespace-pre-wrap text-xs text-text-primary">{aiSuggestion}</p>
                           <div className="mt-3 flex flex-wrap gap-2">
-                            <button onClick={() => { setMessage(aiSuggestion); setAiSuggestion(null); toast.success('Added to composer'); }} className="rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-bg-elevated">
-                              Use message
+                            <button onClick={() => { setMessage(aiSuggestion); setAiSuggestion(null); toast.success(t('toast.whatsappAddedToComposer')); }} className="rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-bg-elevated">
+                              {t('whatsapp.useMessage')}
                             </button>
                             <button onClick={async () => {
                               if (!selected || sending) return;
@@ -815,15 +815,15 @@ export default function WhatsAppPage() {
                                   current.map((c) => c.remote_jid === selected.remote_jid ? { ...c, last_message: aiSuggestion, last_message_timestamp: new Date().toISOString() } : c)
                                 );
                                 setAiSuggestion(null);
-                                toast.success('Message sent');
+                                toast.success(t('toast.whatsappMessageSent'));
                               } catch (error) {
                                 toast.error(error instanceof Error ? error.message : 'Unable to send message');
                               } finally { setSending(false); }
                             }} disabled={sending} className="rounded-lg bg-gold px-3 py-1.5 text-xs font-medium text-[#0D0D0F] hover:bg-gold-soft disabled:opacity-60">
-                              Send
+                              {t('whatsapp.send')}
                             </button>
-                            <button onClick={() => aiSend(aiHistory.filter(m => m.role === 'user').slice(-1)[0]?.content || 'Write a professional reply')} disabled={aiLoading} className="rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-bg-elevated disabled:opacity-50">
-                              Regenerate
+                            <button onClick={() => aiSend(aiHistory.filter(m => m.role === 'user').slice(-1)[0]?.content || t('whatsapp.qaWriteReply'))} disabled={aiLoading} className="rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-bg-elevated disabled:opacity-50">
+                              {t('whatsapp.regenerate')}
                             </button>
                           </div>
                         </div>
@@ -831,7 +831,7 @@ export default function WhatsAppPage() {
                     </div>
                     <div className="border-t border-border p-3">
                       <div className="flex items-center gap-2">
-                        <input value={aiInput} onChange={(e) => setAiInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); aiSend(aiInput); } }} placeholder="Ask AI…" className="min-w-0 flex-1 rounded-xl border border-border bg-bg-secondary px-3 py-2 text-base text-text-primary outline-none focus:border-gold-border" />
+                        <input value={aiInput} onChange={(e) => setAiInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); aiSend(aiInput); } }} placeholder={t('whatsapp.askAi')} className="min-w-0 flex-1 rounded-xl border border-border bg-bg-secondary px-3 py-2 text-base text-text-primary outline-none focus:border-gold-border" />
                         <button onClick={() => aiSend(aiInput)} disabled={aiLoading || !aiInput.trim()} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gold text-[#0D0D0F] hover:bg-gold-soft disabled:opacity-50">
                           <Send className="h-3.5 w-3.5" />
                         </button>
@@ -850,8 +850,8 @@ export default function WhatsAppPage() {
           <div className="w-full max-w-md rounded-2xl border border-border bg-bg-elevated p-6 shadow-modal" onClick={(e) => e.stopPropagation()}>
             <div className="mb-5 flex items-start justify-between">
               <div>
-                <h2 className="font-serif text-xl text-text-primary">{connection.connected ? 'Connection settings' : 'Connect WhatsApp'}</h2>
-                <p className="mt-1 text-xs text-text-muted">{connection.connected ? 'Your instance is connected. Reconnect if needed.' : 'Scan the QR code with WhatsApp on your phone to link this workspace.'}</p>
+                <h2 className="font-serif text-xl text-text-primary">{connection.connected ? t('whatsapp.connectionSettings') : t('whatsapp.connectWhatsapp')}</h2>
+                <p className="mt-1 text-xs text-text-muted">{connection.connected ? t('whatsapp.instanceConnected') : t('whatsapp.scanQrDescription')}</p>
               </div>
               <button onClick={closeConnectModal} className="text-text-muted">×</button>
             </div>
@@ -864,14 +864,14 @@ export default function WhatsAppPage() {
                 <div className="mt-3 flex items-center gap-2">
                   {qrStage === 'idle' || qrStage === 'error' ? (
                     <button onClick={startConnect} className="flex items-center gap-1.5 text-xs font-medium text-gold hover:text-gold-soft">
-                      <RefreshCw className="h-3.5 w-3.5" /> Generate QR Code
+                      <RefreshCw className="h-3.5 w-3.5" /> {t('whatsapp.generateQr')}
                     </button>
                   ) : (
                     <button onClick={refreshQr} disabled={qrStage === 'creating'} className="flex items-center gap-1.5 text-xs font-medium text-gold hover:text-gold-soft disabled:opacity-50">
-                      <RefreshCw className="h-3.5 w-3.5" /> Refresh QR
+                      <RefreshCw className="h-3.5 w-3.5" /> {t('whatsapp.refreshQr')}
                     </button>
                   )}
-                  <span className="text-[10px] text-text-muted">Open WhatsApp → Settings → Linked Devices → Link a Device</span>
+                  <span className="text-[10px] text-text-muted">{t('whatsapp.linkDeviceInstructions')}</span>
                 </div>
               </div>
             )}
@@ -879,8 +879,8 @@ export default function WhatsAppPage() {
             {connection.connected && (
               <div className="mb-5 flex flex-col items-center gap-3 py-4">
                 <CheckCircle2 className="h-12 w-12 text-success" />
-                <p className="text-sm font-medium text-text-primary">WhatsApp Connected</p>
-                <p className="text-xs text-text-muted">Instance: {connection.instanceName}</p>
+                <p className="text-sm font-medium text-text-primary">{t('whatsapp.whatsappConnected')}</p>
+                <p className="text-xs text-text-muted">{t('whatsapp.instance')}: {connection.instanceName}</p>
                 <button onClick={async () => {
                   if (disconnecting) return;
                   setDisconnecting(true);
@@ -893,27 +893,27 @@ export default function WhatsAppPage() {
                     setSelectedJid(null);
                     setMessages([]);
                     connectionQuery.refetch();
-                    toast.success('WhatsApp disconnected');
+                    toast.success(t('toast.whatsappDisconnected'));
                     closeConnectModal();
                   } catch (error) {
-                    toast.error(error instanceof Error ? error.message : 'Failed to disconnect from Evolution API');
+                    toast.error(error instanceof Error ? error.message : t('toast.whatsappDisconnectFailed'));
                   } finally {
                     setDisconnecting(false);
                   }
                 }} disabled={disconnecting} className="text-xs font-medium text-error hover:text-red-400 disabled:opacity-50">
-                  {disconnecting ? <span className="flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Disconnecting…</span> : 'Disconnect'}
+                  {disconnecting ? <span className="flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('whatsapp.disconnecting')}</span> : t('whatsapp.disconnect')}
                 </button>
               </div>
             )}
 
             <label className="block text-xs font-medium text-text-secondary">
-              Business phone number
+              {t('whatsapp.businessPhoneNumber')}
               <input value={connection.phoneNumber} onChange={(e) => setConnection((c) => ({ ...c, phoneNumber: e.target.value }))} placeholder="+1 305 555 0100" className="mt-2 w-full rounded-xl border border-border bg-bg-secondary px-3 py-3 text-base text-text-primary outline-none focus:border-gold-border" />
             </label>
 
             <div className="mt-6 flex justify-end gap-2">
-              <button onClick={closeConnectModal} className="btn btn-outline btn-md">Close</button>
-              {connection.connected && <button onClick={async () => { await updateWhatsAppConnection(connection); toast.success('Settings saved'); closeConnectModal(); }} className="btn btn-gold btn-md">Save changes</button>}
+              <button onClick={closeConnectModal} className="btn btn-outline btn-md">{t('common.close')}</button>
+              {connection.connected && <button onClick={async () => { await updateWhatsAppConnection(connection); toast.success(t('toast.settingsSaved')); closeConnectModal(); }} className="btn btn-gold btn-md">{t('common.saveChanges')}</button>}
             </div>
           </div>
         </div>

@@ -63,7 +63,7 @@ function mapProperty(p: any): Property {
 }
 
 export default function PropertiesPage() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const { currency } = useAgency();
   const { data: rawProperties, loading, error, refetch } = useSupabaseQuery(fetchProperties);
 
@@ -187,7 +187,7 @@ export default function PropertiesPage() {
       setEditProp(null);
       toast.success(t('properties.updated', { title: editProp.title }));
     } catch (err) {
-      toast.error('Failed to update property. Please try again.');
+      toast.error(t('toast.propertyUpdateFailed'));
     } finally {
       setSaving(false);
     }
@@ -285,7 +285,7 @@ export default function PropertiesPage() {
                   <div className="mt-3 flex items-center gap-4 text-[12px] text-text-secondary overflow-hidden">
                     {property.bedrooms > 0 && <span className="flex shrink-0 items-center gap-1.5"><Bed className="h-3.5 w-3.5" strokeWidth={1.5} /> {property.bedrooms} bd</span>}
                     {property.bathrooms > 0 && <span className="flex shrink-0 items-center gap-1.5"><Bath className="h-3.5 w-3.5" strokeWidth={1.5} /> {property.bathrooms} ba</span>}
-                    <span className="flex shrink-0 items-center gap-1.5"><Maximize className="h-3.5 w-3.5" strokeWidth={1.5} /> {property.area.toLocaleString()} ft²</span>
+                    <span className="flex shrink-0 items-center gap-1.5"><Maximize className="h-3.5 w-3.5" strokeWidth={1.5} /> {property.area.toLocaleString(locale)} ft²</span>
                   </div>
                   <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
                     <Avatar name={property.agent} size="sm" color="#D4AF37" />

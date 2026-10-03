@@ -76,7 +76,7 @@ export default function ReportsPage() {
       ['Name', 'Email', 'Phone', 'Source', 'Status', 'Budget', 'Score', 'Owner', 'Tags', 'Created'],
       leads.map((l) => [l.name, l.email ?? '', l.phone ?? '', l.source, l.status, l.budget, l.score, l.owner, l.tags.join('; '), l.createdAt ?? ''])
     );
-    toast.success('Leads report downloaded');
+    toast.success(t('toast.reportDownloaded', { type: t('reports.leads') }));
   };
 
   const downloadDealsCSV = () => {
@@ -84,7 +84,7 @@ export default function ReportsPage() {
       ['Title', 'Stage', 'Value', 'Lead Name', 'Property Name', 'Owner', 'Expected Close', 'Created'],
       deals.map((d) => [d.title, d.stage, d.value, d.leadName, d.propertyName, d.ownerName, d.closeDate ?? '', d.createdAt ?? ''])
     );
-    toast.success('Deals report downloaded');
+    toast.success(t('toast.reportDownloaded', { type: t('reports.deals') }));
   };
 
   const downloadPropertiesCSV = () => {
@@ -92,7 +92,7 @@ export default function ReportsPage() {
       ['Title', 'Type', 'Price', 'Status', 'Bedrooms', 'Bathrooms', 'Area', 'City', 'Country'],
       properties.map((p) => [p.title, p.type, p.price, p.status, p.bedrooms, p.bathrooms, p.area, p.city, p.country ?? ''])
     );
-    toast.success('Properties report downloaded');
+    toast.success(t('toast.reportDownloaded', { type: t('reports.properties') }));
   };
 
   const downloadRevenueCSV = () => {
@@ -100,7 +100,7 @@ export default function ReportsPage() {
       ['Month', 'Revenue', 'Target'],
       revenueData.map((r) => [r.month, r.revenue, r.target])
     );
-    toast.success('Revenue report downloaded');
+    toast.success(t('toast.reportDownloaded', { type: t('reports.revenue') }));
   };
 
   const downloadFunnelCSV = () => {
@@ -108,7 +108,7 @@ export default function ReportsPage() {
       ['Stage', 'Count', 'Value'],
       funnelData.map((f) => [f.stage, f.count, f.value])
     );
-    toast.success('Pipeline report downloaded');
+    toast.success(t('toast.reportDownloaded', { type: t('reports.pipeline') }));
   };
 
   const reportActions: Record<string, () => void> = {
@@ -134,9 +134,9 @@ export default function ReportsPage() {
       });
       const report = await getAIReport(context, 'Business Performance', locale);
       setAiReport(report);
-      toast.success('AI report generated');
+      toast.success(t('toast.aiReportGenerated'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to generate AI report');
+      toast.error(err instanceof Error ? err.message : t('toast.aiReportFailed'));
     } finally {
       setReportLoading(false);
     }
@@ -146,7 +146,7 @@ export default function ReportsPage() {
     <AppShell>
       <PageHeader title={t('page.reports')} description={t('page.reportsDescription')}>
         <button onClick={generateAIReport} disabled={reportLoading || loading} className="btn btn-gold btn-md disabled:opacity-60">
-          <FileText className="h-4 w-4" strokeWidth={1.5} /> {reportLoading ? 'Generating…' : 'Generate Report'}
+          <FileText className="h-4 w-4" strokeWidth={1.5} /> {reportLoading ? t('reports.generating') : t('reports.generate')}
         </button>
       </PageHeader>
 
@@ -188,8 +188,8 @@ export default function ReportsPage() {
           <div className="mt-8 grid gap-4 lg:grid-cols-2">
             <Card delay={0.2}>
               <div className="mb-6">
-                <h3 className="font-serif text-lg font-medium text-text-primary">Revenue vs Target</h3>
-                <p className="mt-1 text-xs text-text-muted">Monthly comparison</p>
+                <h3 className="font-serif text-lg font-medium text-text-primary">{t('reports.revenueVsTarget')}</h3>
+                <p className="mt-1 text-xs text-text-muted">{t('reports.monthlyComparison')}</p>
               </div>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={revenueData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
@@ -205,8 +205,8 @@ export default function ReportsPage() {
 
             <Card delay={0.25}>
               <div className="mb-6">
-                <h3 className="font-serif text-lg font-medium text-text-primary">Funnel Performance</h3>
-                <p className="mt-1 text-xs text-text-muted">Stage-by-stage conversion</p>
+                <h3 className="font-serif text-lg font-medium text-text-primary">{t('reports.funnelPerformance')}</h3>
+                <p className="mt-1 text-xs text-text-muted">{t('reports.stageByStage')}</p>
               </div>
               <div className="space-y-3">
                 {funnelData.length > 0 && funnelData.map((stage, i) => {
@@ -237,14 +237,14 @@ export default function ReportsPage() {
           </div>
 
           {aiReport && <Card className="mt-4" delay={0.25}>
-            <div className="mb-4 flex items-center justify-between"><h3 className="font-serif text-lg font-medium text-text-primary">Latest AI Report</h3><Badge variant="gold">OpenRouter AI</Badge></div>
+            <div className="mb-4 flex items-center justify-between"><h3 className="font-serif text-lg font-medium text-text-primary">{t('reports.latestAiReport')}</h3><Badge variant="gold">OpenRouter AI</Badge></div>
             <div className="whitespace-pre-wrap text-sm leading-7 text-text-secondary">{aiReport}</div>
           </Card>}
 
           <Card className="mt-4" delay={0.3}>
             <div className="mb-5 flex items-center justify-between">
-              <h3 className="font-serif text-lg font-medium text-text-primary">Generated Reports</h3>
-              <Badge variant="gold">{reports.length} reports</Badge>
+              <h3 className="font-serif text-lg font-medium text-text-primary">{t('reports.generatedReports')}</h3>
+              <Badge variant="gold">{reports.length} {t('reports.reports')}</Badge>
             </div>
             <div className="space-y-2">
               {reports.map((report, i) => (
@@ -262,7 +262,7 @@ export default function ReportsPage() {
                     <p className="text-sm font-medium text-text-primary">{report.name}</p>
                     <p className="text-xs text-text-muted">{report.type} · {report.date}</p>
                   </div>
-                  <Badge variant={report.status === 'Ready' ? 'success' : 'warning'}>{report.status}</Badge>
+                  <Badge variant={report.status === 'Ready' ? 'success' : 'warning'}>{t(report.status === 'Ready' ? 'reports.ready' : 'reports.generating')}</Badge>
                   {report.status === 'Ready' && (
                     <button
                       onClick={() => { const fn = reportActions[report.id]; if (fn) fn(); else toast.error('Report data not available'); }}

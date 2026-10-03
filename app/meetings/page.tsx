@@ -227,7 +227,7 @@ export default function MeetingsPage() {
                             onClick={() => handleWhatsAppAlert(meeting)}
                             className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-2.5 py-1.5 text-[11px] font-medium text-text-secondary transition-colors hover:border-success/40 hover:text-success"
                           >
-                            <MessageCircle className="h-3.5 w-3.5" strokeWidth={1.5} /> WhatsApp
+                            <MessageCircle className="h-3.5 w-3.5" strokeWidth={1.5} /> {t('page.whatsapp')}
                           </button>
                           <button
                             onClick={() => handleComplete(meeting.id, meeting.title)}
@@ -243,7 +243,7 @@ export default function MeetingsPage() {
                           </button>
                         </div>
                         <div className="mt-2 flex items-center gap-2">
-                          <Badge variant={meeting.status === 'confirmed' ? 'success' : meeting.status === 'rescheduled' ? 'gold' : 'neutral'}>{meeting.status}</Badge>
+                          <Badge variant={meeting.status === 'confirmed' ? 'success' : meeting.status === 'rescheduled' ? 'gold' : 'neutral'}>{t(`meeting.status.${meeting.status}`)}</Badge>
                         </div>
                       </div>
                     </div>
