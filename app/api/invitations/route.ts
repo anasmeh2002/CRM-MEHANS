@@ -13,10 +13,13 @@ function serverSupabase() {
 async function getUserFromRequest(): Promise<{ id: string; email: string } | null> {
   const headerList = await headers();
   const authHeader = headerList.get('authorization');
-  if (!authHeader) return null;
-  const token = authHeader.replace('Bearer ', '');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+
+  const token = authHeader.slice('Bearer '.length).trim();
+  if (!token) return null;
+
   const sb = createClient(SUPABASE_URL, ANON_KEY, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
+    global: { headers: { Authorization: 'Bearer ' + token } },
   });
   const { data, error } = await sb.auth.getUser();
   if (error || !data.user) return null;
@@ -47,7 +50,7 @@ async function getUserRole(userId: string): Promise<string | null> {
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
@@ -85,7 +88,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'permission_denied' }, { status: 403, headers: corsHeaders });
     }
 
-    // Only owners can invite other owners
     if (role === 'owner' && callerRole !== 'owner') {
       return NextResponse.json({ error: 'permission_denied' }, { status: 403, headers: corsHeaders });
     }
@@ -93,7 +95,6 @@ export async function POST(request: NextRequest) {
     const sb = serverSupabase();
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Check for existing workspace_members with same email in this workspace
     const { data: existingMember } = await sb
       .from('workspace_members')
       .select('id, status, user_id')
@@ -101,87 +102,138 @@ export async function POST(request: NextRequest) {
       .eq('email', normalizedEmail)
       .maybeSingle();
 
-    if (existingMember) {
-      if (existingMember.status === 'active') {
-        return NextResponse.json({ error: 'already_active', message: 'This user is already an active member.' }, { status: 409, headers: corsHeaders });
-      }
-      if (existingMember.status === 'invited') {
-        return NextResponse.json({ error: 'already_invited', message: 'This user has already been invited.' }, { status: 409, headers: corsHeaders });
-      }
+    if (existingMember?.status === 'active') {
+      return NextResponse.json(
+        { error: 'already_active', message: 'This user is already an active member.' },
+        { status: 409, headers: corsHeaders }
+      );
     }
 
-    // Send Supabase Auth invitation email
+    if (existingMember?.status === 'invited') {
+      return NextResponse.json(
+        { error: 'already_invited', message: 'This user has already been invited.' },
+        { status: 409, headers: corsHeaders }
+      );
+    }
+
+    let invitationId: string;
+
+    if (existingMember) {
+      const { data: resetMember, error: resetError } = await sb
+        .from('workspace_members')
+        .update({
+          user_id: null,
+          name: name.trim(),
+          email: normalizedEmail,
+          role,
+          status: 'invited',
+          invited_by: currentUser.id,
+          invited_at: new Date().toISOString(),
+          accepted_at: null,
+        })
+        .eq('id', existingMember.id)
+        .select('id')
+        .single();
+
+      if (resetError || !resetMember) throw resetError ?? new Error('Could not prepare invitation');
+      invitationId = resetMember.id;
+    } else {
+      const { data: newMember, error: insertError } = await sb
+        .from('workspace_members')
+        .insert({
+          workspace_id: agencyId,
+          user_id: null,
+          name: name.trim(),
+          email: normalizedEmail,
+          role,
+          status: 'invited',
+          invited_by: currentUser.id,
+          invited_at: new Date().toISOString(),
+          accepted_at: null,
+        })
+        .select('id')
+        .single();
+
+      if (insertError || !newMember) throw insertError ?? new Error('Could not create invitation');
+      invitationId = newMember.id;
+    }
+
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (typeof request.url === 'string' ? new URL(request.url).origin : 'http://localhost:3000');
+
+    const redirectTo =
+      siteUrl +
+      '/auth/callback?invitation_id=' +
+      encodeURIComponent(invitationId) +
+      '&next=/';
+
     const { data: inviteData, error: inviteError } = await sb.auth.admin.inviteUserByEmail(
       normalizedEmail,
       {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || (typeof request.url === 'string' ? new URL(request.url).origin : 'http://localhost:3000')}/auth/callback`,
+        redirectTo,
         data: {
           full_name: name.trim(),
           workspace_id: agencyId,
+          invitation_id: invitationId,
           role,
         },
       }
     );
 
-    // Handle common errors
     if (inviteError) {
       const msg = inviteError.message.toLowerCase();
-      if (msg.includes('already') && msg.includes('registered')) {
-        // User already has an auth account — link them directly
+
+      if (msg.includes('already') && (msg.includes('registered') || msg.includes('exists'))) {
         const { data: existingAuth } = await sb.auth.admin.listUsers();
-        const authUser = existingAuth?.users?.find((u) => u.email === normalizedEmail);
+        const authUser = existingAuth?.users?.find(
+          (u) => (u.email ?? '').trim().toLowerCase() === normalizedEmail
+        );
+
         if (authUser) {
-          const memberRow = {
-            workspace_id: agencyId,
-            user_id: authUser.id,
-            name: name.trim(),
-            email: normalizedEmail,
-            role,
-            status: 'invited' as const,
-            invited_by: currentUser.id,
-            invited_at: new Date().toISOString(),
-          };
-          if (existingMember) {
-            const { error: updateErr } = await sb
-              .from('workspace_members')
-              .update(memberRow)
-              .eq('id', existingMember.id);
-            if (updateErr) throw updateErr;
-          } else {
-            const { error: insertErr } = await sb.from('workspace_members').insert(memberRow);
-            if (insertErr) throw insertErr;
-          }
-          return NextResponse.json({ success: true, mode: 'existing_user_linked' }, { headers: corsHeaders });
+          const { error: linkError } = await sb
+            .from('workspace_members')
+            .update({
+              user_id: authUser.id,
+              status: 'invited',
+            })
+            .eq('id', invitationId);
+
+          if (linkError) throw linkError;
+
+          return NextResponse.json(
+            { success: true, mode: 'existing_user_linked', invitation_id: invitationId },
+            { headers: corsHeaders }
+          );
         }
       }
+
+      await sb
+        .from('workspace_members')
+        .delete()
+        .eq('id', invitationId)
+        .eq('status', 'invited');
+
       throw inviteError;
     }
 
-    // Create / update workspace_members record
-    const memberRow = {
-      workspace_id: agencyId,
-      user_id: inviteData.user?.id ?? null,
-      name: name.trim(),
-      email: normalizedEmail,
-      role,
-      status: 'invited' as const,
-      invited_by: currentUser.id,
-      invited_at: new Date().toISOString(),
-    };
-
-    if (existingMember) {
-      const { error: updateErr } = await sb
-        .from('workspace_members')
-        .update(memberRow)
-        .eq('id', existingMember.id);
-      if (updateErr) throw updateErr;
-    } else {
-      const { error: insertErr } = await sb.from('workspace_members').insert(memberRow);
-      if (insertErr) throw insertErr;
+    if (!inviteData.user?.id) {
+      await sb.from('workspace_members').delete().eq('id', invitationId);
+      throw new Error('Supabase Auth did not return an invited user');
     }
 
-    // Create a notification for workspace owners/admins
-    const { data: admins } = await sb
+    const { error: linkError } = await sb
+      .from('workspace_members')
+      .update({
+        user_id: inviteData.user.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', invitationId)
+      .eq('status', 'invited');
+
+    if (linkError) throw linkError;
+
+    const { data: admins, error: adminsError } = await sb
       .from('workspace_members')
       .select('user_id')
       .eq('workspace_id', agencyId)
@@ -189,25 +241,30 @@ export async function POST(request: NextRequest) {
       .eq('status', 'active')
       .not('user_id', 'is', null);
 
-    if (admins) {
-      const notifInserts = admins
-        .filter((a) => a.user_id)
-        .map((a) => ({
-          user_id: a.user_id,
-          agency_id: agencyId,
-          title: 'New Team Member Invited',
-          description: `${name.trim()} was invited as ${role}.`,
-          type: 'team',
-          record_type: 'member',
-          record_id: null,
-          read: false,
-        }));
-      if (notifInserts.length > 0) {
-        await sb.from('notifications').insert(notifInserts);
-      }
+    if (adminsError) throw adminsError;
+
+    const notifInserts = (admins ?? [])
+      .filter((admin) => admin.user_id)
+      .map((admin) => ({
+        user_id: admin.user_id,
+        agency_id: agencyId,
+        title: 'New Team Member Invited',
+        description: name.trim() + ' was invited as ' + role + '.',
+        type: 'team',
+        record_type: 'member',
+        record_id: invitationId,
+        read: false,
+      }));
+
+    if (notifInserts.length > 0) {
+      const { error: notificationError } = await sb.from('notifications').insert(notifInserts);
+      if (notificationError) throw notificationError;
     }
 
-    return NextResponse.json({ success: true, mode: 'invitation_sent' }, { headers: corsHeaders });
+    return NextResponse.json(
+      { success: true, mode: 'invitation_sent', invitation_id: invitationId },
+      { headers: corsHeaders }
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Internal error';
     return NextResponse.json({ error: message }, { status: 500, headers: corsHeaders });
