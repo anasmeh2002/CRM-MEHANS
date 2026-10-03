@@ -192,7 +192,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
                 <input
                   autoFocus
                   placeholder={t('navbar.searchPlaceholder')}
-                  className="flex-1 bg-transparent text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none"
+                  className="flex-1 bg-transparent text-base text-text-primary placeholder:text-text-muted focus:outline-none"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />

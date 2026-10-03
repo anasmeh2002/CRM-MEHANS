@@ -131,6 +131,8 @@ export function Select({
 }) {
   const { t } = useLanguage();
   const placeholderText = placeholder ?? t('common.select');
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handler(e: MouseEvent) {

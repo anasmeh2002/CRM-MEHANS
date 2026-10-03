@@ -212,9 +212,9 @@ export default function PropertiesPage() {
         </button>
       </PageHeader>
 
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:overflow-hidden">
         <SearchInput value={search} onChange={setSearch} placeholder={t('properties.searchPlaceholder')} className="flex-1 max-w-md" />
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
           {statusFilters.map((status) => (
             <button
               key={status}
@@ -272,20 +272,20 @@ export default function PropertiesPage() {
                       <Star className="h-3.5 w-3.5 fill-gold text-gold" strokeWidth={1.5} />
                     </div>
                   )}
-                  <div className="absolute bottom-3 left-3 right-3">
-                    <p className="text-[11px] text-white/70">{property.city}</p>
-                    <p className="font-serif text-lg font-medium text-white">{property.title}</p>
+                  <div className="absolute bottom-3 left-3 right-3 min-w-0">
+                    <p className="truncate text-[11px] text-white/70">{property.city}</p>
+                    <p className="truncate font-serif text-lg font-medium text-white">{property.title}</p>
                   </div>
                 </div>
                 <div className="p-4 sm:p-5">
-                  <div className="flex items-center justify-between">
-                    <p className="font-serif text-xl font-medium text-gold">{formatCurrency(property.price, currency)}</p>
-                    <Badge variant="neutral">{t(propertyTypeKeys[property.type as PropertyType] ?? 'property.apartment')}</Badge>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="min-w-0 truncate font-serif text-xl font-medium text-gold">{formatCurrency(property.price, currency)}</p>
+                    <Badge variant="neutral" className="shrink-0">{t(propertyTypeKeys[property.type as PropertyType] ?? 'property.apartment')}</Badge>
                   </div>
-                  <div className="mt-3 flex items-center gap-4 text-[12px] text-text-secondary">
-                    {property.bedrooms > 0 && <span className="flex items-center gap-1.5"><Bed className="h-3.5 w-3.5" strokeWidth={1.5} /> {property.bedrooms} bd</span>}
-                    {property.bathrooms > 0 && <span className="flex items-center gap-1.5"><Bath className="h-3.5 w-3.5" strokeWidth={1.5} /> {property.bathrooms} ba</span>}
-                    <span className="flex items-center gap-1.5"><Maximize className="h-3.5 w-3.5" strokeWidth={1.5} /> {property.area.toLocaleString()} ft²</span>
+                  <div className="mt-3 flex items-center gap-4 text-[12px] text-text-secondary overflow-hidden">
+                    {property.bedrooms > 0 && <span className="flex shrink-0 items-center gap-1.5"><Bed className="h-3.5 w-3.5" strokeWidth={1.5} /> {property.bedrooms} bd</span>}
+                    {property.bathrooms > 0 && <span className="flex shrink-0 items-center gap-1.5"><Bath className="h-3.5 w-3.5" strokeWidth={1.5} /> {property.bathrooms} ba</span>}
+                    <span className="flex shrink-0 items-center gap-1.5"><Maximize className="h-3.5 w-3.5" strokeWidth={1.5} /> {property.area.toLocaleString()} ft²</span>
                   </div>
                   <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
                     <Avatar name={property.agent} size="sm" color="#D4AF37" />

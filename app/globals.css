@@ -265,7 +265,7 @@
     border: 1px solid var(--border-default);
     background: var(--bg-elevated);
     padding: 11px 14px;
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.5;
     color: var(--text-primary);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -399,7 +399,17 @@
 @media (max-width: 639px) {
   .modal-panel { max-height: calc(100dvh - 1rem); }
   table { min-width: 680px; }
+  /* Prevent iOS Safari auto-zoom: all text inputs must be >=16px */
+  input[type="text"], input[type="email"], input[type="tel"],
+  input[type="number"], input[type="password"], input[type="search"],
+  input[type="url"], input[type="date"], input[type="time"],
+  input:not([type]), textarea, select {
+    font-size: 16px !important;
+  }
 }
 
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 .safe-top { padding-top: env(safe-area-inset-top); }
+
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

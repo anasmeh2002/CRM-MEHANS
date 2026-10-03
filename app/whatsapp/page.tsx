@@ -619,7 +619,7 @@ export default function WhatsAppPage() {
           <div className="border-b border-border p-3">
             <div className="flex items-center gap-2 rounded-xl border border-border bg-bg-elevated px-3 py-2">
               <Search className="h-4 w-4 shrink-0 text-text-muted" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search conversations" className="w-full bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search conversations" className="w-full bg-transparent text-base text-text-primary outline-none placeholder:text-text-muted" />
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-2">
@@ -726,7 +726,7 @@ export default function WhatsAppPage() {
                       <button onClick={() => fileInputRef.current?.click()} disabled={sending} className="shrink-0 rounded-lg p-2 text-text-muted hover:bg-bg-elevated disabled:opacity-50" title="Attach image or document">
                         <Paperclip className="h-4 w-4" />
                       </button>
-                      <input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} placeholder={attachment ? 'Add a caption...' : 'Type a message...'} className="min-w-0 flex-1 rounded-xl border border-border bg-bg-elevated px-3 py-2.5 text-sm text-text-primary outline-none focus:border-gold-border" />
+                      <input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} placeholder={attachment ? 'Add a caption...' : 'Type a message...'} className="min-w-0 flex-1 rounded-xl border border-border bg-bg-elevated px-3 py-2.5 text-base text-text-primary outline-none focus:border-gold-border" />
                       <button disabled={sending || (!message.trim() && !attachment)} onClick={handleSend} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold text-[#0D0D0F] hover:bg-gold-soft disabled:opacity-60">{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button>
                     </div>
                   </footer>
@@ -831,7 +831,7 @@ export default function WhatsAppPage() {
                     </div>
                     <div className="border-t border-border p-3">
                       <div className="flex items-center gap-2">
-                        <input value={aiInput} onChange={(e) => setAiInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); aiSend(aiInput); } }} placeholder="Ask AI…" className="min-w-0 flex-1 rounded-xl border border-border bg-bg-secondary px-3 py-2 text-xs text-text-primary outline-none focus:border-gold-border" />
+                        <input value={aiInput} onChange={(e) => setAiInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); aiSend(aiInput); } }} placeholder="Ask AI…" className="min-w-0 flex-1 rounded-xl border border-border bg-bg-secondary px-3 py-2 text-base text-text-primary outline-none focus:border-gold-border" />
                         <button onClick={() => aiSend(aiInput)} disabled={aiLoading || !aiInput.trim()} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gold text-[#0D0D0F] hover:bg-gold-soft disabled:opacity-50">
                           <Send className="h-3.5 w-3.5" />
                         </button>
@@ -908,7 +908,7 @@ export default function WhatsAppPage() {
 
             <label className="block text-xs font-medium text-text-secondary">
               Business phone number
-              <input value={connection.phoneNumber} onChange={(e) => setConnection((c) => ({ ...c, phoneNumber: e.target.value }))} placeholder="+1 305 555 0100" className="mt-2 w-full rounded-xl border border-border bg-bg-secondary px-3 py-3 text-sm text-text-primary outline-none focus:border-gold-border" />
+              <input value={connection.phoneNumber} onChange={(e) => setConnection((c) => ({ ...c, phoneNumber: e.target.value }))} placeholder="+1 305 555 0100" className="mt-2 w-full rounded-xl border border-border bg-bg-secondary px-3 py-3 text-base text-text-primary outline-none focus:border-gold-border" />
             </label>
 
             <div className="mt-6 flex justify-end gap-2">

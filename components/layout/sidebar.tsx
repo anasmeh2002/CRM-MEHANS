@@ -1,19 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import {
   LayoutDashboard, Users, Home, KanbanSquare, TrendingUp,
   Calendar, CheckSquare, CalendarClock, MessageCircle, BarChart3,
   Sparkles, FileText, Settings, ChevronLeft, X, MoreHorizontal,
+  User, LogOut, Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MehansLogo, MehansLogoIcon } from '@/components/logo';
 import { useLanguage } from '@/components/language-provider';
 import { useSupabaseQuery } from '@/hooks/use-supabase-query';
 import { fetchAgency, type AgencyProfile } from '@/lib/data';
+import { useAuth } from '@/components/auth-provider';
 
 const navItems = [
   { labelKey: 'nav.overview', href: '/', icon: LayoutDashboard },
@@ -24,12 +26,15 @@ const navItems = [
   { labelKey: 'nav.calendar', href: '/calendar', icon: Calendar },
   { labelKey: 'nav.tasks', href: '/tasks', icon: CheckSquare },
   { labelKey: 'nav.meetings', href: '/meetings', icon: CalendarClock },
+  { labelKey: 'nav.contacts', href: '/contacts', icon: User },
   { labelKey: 'nav.whatsapp', href: '/whatsapp', icon: MessageCircle },
   { labelKey: 'nav.analytics', href: '/analytics', icon: BarChart3 },
   { labelKey: 'nav.aiAssistant', href: '/ai-assistant', icon: Sparkles },
   { labelKey: 'nav.reports', href: '/reports', icon: FileText },
   { labelKey: 'nav.settings', href: '/settings', icon: Settings },
 ];
+
+const primaryItems = [navItems[0], navItems[1], navItems[2], navItems[5]];
 
 export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; onToggleCollapse: () => void }) {
   const pathname = usePathname();
@@ -111,50 +116,211 @@ export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; o
 
 export function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
-  const { t } = useLanguage();
+  const { t, rtl } = useLanguage();
+  const { user, signOut } = useAuth();
+  const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
-  const primaryItems = [navItems[0], navItems[1], navItems[2], navItems[5]];
-  const moreItems = navItems.filter((item) => !primaryItems.includes(item));
+
+  const moreNavItems = navItems.filter((item) => !primaryItems.includes(item));
+
+  const handleSignOut = async () => {
+    setMoreOpen(false);
+    onClose();
+    try {
+      await signOut();
+      router.replace('/login');
+    } catch { /* ignore */ }
+  };
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(4.25rem+env(safe-area-inset-bottom))] items-start justify-around border-t border-border bg-bg-secondary/95 px-1 pt-1.5 shadow-modal backdrop-blur-xl lg:hidden">
-        {[...primaryItems, { labelKey: 'nav.more', href: '#more', icon: MoreHorizontal }].map((item) => {
+      {/* Fixed bottom navigation bar */}
+      <nav
+        className="fixed inset-x-0 bottom-0 z-[45] flex h-[calc(4.5rem+env(safe-area-inset-bottom))] items-stretch justify-around border-t border-border bg-bg-secondary/95 px-1 pb-[env(safe-area-inset-bottom)] pt-1.5 shadow-modal backdrop-blur-xl lg:hidden"
+        style={{ touchAction: 'manipulation' }}
+      >
+        {primaryItems.map((item) => {
           const Icon = item.icon;
-          const active = item.href === '#more' ? moreOpen : pathname === item.href;
+          const active = pathname === item.href;
           return (
-            <button
+            <Link
               key={item.href}
-              onClick={() => item.href === '#more' ? setMoreOpen((value) => !value) : undefined}
-              className={cn('flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium transition-colors', active ? 'text-gold' : 'text-text-muted')}
+              href={item.href}
+              className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1 text-[10px] font-medium transition-colors active:scale-95"
+              style={{ minHeight: '44px' }}
             >
-              <Icon className="h-5 w-5" strokeWidth={1.6} />
-              <span className="max-w-full truncate">{t(item.labelKey)}</span>
-            </button>
+              <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-gold' : 'text-text-muted')} strokeWidth={1.6} />
+              <span className={cn('max-w-full truncate', active ? 'text-gold' : 'text-text-muted')}>{t(item.labelKey)}</span>
+            </Link>
           );
         })}
+        <button
+          onClick={() => setMoreOpen(true)}
+          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1 text-[10px] font-medium transition-colors active:scale-95"
+          style={{ minHeight: '44px' }}
+        >
+          <MoreHorizontal className={cn('h-5 w-5 shrink-0', moreOpen ? 'text-gold' : 'text-text-muted')} strokeWidth={1.6} />
+          <span className={cn('max-w-full truncate', moreOpen ? 'text-gold' : 'text-text-muted')}>{t('nav.more')}</span>
+        </button>
       </nav>
+
+      {/* More drawer — full-height premium navigation */}
       <AnimatePresence>
         {moreOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMoreOpen(false)} className="fixed inset-0 z-40 bg-black/55 lg:hidden" />
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-50 grid grid-cols-3 gap-1.5 rounded-2xl border border-border bg-bg-elevated p-2 shadow-modal lg:hidden">
-              {moreItems.map((item) => {
-                const Icon = item.icon;
-                const active = pathname === item.href;
-                return <Link key={item.href} href={item.href} onClick={() => setMoreOpen(false)} className={cn('flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[11px]', active ? 'bg-gold-bg text-gold' : 'text-text-secondary hover:bg-bg-hover')}><Icon className="h-4 w-4" strokeWidth={1.5} />{t(item.labelKey)}</Link>;
-              })}
-            </motion.div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMoreOpen(false)}
+              className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm lg:hidden"
+            />
+            <motion.aside
+              initial={{ x: rtl ? '100%' : '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: rtl ? '100%' : '-100%' }}
+              transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+              className="fixed inset-y-0 z-[60] flex w-[min(85vw,320px)] flex-col border-e border-border bg-bg-secondary lg:hidden rtl:left-auto rtl:right-0 rtl:border-s rtl:border-e-0"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-border px-5 pb-5 pt-[calc(1.25rem+env(safe-area-inset-top))]">
+                <div className="flex items-center gap-2.5">
+                  <MehansLogoIcon size={36} />
+                  <div>
+                    <p className="font-serif text-lg font-medium text-text-primary">MEHANS</p>
+                    <p className="text-[10px] text-text-muted">{t('navbar.enterpriseWorkspace')}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMoreOpen(false)}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-text-muted transition-colors hover:bg-bg-elevated hover:text-text-primary"
+                >
+                  <X className="h-5 w-5" strokeWidth={1.5} />
+                </button>
+              </div>
+
+              {/* Navigation */}
+              <div className="scrollbar-thin flex-1 overflow-y-auto px-3 py-4">
+                <p className="eyebrow mb-2 px-3">{t('nav.navigation')}</p>
+                <div className="mb-5 space-y-0.5">
+                  {moreNavItems.map((item) => {
+                    const Icon = item.icon;
+                    const active = pathname === item.href;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMoreOpen(false)}
+                        className={cn(
+                          'flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                          active ? 'bg-bg-elevated text-gold' : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
+                        )}
+                      >
+                        <Icon className={cn('h-5 w-5 shrink-0', active && 'text-gold')} strokeWidth={1.5} />
+                        {t(item.labelKey)}
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                <p className="eyebrow mb-2 px-3">{t('nav.workspace')}</p>
+                <div className="mb-5 space-y-0.5">
+                  <Link
+                    href="/ai-assistant"
+                    onClick={() => setMoreOpen(false)}
+                    className={cn(
+                      'flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                      pathname === '/ai-assistant' ? 'bg-bg-elevated text-gold' : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
+                    )}
+                  >
+                    <Sparkles className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+                    {t('nav.aiAssistant')}
+                  </Link>
+                  <Link
+                    href="/settings"
+                    onClick={() => setMoreOpen(false)}
+                    className={cn(
+                      'flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                      pathname === '/settings' ? 'bg-bg-elevated text-gold' : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
+                    )}
+                  >
+                    <Settings className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+                    {t('nav.settings')}
+                  </Link>
+                </div>
+              </div>
+
+              {/* Account footer */}
+              <div className="border-t border-border px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+                <p className="eyebrow mb-2 px-3">{t('nav.account')}</p>
+                <Link
+                  href="/settings"
+                  onClick={() => setMoreOpen(false)}
+                  className="mb-0.5 flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-primary"
+                >
+                  <User className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+                  {t('navbar.profile')}
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-error transition-colors hover:bg-error-bg"
+                >
+                  <LogOut className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+                  {t('navbar.signOut')}
+                </button>
+              </div>
+            </motion.aside>
           </>
         )}
       </AnimatePresence>
+
+      {/* Mobile drawer (from hamburger menu) */}
       <AnimatePresence>
         {open && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden" />
-            <motion.aside initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="fixed inset-y-0 start-0 z-[60] flex w-[min(82vw,280px)] flex-col border-e border-border bg-bg-secondary p-4 shadow-modal lg:hidden">
-              <div className="mb-5 flex items-center justify-between"><MehansLogo height={36} /><button onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-text-muted"><X className="h-5 w-5" strokeWidth={1.5} /></button></div>
-              <nav className="overflow-y-auto">{navItems.map((item) => { const Icon = item.icon; const active = pathname === item.href; return <Link key={item.href} href={item.href} onClick={onClose} className={cn('mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm', active ? 'bg-bg-elevated text-gold' : 'text-text-secondary')}><Icon className="h-5 w-5" strokeWidth={1.5} />{t(item.labelKey)}</Link>; })}</nav>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onClose}
+              className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm lg:hidden"
+            />
+            <motion.aside
+              initial={{ x: rtl ? '100%' : '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: rtl ? '100%' : '-100%' }}
+              transition={{ type: 'spring', stiffness: 400, damping: 38 }}
+              className="fixed inset-y-0 z-[60] flex w-[min(85vw,320px)] flex-col border-e border-border bg-bg-secondary lg:hidden rtl:left-auto rtl:right-0 rtl:border-s rtl:border-e-0"
+            >
+              <div className="flex items-center justify-between border-b border-border px-5 pb-5 pt-[calc(1.25rem+env(safe-area-inset-top))]">
+                <MehansLogo height={36} />
+                <button
+                  onClick={onClose}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-text-muted transition-colors hover:bg-bg-elevated hover:text-text-primary"
+                >
+                  <X className="h-5 w-5" strokeWidth={1.5} />
+                </button>
+              </div>
+              <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 py-4">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      className={cn(
+                        'mb-0.5 flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                        active ? 'bg-bg-elevated text-gold' : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
+                      )}
+                    >
+                      <Icon className={cn('h-5 w-5 shrink-0', active && 'text-gold')} strokeWidth={1.5} />
+                      {t(item.labelKey)}
+                    </Link>
+                  );
+                })}
+              </nav>
             </motion.aside>
           </>
         )}
