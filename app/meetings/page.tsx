@@ -29,13 +29,13 @@ const meetingColors: Record<string, string> = {
   'in-person': 'border-success/40 text-success bg-success-bg',
 };
 
-function mapMeeting(m: Meeting) {
+function mapMeeting(m: Meeting, locale: string) {
   const startsAt = m.starts_at ? new Date(m.starts_at) : null;
   return {
     id: m.id,
     title: m.title,
     date: startsAt ? startsAt.toISOString().slice(0, 10) : '',
-    time: startsAt ? startsAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '',
+    time: startsAt ? startsAt.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false }) : '',
     duration: m.duration_minutes ?? m.duration ?? 0,
     type: m.meeting_type ?? m.type ?? '',
     attendee: m.attendee_name ?? m.attendee ?? 'TBD',
@@ -60,7 +60,7 @@ function MeetingSkeleton() {
 }
 
 export default function MeetingsPage() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const { openModal } = useGlobalModal();
   const { data, loading, error, refetch } = useSupabaseQuery<Meeting[]>(fetchMeetings);
 
@@ -70,50 +70,50 @@ export default function MeetingsPage() {
     return () => window.removeEventListener('focus', onFocus);
   }, [refetch]);
 
-  const meetings = (data ?? []).map(mapMeeting);
+  const meetings = (data ?? []).map((m) => mapMeeting(m, locale));
   const upcoming = meetings.filter((m) => ['pending', 'confirmed', 'upcoming', 'rescheduled'].includes(m.status)).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const completed = meetings.filter((m) => m.status === 'completed');
 
   const handleComplete = async (id: string, title: string) => {
     const updated = await updateMeeting(id, { status: 'completed' });
     if (updated) {
-      toast.success(`Meeting "${title}" marked as completed`);
+      toast.success(t('toast.meetingCompleted', { title }));
       refetch();
     } else {
-      toast.error('Failed to update meeting status.');
+      toast.error(t('toast.meetingStatusFailed'));
     }
   };
 
   const handleConfirm = async (id: string, title: string) => {
     const updated = await updateMeeting(id, { status: 'confirmed' });
     if (updated) {
-      toast.success(`Meeting "${title}" confirmed`);
+      toast.success(t('toast.meetingConfirmed', { title }));
       refetch();
-    } else toast.error('Failed to confirm meeting.');
+    } else toast.error(t('toast.meetingConfirmFailed'));
   };
 
   const handleReschedule = async (meeting: typeof upcoming[number]) => {
-    const nextDate = window.prompt('Enter the new date and time (for example, 2026-09-12 14:30):');
+    const nextDate = window.prompt(t('calendar.reschedulePrompt'));
     if (!nextDate) return;
     const parsed = new Date(nextDate.replace(' ', 'T'));
     if (Number.isNaN(parsed.getTime())) {
-      toast.error('Enter a valid date and time.');
+      toast.error(t('toast.meetingInvalidDateTime'));
       return;
     }
     const updated = await updateMeeting(meeting.id, { starts_at: parsed.toISOString(), status: 'rescheduled' });
     if (updated) {
-      toast.success(`Meeting "${meeting.title}" rescheduled`);
+      toast.success(t('toast.meetingRescheduled', { title: meeting.title }));
       refetch();
-    } else toast.error('Failed to reschedule meeting.');
+    } else toast.error(t('toast.meetingRescheduleFailed'));
   };
 
   const handleCancel = async (id: string, title: string) => {
     const updated = await updateMeeting(id, { status: 'cancelled' });
     if (updated) {
-      toast.success(`Meeting "${title}" cancelled`);
+      toast.success(t('toast.meetingCancelled', { title }));
       refetch();
     } else {
-      toast.error('Failed to cancel meeting.');
+      toast.error(t('toast.meetingCancelFailed'));
     }
   };
 
@@ -126,9 +126,9 @@ export default function MeetingsPage() {
         time: meeting.time,
         attendee: meeting.attendee,
       });
-      toast.success(`Reminder sent for "${meeting.title}"`);
+      toast.success(t('toast.meetingReminderSent', { title: meeting.title }));
     } catch {
-      toast.error('Failed to send reminder.');
+      toast.error(t('toast.meetingReminderFailed'));
     }
   };
 
@@ -141,9 +141,9 @@ export default function MeetingsPage() {
         time: meeting.time,
         attendee: meeting.attendee,
       });
-      toast.success(`WhatsApp alert sent for "${meeting.title}"`);
+      toast.success(t('toast.meetingWhatsappSent', { title: meeting.title }));
     } catch {
-      toast.error('Failed to send WhatsApp alert.');
+      toast.error(t('toast.meetingWhatsappFailed'));
     }
   };
 
@@ -157,7 +157,7 @@ export default function MeetingsPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-4">
-          <h3 className="font-serif text-lg font-medium text-text-primary">Upcoming</h3>
+          <h3 className="font-serif text-lg font-medium text-text-primary">{t('calendar.upcoming')}</h3>
 
           {loading ? (
             <div className="space-y-4">
@@ -169,7 +169,7 @@ export default function MeetingsPage() {
             </Card>
           ) : upcoming.length === 0 ? (
             <Card>
-              <p className="text-sm text-text-muted">No upcoming meetings scheduled.</p>
+              <p className="text-sm text-text-muted">{t('calendar.noUpcoming')}</p>
             </Card>
           ) : (
             upcoming.map((meeting, i) => {
@@ -186,7 +186,7 @@ export default function MeetingsPage() {
                     <div className="flex items-start gap-4">
                       <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl border border-border bg-bg-elevated">
                         <span className="text-[10px] font-medium text-text-muted">
-                          {meeting.date ? new Date(meeting.date).toLocaleDateString('en-US', { month: 'short' }).toUpperCase() : '—'}
+                          {meeting.date ? new Date(meeting.date).toLocaleDateString(locale, { month: 'short' }).toUpperCase() : '—'}
                         </span>
                         <span className="font-serif text-xl font-medium text-text-primary">{meeting.date ? new Date(meeting.date).getDate() : '—'}</span>
                       </div>
@@ -209,19 +209,19 @@ export default function MeetingsPage() {
                             onClick={() => handleConfirm(meeting.id, meeting.title)}
                             className="flex items-center gap-1.5 rounded-lg border border-success/30 bg-success-bg px-2.5 py-1.5 text-[11px] font-medium text-success transition-colors hover:border-success/50"
                           >
-                            <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.5} /> Confirm
+                            <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.5} /> {t('calendar.confirm')}
                           </button>}
                           <button
                             onClick={() => handleReschedule(meeting)}
                             className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-2.5 py-1.5 text-[11px] font-medium text-text-secondary transition-colors hover:border-gold-border hover:text-gold"
                           >
-                            <CalendarClock className="h-3.5 w-3.5" strokeWidth={1.5} /> Reschedule
+                            <CalendarClock className="h-3.5 w-3.5" strokeWidth={1.5} /> {t('calendar.reschedule')}
                           </button>
                           <button
                             onClick={() => handleReminder(meeting)}
                             className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-2.5 py-1.5 text-[11px] font-medium text-text-secondary transition-colors hover:border-gold-border hover:text-gold"
                           >
-                            <Bell className="h-3.5 w-3.5" strokeWidth={1.5} /> Remind
+                            <Bell className="h-3.5 w-3.5" strokeWidth={1.5} /> {t('calendar.remind')}
                           </button>
                           <button
                             onClick={() => handleWhatsAppAlert(meeting)}
@@ -233,13 +233,13 @@ export default function MeetingsPage() {
                             onClick={() => handleComplete(meeting.id, meeting.title)}
                             className="flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-2.5 py-1.5 text-[11px] font-medium text-text-secondary transition-colors hover:border-success/40 hover:text-success"
                           >
-                            <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.5} /> Complete
+                            <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.5} /> {t('calendar.complete')}
                           </button>
                           <button
                             onClick={() => handleCancel(meeting.id, meeting.title)}
                             className="ml-auto flex items-center gap-1.5 rounded-lg border border-border bg-bg-elevated px-2.5 py-1.5 text-[11px] font-medium text-text-secondary transition-colors hover:border-error/40 hover:text-error"
                           >
-                            <XCircle className="h-3.5 w-3.5" strokeWidth={1.5} /> Cancel
+                            <XCircle className="h-3.5 w-3.5" strokeWidth={1.5} /> {t('calendar.cancel')}
                           </button>
                         </div>
                         <div className="mt-2 flex items-center gap-2">
@@ -255,7 +255,7 @@ export default function MeetingsPage() {
         </div>
 
         <div className="space-y-4">
-          <h3 className="font-serif text-lg font-medium text-text-primary">Completed</h3>
+          <h3 className="font-serif text-lg font-medium text-text-primary">{t('calendar.completed')}</h3>
           {loading ? (
             <div className="space-y-4">
               {Array.from({ length: 2 }).map((_, i) => <MeetingSkeleton key={i} />)}
@@ -266,7 +266,7 @@ export default function MeetingsPage() {
             </Card>
           ) : completed.length === 0 ? (
             <Card>
-              <p className="text-sm text-text-muted">No completed meetings.</p>
+              <p className="text-sm text-text-muted">{t('calendar.noCompleted')}</p>
             </Card>
           ) : (
             completed.map((meeting, i) => {
@@ -283,7 +283,7 @@ export default function MeetingsPage() {
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border border-border bg-bg-elevated">
                         <span className="text-[9px] font-medium text-text-muted">
-                          {meeting.date ? new Date(meeting.date).toLocaleDateString('en-US', { month: 'short' }).toUpperCase() : '—'}
+                          {meeting.date ? new Date(meeting.date).toLocaleDateString(locale, { month: 'short' }).toUpperCase() : '—'}
                         </span>
                         <span className="text-sm font-bold text-text-primary">{meeting.date ? new Date(meeting.date).getDate() : '—'}</span>
                       </div>
@@ -292,12 +292,12 @@ export default function MeetingsPage() {
                         <p className="text-xs text-text-muted">{meeting.time} · {meeting.duration}min</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="success">Completed</Badge>
+                        <Badge variant="success">{t('calendar.completedBadge')}</Badge>
                         <button
                           onClick={() => handleWhatsAppAlert(meeting)}
                           className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[11px] text-text-secondary hover:border-gold-border hover:text-gold"
                         >
-                          <MessageCircle className="h-3 w-3" strokeWidth={1.5} /> Follow up
+                          <MessageCircle className="h-3 w-3" strokeWidth={1.5} /> {t('calendar.followUp')}
                         </button>
                       </div>
                     </div>

@@ -65,7 +65,7 @@ function MeetingChip({ meeting, compact = false }: { meeting: CalendarMeeting; c
 
 export default function CalendarPage() {
   const { openModal } = useGlobalModal();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [view, setView] = useState<CalendarView>('month');
 

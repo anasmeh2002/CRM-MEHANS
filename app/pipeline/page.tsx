@@ -37,7 +37,7 @@ function mapDealForDisplay(deal: Deal): Deal {
 }
 
 export default function PipelinePage() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const { currency } = useAgency();
   const { data, loading, error, setData } = useSupabaseQuery(fetchDeals);
   const deals = (data ?? []).map(mapDealForDisplay);
@@ -174,7 +174,7 @@ export default function PipelinePage() {
                         </div>
                         <span className="text-[11px] text-text-muted">
                           {deal.closeDate
-                            ? new Date(deal.closeDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                            ? new Date(deal.closeDate).toLocaleDateString(locale, { month: 'short', day: 'numeric' })
                             : t('common.na')}
                         </span>
                       </div>

@@ -66,7 +66,7 @@ function TaskSkeleton() {
 }
 
 export default function TasksPage() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const { openModal } = useGlobalModal();
   const { data, loading, error, refetch } = useSupabaseQuery<Task[]>(fetchTasks);
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
@@ -184,7 +184,7 @@ export default function TasksPage() {
                                 <Flag className="h-2.5 w-2.5" /> {t(priorityKeys[task.priority])}
                               </Badge>
                               <span className="flex items-center gap-1 text-[11px] text-text-muted">
-                                <Calendar className="h-3 w-3" strokeWidth={1.5} /> {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : t('common.na')}
+                                <Calendar className="h-3 w-3" strokeWidth={1.5} /> {task.dueDate ? new Date(task.dueDate).toLocaleDateString(locale, { month: 'short', day: 'numeric' }) : t('common.na')}
                               </span>
                             </div>
                             <div className="mt-2.5 flex items-center gap-1.5 border-t border-border pt-2.5">

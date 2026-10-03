@@ -35,27 +35,34 @@ const actionColors: Record<string, string> = {
   ai_follow_up: '#D4AF37',
 };
 
-const statusConfig: Record<string, { icon: React.ElementType; color: string; label: string }> = {
-  success: { icon: CheckCircle2, color: 'text-success', label: 'Success' },
-  error: { icon: XCircle, color: 'text-error', label: 'Error' },
-  pending: { icon: Loader2, color: 'text-info', label: 'Pending' },
-  skipped: { icon: AlertCircle, color: 'text-text-muted', label: 'Skipped' },
+const statusIcons: Record<string, { icon: React.ElementType; color: string }> = {
+  success: { icon: CheckCircle2, color: 'text-success' },
+  error: { icon: XCircle, color: 'text-error' },
+  pending: { icon: Loader2, color: 'text-info' },
+  skipped: { icon: AlertCircle, color: 'text-text-muted' },
 };
 
-function formatTimeAgo(iso: string | null): string {
-  if (!iso) return 'Never';
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
+const statusLabelKeys: Record<string, string> = {
+  success: 'automation.statusSuccess',
+  error: 'automation.statusError',
+  pending: 'automation.statusPending',
+  skipped: 'automation.statusSkipped',
+};
 
 export default function AutomationsPage() {
   const { t } = useLanguage();
+
+  const formatTimeAgo = (iso: string | null): string => {
+    if (!iso) return t('automation.never');
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return t('automation.justNow');
+    if (mins < 60) return t('automation.minutesAgo', { count: mins });
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return t('automation.hoursAgo', { count: hours });
+    const days = Math.floor(hours / 24);
+    return t('automation.daysAgo', { count: days });
+  };
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [executions, setExecutions] = useState<AutomationExecution[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +75,7 @@ export default function AutomationsPage() {
       setAutomations(autos);
       setExecutions(execs);
     } catch {
-      toast.error('Failed to load automations');
+      toast.error(t('toast.automationLoadFailed'));
     } finally {
       setLoading(false);
     }
@@ -81,9 +88,9 @@ export default function AutomationsPage() {
     try {
       await toggleAutomation(auto.id, !auto.enabled);
       setAutomations((prev) => prev.map((a) => a.id === auto.id ? { ...a, enabled: !a.enabled } : a));
-      toast.success(`${auto.name} ${auto.enabled ? 'paused' : 'activated'}`);
+      toast.success(t('toast.automationToggled', { name: auto.name, state: auto.enabled ? t('toast.automationPaused') : t('toast.automationActivated') }));
     } catch {
-      toast.error('Failed to update automation');
+      toast.error(t('toast.automationUpdateFailed'));
     } finally {
       setToggling(null);
     }
@@ -93,9 +100,9 @@ export default function AutomationsPage() {
     try {
       await deleteAutomation(id);
       setAutomations((prev) => prev.filter((a) => a.id !== id));
-      toast.success('Automation deleted');
+      toast.success(t('toast.automationDeleted'));
     } catch {
-      toast.error('Failed to delete automation');
+      toast.error(t('toast.automationDeleteFailed'));
     }
   };
 
@@ -106,7 +113,7 @@ export default function AutomationsPage() {
     <AppShell>
       <PageHeader title={t('page.automations')} description={t('page.automationsDescription')}>
         <button onClick={() => setShowCreate(!showCreate)} className="btn btn-gold btn-md">
-          <Plus className="h-4 w-4" strokeWidth={1.5} /> New Automation
+          <Plus className="h-4 w-4" strokeWidth={1.5} /> {t('automation.newAutomationBtn')}
         </button>
       </PageHeader>
 
@@ -158,16 +165,16 @@ export default function AutomationsPage() {
                     </button>
                   </div>
                   <div className="mt-4 flex items-center gap-2 border-t border-border pt-4">
-                    <Badge variant="neutral">Trigger: {auto.trigger_event}</Badge>
-                    <Badge variant="gold">Action: {auto.action_type}</Badge>
-                    <span className="ml-auto text-[12px] text-text-muted">{auto.execution_count ?? 0} runs</span>
+                    <Badge variant="neutral">{t('automation.triggerLabel', { value: auto.trigger_event })}</Badge>
+                    <Badge variant="gold">{t('automation.actionLabel', { value: auto.action_type })}</Badge>
+                    <span className="ml-auto text-[12px] text-text-muted">{t('automation.runs', { count: auto.execution_count ?? 0 })}</span>
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-[11px] text-text-muted">
-                      Last: {formatTimeAgo(auto.last_execution_at)}
+                      {t('automation.last', { time: formatTimeAgo(auto.last_execution_at) })}
                       {auto.last_execution_status && (
                         <span className={cn('ml-1.5 font-medium', auto.last_execution_status === 'success' ? 'text-success' : auto.last_execution_status === 'error' ? 'text-error' : 'text-text-muted')}>
-                          {auto.last_execution_status}
+                          {t(statusLabelKeys[auto.last_execution_status] ?? 'automation.statusPending')}
                         </span>
                       )}
                     </span>
@@ -175,7 +182,7 @@ export default function AutomationsPage() {
                       onClick={() => handleDelete(auto.id)}
                       className="text-[11px] text-text-muted transition-colors hover:text-error"
                     >
-                      Delete
+                      {t('automation.delete')}
                     </button>
                   </div>
                 </Card>
@@ -189,11 +196,11 @@ export default function AutomationsPage() {
         <Card className="mt-4" delay={0.2}>
           <div className="mb-5 flex items-center gap-2.5">
             <Activity className="h-4 w-4 text-gold" strokeWidth={1.5} />
-            <h3 className="font-serif text-lg font-medium text-text-primary">Recent Executions</h3>
+            <h3 className="font-serif text-lg font-medium text-text-primary">{t('automation.recentExecutions')}</h3>
           </div>
           <div className="space-y-2">
             {executions.map((exec) => {
-              const cfg = statusConfig[exec.status] ?? statusConfig.pending;
+              const cfg = statusIcons[exec.status] ?? statusIcons.pending;
               const StatusIcon = cfg.icon;
               const auto = automations.find((a) => a.id === exec.automation_id);
               return (
@@ -204,7 +211,7 @@ export default function AutomationsPage() {
                     <p className="text-[11px] text-text-muted">{formatTimeAgo(exec.started_at)}</p>
                   </div>
                   <Badge variant={exec.status === 'success' ? 'success' : exec.status === 'error' ? 'error' : 'neutral'}>
-                    {cfg.label}
+                    {t(statusLabelKeys[exec.status] ?? 'automation.statusPending')}
                   </Badge>
                 </div>
               );
@@ -217,20 +224,21 @@ export default function AutomationsPage() {
 }
 
 function CreateAutomationCard({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [trigger, setTrigger] = useState('whatsapp.new_conversation');
   const [action, setAction] = useState('create_lead');
   const [saving, setSaving] = useState(false);
 
   const handleCreate = async () => {
-    if (!name.trim()) { toast.error('Please enter a name'); return; }
+    if (!name.trim()) { toast.error(t('toast.automationNameRequired')); return; }
     setSaving(true);
     try {
       await createAutomation({ name, trigger_event: trigger, action_type: action });
-      toast.success('Automation created');
+      toast.success(t('toast.automationCreated'));
       onCreated();
     } catch {
-      toast.error('Failed to create automation');
+      toast.error(t('toast.automationCreateFailed'));
     } finally {
       setSaving(false);
     }
@@ -243,39 +251,39 @@ function CreateAutomationCard({ onClose, onCreated }: { onClose: () => void; onC
       exit={{ opacity: 0, height: 0 }}
     >
       <Card className="mb-4">
-        <h3 className="mb-4 font-serif text-lg font-medium text-text-primary">New Automation</h3>
+        <h3 className="mb-4 font-serif text-lg font-medium text-text-primary">{t('automation.newAutomation')}</h3>
         <div className="space-y-3">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-text-muted">Name</label>
-            <input className="input w-full" placeholder="e.g. New Lead WhatsApp Alert" value={name} onChange={(e) => setName(e.target.value)} />
+            <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('automation.name')}</label>
+            <input className="input w-full" placeholder={t('automation.namePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-text-muted">When (Trigger)</label>
+              <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('automation.when')}</label>
               <select className="input w-full" value={trigger} onChange={(e) => setTrigger(e.target.value)}>
                 {[
-                  { value: 'whatsapp.new_message', label: 'New WhatsApp Message' },
-                  { value: 'whatsapp.new_conversation', label: 'New WhatsApp Conversation' },
-                  { value: 'lead.created', label: 'Lead Created' },
-                  { value: 'lead.inactive', label: 'Lead Inactive (48h)' },
-                  { value: 'deal.won', label: 'Deal Won' },
-                  { value: 'meeting.created', label: 'Appointment Created' },
-                  { value: 'property.match', label: 'Property Matches Lead' },
+                  { value: 'whatsapp.new_message', label: t('automation.trigger.whatsappNewMessage') },
+                  { value: 'whatsapp.new_conversation', label: t('automation.trigger.whatsappNewConversation') },
+                  { value: 'lead.created', label: t('automation.trigger.leadCreated') },
+                  { value: 'lead.inactive', label: t('automation.trigger.leadInactive') },
+                  { value: 'deal.won', label: t('automation.trigger.dealWon') },
+                  { value: 'meeting.created', label: t('automation.trigger.meetingCreated') },
+                  { value: 'property.match', label: t('automation.trigger.propertyMatch') },
                 ].map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-text-muted">Then (Action)</label>
+              <label className="mb-1.5 block text-xs font-medium text-text-muted">{t('automation.then')}</label>
               <select className="input w-full" value={action} onChange={(e) => setAction(e.target.value)}>
                 {[
-                  { value: 'create_lead', label: 'Create/Update Lead' },
-                  { value: 'create_task', label: 'Create Follow-up Task' },
-                  { value: 'send_whatsapp', label: 'Send WhatsApp Message' },
-                  { value: 'send_notification', label: 'Send Notification' },
-                  { value: 'ai_summarize', label: 'AI Summarize Conversation' },
-                  { value: 'ai_qualify_lead', label: 'AI Qualify Lead' },
+                  { value: 'create_lead', label: t('automation.action.createLead') },
+                  { value: 'create_task', label: t('automation.action.createTask') },
+                  { value: 'send_whatsapp', label: t('automation.action.sendWhatsapp') },
+                  { value: 'send_notification', label: t('automation.action.sendNotification') },
+                  { value: 'ai_summarize', label: t('automation.action.aiSummarize') },
+                  { value: 'ai_qualify_lead', label: t('automation.action.aiQualifyLead') },
                 ].map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
@@ -284,9 +292,9 @@ function CreateAutomationCard({ onClose, onCreated }: { onClose: () => void; onC
           </div>
           <div className="flex gap-2">
             <button onClick={handleCreate} disabled={saving} className="btn btn-gold btn-sm">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create'}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('automation.create')}
             </button>
-            <button onClick={onClose} className="btn btn-ghost btn-sm">Cancel</button>
+            <button onClick={onClose} className="btn btn-ghost btn-sm">{t('common.cancel')}</button>
           </div>
         </div>
       </Card>

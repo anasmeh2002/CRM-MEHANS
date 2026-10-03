@@ -63,7 +63,7 @@ function mapDealForDisplay(deal: Deal): Deal {
 }
 
 export default function DealsPage() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const { currency } = useAgency();
   const {
     data: dealsData,
@@ -270,7 +270,7 @@ export default function DealsPage() {
                   <div className="mt-4 space-y-2 text-[12px] text-text-secondary">
                     <div className="flex items-center gap-2"><User className="h-3.5 w-3.5" strokeWidth={1.5} /> {deal.leadName}</div>
                     <div className="flex items-center gap-2"><Building className="h-3.5 w-3.5" strokeWidth={1.5} /> {deal.propertyName}</div>
-                    <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5" strokeWidth={1.5} /> Close by {deal.closeDate !== 'N/A' ? new Date(deal.closeDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}</div>
+                    <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5" strokeWidth={1.5} /> {t('deals.closeBy')} {deal.closeDate !== 'N/A' ? new Date(deal.closeDate).toLocaleDateString(locale, { month: 'short', day: 'numeric' }) : t('common.na')}</div>
                   </div>
                   <div className="mt-4 border-t border-border pt-4">
                     <div className="flex items-center justify-between">
