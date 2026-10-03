@@ -156,7 +156,7 @@ export default function DashboardPage() {
         deals: deals.slice(0, 20).map((d) => ({ title: d.title, stage: d.stage, value: d.value })),
         tasks: activities.filter((a) => a.type === 'task_completed').length,
       });
-      getAIInsights(crmContext)
+      getAIInsights(crmContext, locale)
         .then((result) => setAiInsights(result.map((insight, i) => ({ ...insight, id: `ai-${i}` }))))
         .catch(() => {})
         .finally(() => setInsightsLoading(false));

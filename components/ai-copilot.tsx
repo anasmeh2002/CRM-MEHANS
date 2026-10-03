@@ -4,12 +4,14 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Send, Loader2, Check, AlertTriangle, User, Home, CheckSquare, Calendar, Search, TrendingUp, MessageCircle } from 'lucide-react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { askAI } from '@/lib/ai';
+import { askAI, localeInstruction } from '@/lib/ai';
 import { fetchLeads, fetchProperties, fetchTasks, fetchMeetings, fetchDeals, createLead, createTask, createMeeting } from '@/lib/data';
 import { fetchCachedConversations, fetchCachedMessages } from '@/lib/whatsapp';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/components/language-provider';
+import type { Locale } from '@/lib/i18n';
 
 type AIMessage = { role: 'user' | 'assistant'; content: string };
 type AIAction = {
@@ -19,17 +21,17 @@ type AIAction = {
   description: string;
 };
 
-const pageContextMap: Record<string, { label: string; icon: typeof User; fetchContext: () => Promise<string> }> = {
-  '/': { label: 'Dashboard', icon: TrendingUp, fetchContext: fetchDashboardContext },
-  '/leads': { label: 'Leads', icon: User, fetchContext: fetchLeadsContext },
-  '/properties': { label: 'Properties', icon: Home, fetchContext: fetchPropertiesContext },
-  '/tasks': { label: 'Tasks', icon: CheckSquare, fetchContext: fetchTasksContext },
-  '/calendar': { label: 'Calendar', icon: Calendar, fetchContext: fetchCalendarContext },
-  '/meetings': { label: 'Meetings', icon: Calendar, fetchContext: fetchCalendarContext },
-  '/deals': { label: 'Deals', icon: TrendingUp, fetchContext: fetchDealsContext },
-  '/pipeline': { label: 'Pipeline', icon: TrendingUp, fetchContext: fetchDealsContext },
-  '/contacts': { label: 'Contacts', icon: User, fetchContext: fetchContactsContext },
-  '/whatsapp': { label: 'WhatsApp', icon: MessageCircle, fetchContext: async () => 'WhatsApp conversations page. Use CRM data for context.' },
+const pageContextMap: Record<string, { labelKey: string; icon: typeof User; fetchContext: () => Promise<string> }> = {
+  '/': { labelKey: 'aiCopilot.contextDashboard', icon: TrendingUp, fetchContext: fetchDashboardContext },
+  '/leads': { labelKey: 'aiCopilot.contextLeads', icon: User, fetchContext: fetchLeadsContext },
+  '/properties': { labelKey: 'aiCopilot.contextProperties', icon: Home, fetchContext: fetchPropertiesContext },
+  '/tasks': { labelKey: 'aiCopilot.contextTasks', icon: CheckSquare, fetchContext: fetchTasksContext },
+  '/calendar': { labelKey: 'aiCopilot.contextCalendar', icon: Calendar, fetchContext: fetchCalendarContext },
+  '/meetings': { labelKey: 'aiCopilot.contextMeetings', icon: Calendar, fetchContext: fetchCalendarContext },
+  '/deals': { labelKey: 'aiCopilot.contextDeals', icon: TrendingUp, fetchContext: fetchDealsContext },
+  '/pipeline': { labelKey: 'aiCopilot.contextPipeline', icon: TrendingUp, fetchContext: fetchDealsContext },
+  '/contacts': { labelKey: 'aiCopilot.contextContacts', icon: User, fetchContext: fetchContactsContext },
+  '/whatsapp': { labelKey: 'aiCopilot.contextWhatsApp', icon: MessageCircle, fetchContext: async () => 'WhatsApp conversations page. Use CRM data for context.' },
 };
 
 async function fetchLeadsContext(): Promise<string> {
@@ -84,8 +86,11 @@ async function fetchDashboardContext(): Promise<string> {
   return `Current page: Dashboard.\nLeads: ${leads.length} (${hotLeads.length} hot)\nProperties: ${properties.length} (${properties.filter(p => p.status === 'available').length} available)\nTasks: ${tasks.length} (${overdueTasks.length} overdue)\nMeetings: ${meetings.length}\nDeals: ${deals.length}\n\nHot leads:\n${hotLeads.map(l => `- ${l.name} (id=${l.id}, score=${l.score}, status=${l.status}, lastActivity=${l.lastActivity})`).join('\n')}\n\nOverdue tasks:\n${overdueTasks.slice(0, 5).map(t => `- ${t.title} (due=${t.dueDate}, related=${t.related_id ?? 'N/A'})`).join('\n')}`;
 }
 
-function buildSystemPrompt(pageLabel: string, crmContext: string): string {
+function buildSystemPrompt(pageLabel: string, crmContext: string, locale: Locale): string {
+  const langInstruction = localeInstruction(locale);
   return `You are the MEHANS AI Sales Operating System for a real-estate agency. You are an accountable sales employee, not a generic chatbot. The user is currently on the "${pageLabel}" page.
+
+${langInstruction}
 
 CRM DATA (real, from Supabase):
 ${crmContext}
@@ -109,17 +114,18 @@ RULES:
 6. For missing values, say "Not recorded" and ask for the missing information; never infer or invent it.
 7. Base HOT/WARM/COLD only on recorded score, status, timing, tasks, meetings, and conversation signals.
 8. Keep responses concise and actionable. No preamble.
-9. Never claim to have performed an action — always propose it for confirmation.`;
+9. Never claim to have performed an action — always propose it for confirmation.
+10. All natural-language responses must be in the user's interface language. Never respond in English when the user's language is French or Arabic.`;
 }
 
-function parseAction(text: string): { action: AIAction | null; display: string } {
+function parseAction(text: string, t: (key: string, vars?: Record<string, string | number>) => string): { action: AIAction | null; display: string } {
   const match = text.match(/<action>([\s\S]*?)<\/action>/);
   if (match) {
     try {
       const parsed = JSON.parse(match[1].trim());
       const action: AIAction = {
         type: parsed.type,
-        label: parsed.label ?? 'Confirm Action',
+        label: parsed.label ?? t('aiCopilot.confirmAction'),
         data: parsed.data ?? {},
         description: parsed.description ?? '',
       };
@@ -130,31 +136,32 @@ function parseAction(text: string): { action: AIAction | null; display: string }
   return { action: null, display: text };
 }
 
-async function executeAction(action: AIAction): Promise<string> {
+async function executeAction(action: AIAction, t: (key: string, vars?: Record<string, string | number>) => string): Promise<string> {
   switch (action.type) {
     case 'create_lead': {
       const result = await createLead(action.data);
-      if (!result) throw new Error('Failed to create lead');
-      return `Lead created: ${result.name}`;
+      if (!result) throw new Error(t('aiCopilot.actionFailed'));
+      return t('aiCopilot.leadCreated', { name: result.name });
     }
     case 'create_task': {
       const result = await createTask(action.data);
-      if (!result) throw new Error('Failed to create task');
-      return `Task created: ${result.title}`;
+      if (!result) throw new Error(t('aiCopilot.actionFailed'));
+      return t('aiCopilot.taskCreated', { title: result.title });
     }
     case 'create_meeting': {
       const result = await createMeeting(action.data);
-      if (!result) throw new Error('Failed to create meeting');
-      return `Meeting created: ${result.title}`;
+      if (!result) throw new Error(t('aiCopilot.actionFailed'));
+      return t('aiCopilot.meetingCreated', { title: result.title });
     }
     default:
-      return 'Action completed';
+      return t('aiCopilot.actionCompleted');
   }
 }
 
 export function AICopilot() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { locale, t, rtl } = useLanguage();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<AIMessage[]>([]);
@@ -164,13 +171,16 @@ export function AICopilot() {
   const [crmContext, setCrmContext] = useState<string>('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [proactiveLoaded, setProactiveLoaded] = useState(false);
+  const [proactiveLocale, setProactiveLocale] = useState<Locale | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const pageCtx = useMemo(() => {
     const matchPath = Object.keys(pageContextMap).find(key => pathname.startsWith(key));
-    return matchPath ? pageContextMap[matchPath] : { label: 'CRM', icon: Sparkles, fetchContext: async () => 'No specific page context available.' };
+    return matchPath ? pageContextMap[matchPath] : { labelKey: 'aiCopilot.contextCRM', icon: Sparkles, fetchContext: async () => 'No specific page context available.' };
   }, [pathname]);
+
+  const pageLabel = t(pageCtx.labelKey);
 
   const selectedContext = useMemo(() => {
     const leadId = searchParams.get('lead') ?? searchParams.get('lead_id');
@@ -185,12 +195,14 @@ export function AICopilot() {
     }
   }, [open, pageCtx, crmContext]);
 
+  // Load proactive suggestions when modal opens or locale changes
   useEffect(() => {
-    if (open && !proactiveLoaded && crmContext) {
+    if (open && crmContext && (proactiveLocale !== locale || !proactiveLoaded)) {
       setProactiveLoaded(true);
+      setProactiveLocale(locale);
       loadProactiveSuggestions();
     }
-  }, [open, crmContext, proactiveLoaded]);
+  }, [open, crmContext, locale]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -212,10 +224,12 @@ export function AICopilot() {
 
   const loadProactiveSuggestions = async () => {
     try {
-      const systemPrompt = buildSystemPrompt(pageCtx.label, crmContext || 'No context loaded yet.');
+      const systemPrompt = buildSystemPrompt(pageLabel, crmContext || 'No context loaded yet.', locale);
       const raw = await askAI(
-        [{ role: 'user', content: 'Based on the CRM data, give me 2-3 proactive suggestions as bullet points. Focus on stale leads, overdue tasks, or opportunities. Be very concise (1 line each).' }],
-        systemPrompt
+        [{ role: 'user', content: t('aiCopilot.proactivePrompt') }],
+        systemPrompt,
+        undefined,
+        locale,
       );
       const lines = raw.split('\n').map(l => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean).slice(0, 3);
       setSuggestions(lines);
@@ -230,32 +244,32 @@ export function AICopilot() {
     setLoading(true);
     setPendingAction(null);
     try {
-      const systemPrompt = buildSystemPrompt(pageCtx.label, `${selectedContext}\n${crmContext}`);
-      const response = await askAI([...messages, userMsg], systemPrompt);
-      const { action, display } = parseAction(response);
+      const systemPrompt = buildSystemPrompt(pageLabel, `${selectedContext}\n${crmContext}`, locale);
+      const response = await askAI([...messages, userMsg], systemPrompt, undefined, locale);
+      const { action, display } = parseAction(response, t);
       const assistantMsg: AIMessage = { role: 'assistant', content: display || response };
       setMessages(prev => [...prev, assistantMsg]);
       if (action) setPendingAction(action);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Unable to reach the AI service';
-      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${msg}` }]);
+      const msg = error instanceof Error ? error.message : t('ai.unableReachAI');
+      setMessages(prev => [...prev, { role: 'assistant', content: `${t('aiCopilot.error')}: ${msg}` }]);
     } finally {
       setLoading(false);
     }
-  }, [loading, messages, pageCtx, crmContext, selectedContext]);
+  }, [loading, messages, pageLabel, crmContext, selectedContext, locale, t]);
 
   const confirmAction = async () => {
     if (!pendingAction) return;
     setExecuting(true);
     try {
-      const result = await executeAction(pendingAction);
+      const result = await executeAction(pendingAction, t);
       toast.success(result);
-      setMessages(prev => [...prev, { role: 'assistant', content: `Done! ${result}` }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: t('aiCopilot.done', { result }) }]);
       setPendingAction(null);
       setCrmContext('');
       setProactiveLoaded(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Action failed');
+      toast.error(error instanceof Error ? error.message : t('aiCopilot.actionFailed'));
     } finally {
       setExecuting(false);
     }
@@ -263,23 +277,25 @@ export function AICopilot() {
 
   const quickActions = useMemo(() => {
     const base = [
-      { label: 'What needs my attention today?', icon: AlertTriangle },
-      { label: 'Find leads that haven\'t been contacted in 3 days', icon: Search },
+      { label: t('aiCopilot.attentionToday'), icon: AlertTriangle },
+      { label: t('aiCopilot.uncontactedLeads'), icon: Search },
     ];
-    if (pageCtx.label === 'Leads') base.push({ label: 'Create a new lead', icon: User });
-    if (pageCtx.label === 'Properties') base.push({ label: 'Show me available properties', icon: Home });
-    if (pageCtx.label === 'Tasks') base.push({ label: 'Create a follow-up task for tomorrow at 10', icon: CheckSquare });
-    if (pageCtx.label === 'Calendar' || pageCtx.label === 'Meetings') base.push({ label: 'Schedule a meeting for tomorrow at 11', icon: Calendar });
+    if (pageCtx.labelKey === 'aiCopilot.contextLeads') base.push({ label: t('aiCopilot.createLead'), icon: User });
+    if (pageCtx.labelKey === 'aiCopilot.contextProperties') base.push({ label: t('aiCopilot.showProperties'), icon: Home });
+    if (pageCtx.labelKey === 'aiCopilot.contextTasks') base.push({ label: t('aiCopilot.createFollowUpTask'), icon: CheckSquare });
+    if (pageCtx.labelKey === 'aiCopilot.contextCalendar' || pageCtx.labelKey === 'aiCopilot.contextMeetings') base.push({ label: t('aiCopilot.scheduleMeeting'), icon: Calendar });
     return base;
-  }, [pageCtx.label]);
+  }, [pageCtx.labelKey, t]);
 
   return (
     <>
-      {/* Floating AI button */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-[44] flex h-12 w-12 items-center justify-center sm:bottom-5 sm:right-5 rounded-full bg-gold text-[#0D0D0F] shadow-lg shadow-gold/20 transition-all hover:scale-105 hover:bg-gold-soft"
-        title="AI Copilot"
+        className={cn(
+          'fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[44] flex h-12 w-12 items-center justify-center sm:bottom-5 rounded-full bg-gold text-[#0D0D0F] shadow-lg shadow-gold/20 transition-all hover:scale-105 hover:bg-gold-soft',
+          rtl ? 'left-4 sm:left-5' : 'right-4 sm:right-5'
+        )}
+        title={t('aiCopilot.title')}
       >
         <Sparkles className="h-5 w-5" strokeWidth={1.5} />
       </button>
@@ -299,7 +315,10 @@ export function AICopilot() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-2 z-[71] flex h-[min(600px,calc(100dvh-7rem))] max-h-[80vh] w-[calc(100vw-1rem)] max-w-[400px] flex-col sm:bottom-5 sm:right-5 overflow-hidden rounded-2xl border border-border bg-bg-elevated shadow-modal"
+              className={cn(
+                'fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[71] flex h-[min(600px,calc(100dvh-7rem))] max-h-[80vh] w-[calc(100vw-1rem)] max-w-[400px] flex-col sm:bottom-5 overflow-hidden rounded-2xl border border-border bg-bg-elevated shadow-modal',
+                rtl ? 'left-2 sm:left-5' : 'right-2 sm:right-5'
+              )}
             >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-border bg-bg-secondary px-4 py-3">
@@ -308,8 +327,8 @@ export function AICopilot() {
                     <Sparkles className="h-4 w-4" strokeWidth={1.5} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-text-primary">AI Copilot</p>
-                    <p className="text-[10px] text-text-muted">Context: {pageCtx.label}</p>
+                    <p className="text-sm font-medium text-text-primary">{t('aiCopilot.title')}</p>
+                    <p className="text-[10px] text-text-muted">{t('aiCopilot.context')}: {pageLabel}</p>
                   </div>
                 </div>
                 <button onClick={() => setOpen(false)} className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-bg-elevated hover:text-text-primary">
@@ -322,7 +341,7 @@ export function AICopilot() {
                 {messages.length === 0 && !loading && (
                   <div className="space-y-3">
                     <div className="rounded-xl border border-gold-border bg-gold-bg p-3">
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-gold">Proactive Insights</p>
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-gold">{t('aiCopilot.proactiveInsights')}</p>
                       {suggestions.length > 0 ? (
                         <div className="mt-2 space-y-1.5">
                           {suggestions.map((s, i) => (
@@ -330,10 +349,10 @@ export function AICopilot() {
                           ))}
                         </div>
                       ) : (
-                        <p className="mt-2 text-xs text-text-muted">Analyzing your CRM data...</p>
+                        <p className="mt-2 text-xs text-text-muted">{t('aiCopilot.analyzing')}</p>
                       )}
                     </div>
-                    <p className="px-1 text-xs text-text-muted">Quick actions:</p>
+                    <p className="px-1 text-xs text-text-muted">{t('aiCopilot.quickActions')}</p>
                     {quickActions.map((qa) => (
                       <button
                         key={qa.label}
@@ -351,18 +370,18 @@ export function AICopilot() {
                     key={i}
                     className={cn(
                       'mb-2 max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed',
-                      msg.role === 'user' ? 'ml-auto rounded-br-sm bg-gold-bg text-text-primary' : 'rounded-bl-sm bg-bg-secondary text-text-secondary'
+                      msg.role === 'user' ? 'rounded-br-sm bg-gold-bg text-text-primary' : 'rounded-bl-sm bg-bg-secondary text-text-secondary',
+                      rtl ? (msg.role === 'user' ? 'mr-auto' : 'ml-auto') : (msg.role === 'user' ? 'ml-auto' : 'mr-auto')
                     )}
                   >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    <p className="whitespace-pre-wrap" style={{ textAlign: rtl ? 'right' : 'left' }}>{msg.content}</p>
                   </div>
                 ))}
                 {loading && (
                   <div className="mb-2 flex items-center gap-2 text-xs text-text-muted">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Analyzing...
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('aiCopilot.analyzingShort')}
                   </div>
                 )}
-                {/* Action confirmation card */}
                 {pendingAction && (
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
@@ -378,7 +397,7 @@ export function AICopilot() {
                       {Object.entries(pendingAction.data).map(([k, v]) => (
                         <div key={k} className="flex justify-between gap-2 py-0.5 text-[11px]">
                           <span className="text-text-muted capitalize">{k.replace(/_/g, ' ')}:</span>
-                          <span className="text-right text-text-primary">{String(v)}</span>
+                          <span className="text-right text-text-primary" style={{ textAlign: rtl ? 'left' : 'right' }}>{String(v)}</span>
                         </div>
                       ))}
                     </div>
@@ -389,14 +408,14 @@ export function AICopilot() {
                         className="flex items-center gap-1.5 rounded-lg bg-gold px-3 py-1.5 text-xs font-medium text-[#0D0D0F] transition-colors hover:bg-gold-soft disabled:opacity-50"
                       >
                         {executing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                        Confirm
+                        {t('aiCopilot.confirm')}
                       </button>
                       <button
                         onClick={() => setPendingAction(null)}
                         disabled={executing}
                         className="rounded-lg border border-border bg-bg-secondary px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:text-text-primary disabled:opacity-50"
                       >
-                        Cancel
+                        {t('aiCopilot.cancel')}
                       </button>
                     </div>
                   </motion.div>
@@ -411,8 +430,9 @@ export function AICopilot() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
-                    placeholder="Ask AI Copilot..."
+                    placeholder={t('aiCopilot.placeholder')}
                     className="min-w-0 flex-1 rounded-xl border border-border bg-bg-secondary px-3 py-2.5 text-base text-text-primary outline-none focus:border-gold-border"
+                    style={{ textAlign: rtl ? 'right' : 'left' }}
                   />
                   <button
                     onClick={() => sendMessage(input)}

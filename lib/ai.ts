@@ -9,12 +9,14 @@ export async function askAI(
   messages: AIMessage[],
   system?: string,
   model?: string,
+  locale?: string,
 ): Promise<string> {
   const { data, error } = await supabase.functions.invoke('openrouter-ai', {
     body: {
       messages,
       system,
       model,
+      locale,
     },
   });
 
@@ -41,8 +43,19 @@ export async function askAI(
 // AI INSIGHTS
 // ─────────────────────────────────────────────────────────────
 
+const LOCALE_INSTRUCTIONS: Record<string, string> = {
+  fr: 'The user\'s interface language is French. Respond in professional French.',
+  ar: 'The user\'s interface language is Arabic. Respond in professional Modern Standard Arabic.',
+  en: 'Respond in professional English.',
+};
+
+export function localeInstruction(locale?: string): string {
+  return LOCALE_INSTRUCTIONS[locale ?? 'en'] ?? LOCALE_INSTRUCTIONS.en;
+}
+
 export async function getAIInsights(
   context: string,
+  locale?: string,
 ): Promise<
   {
     title: string;
@@ -51,8 +64,11 @@ export async function getAIInsights(
     type: string;
   }[]
 > {
+  const langInstruction = localeInstruction(locale);
   const system = `
 You are the MEHANS CRM sales analyst.
+
+${langInstruction}
 
 Use ONLY the CRM data provided by the user.
 
@@ -86,6 +102,8 @@ Rules:
       },
     ],
     system,
+    undefined,
+    locale,
   );
 
   try {
@@ -122,9 +140,13 @@ Rules:
 
 export async function getLeadSummary(
   lead: Record<string, unknown>,
+  locale?: string,
 ): Promise<string> {
+  const langInstruction = localeInstruction(locale);
   const system = `
 You are the MEHANS CRM assistant.
+
+${langInstruction}
 
 Summarize this real estate lead in 3-4 concise sentences.
 
@@ -147,6 +169,8 @@ Never invent missing information.
       },
     ],
     system,
+    undefined,
+    locale,
   );
 }
 
@@ -157,11 +181,15 @@ Never invent missing information.
 export async function getAIReport(
   context: string,
   topic: string,
+  locale?: string,
 ): Promise<string> {
   const safeTopic = String(topic || 'CRM performance');
+  const langInstruction = localeInstruction(locale);
 
   const system = `
 You are the MEHANS CRM reporting engine.
+
+${langInstruction}
 
 Create a structured ${safeTopic} report using ONLY the supplied CRM data.
 
@@ -184,6 +212,8 @@ Keep the report under 400 words.
       },
     ],
     system,
+    undefined,
+    locale,
   );
 }
 
@@ -397,6 +427,7 @@ function calculatePropertyMatchScore(
 
 export async function analyzeLead(
   leadId: string,
+  locale?: string,
 ): Promise<LeadAnalysis> {
   // ───────────────────────────────────────────────────────────
   // 1. LEAD
@@ -693,8 +724,11 @@ export async function analyzeLead(
   // 12. AI SYSTEM
   // ───────────────────────────────────────────────────────────
 
+  const langInstruction = localeInstruction(locale);
   const system = `
 You are MEHANS AI, a CRM sales operating system for a real estate agency.
+
+${langInstruction}
 
 You are analyzing ONE real lead.
 
@@ -813,6 +847,8 @@ If information is missing, say "Unknown".
       },
     ],
     system,
+    undefined,
+    locale,
   );
 
   // ───────────────────────────────────────────────────────────

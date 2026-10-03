@@ -11,7 +11,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
   try {
-    const { messages, system, model } = await req.json();
+    const { messages, system, model, locale } = await req.json();
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: "Messages are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -33,6 +33,7 @@ Deno.serve(async (req: Request) => {
         model: model ?? "openai/gpt-4o-mini",
         messages: [{ role: "system", content: system ?? "You are the MEHANS real estate CRM assistant. Give concise, practical answers based only on the supplied CRM context." }, ...messages],
         temperature: 0.4,
+        response_format: locale ? { type: "text" } : undefined,
       }),
     });
 
