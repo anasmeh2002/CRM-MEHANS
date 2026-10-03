@@ -12,7 +12,7 @@ function serverSupabase() {
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
@@ -24,83 +24,135 @@ export async function POST(request: NextRequest) {
   try {
     const headerList = await headers();
     const authHeader = headerList.get('authorization');
-    if (!authHeader) {
+
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.slice('Bearer '.length).trim();
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    }
+
     const authClient = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
+      global: { headers: { Authorization: 'Bearer ' + token } },
     });
+
     const { data: authData, error: authError } = await authClient.auth.getUser();
     if (authError || !authData.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
+    const body = await request.json().catch(() => ({}));
+    const invitationId =
+      typeof body?.invitation_id === 'string' ? body.invitation_id.trim() : '';
+
+    if (!invitationId) {
+      return NextResponse.json(
+        { error: 'invitation_id_required' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
     const authenticatedUserId = authData.user.id;
     const authenticatedEmail = (authData.user.email ?? '').trim().toLowerCase();
 
-    const sb = serverSupabase();
-
-    // Find any invited workspace_members matching this authenticated user's email
-    const { data: invitedMembers } = await sb
-      .from('workspace_members')
-      .select('*')
-      .eq('email', authenticatedEmail)
-      .eq('status', 'invited');
-
-    if (invitedMembers && invitedMembers.length > 0) {
-      for (const member of invitedMembers) {
-        await sb
-          .from('workspace_members')
-          .update({
-            user_id: authenticatedUserId,
-            status: 'active',
-            accepted_at: new Date().toISOString(),
-          })
-          .eq('id', member.id);
-      }
-
-      const workspaceId = invitedMembers[0].workspace_id;
-      const { data: admins } = await sb
-        .from('workspace_members')
-        .select('user_id')
-        .eq('workspace_id', workspaceId)
-        .in('role', ['owner', 'admin'])
-        .eq('status', 'active')
-        .not('user_id', 'is', null);
-
-      if (admins) {
-        const notifInserts = admins
-          .filter((a) => a.user_id)
-          .map((a) => ({
-            user_id: a.user_id,
-            agency_id: workspaceId,
-            title: 'Team Member Joined',
-            description: `${invitedMembers[0].name} has accepted the invitation and is now active.`,
-            type: 'team',
-            read: false,
-          }));
-        if (notifInserts.length > 0) {
-          await sb.from('notifications').insert(notifInserts);
-        }
-      }
-    } else {
-      // No invitation found — check if this user already has an active membership
-      const { data: activeMember } = await sb
-        .from('workspace_members')
-        .select('id, workspace_id')
-        .eq('user_id', authenticatedUserId)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (!activeMember) {
-        // No invitation and no existing membership — do NOT auto-create one.
-        // User must be invited by a workspace owner/admin first.
-      }
+    if (!authenticatedEmail) {
+      return NextResponse.json(
+        { error: 'Authenticated user has no email' },
+        { status: 400, headers: corsHeaders }
+      );
     }
 
-    return NextResponse.json({ success: true }, { headers: corsHeaders });
+    const sb = serverSupabase();
+
+    const { data: invitation, error: invitationError } = await sb
+      .from('workspace_members')
+      .select('id, workspace_id, user_id, name, email, role, status')
+      .eq('id', invitationId)
+      .eq('status', 'invited')
+      .maybeSingle();
+
+    if (invitationError) throw invitationError;
+
+    if (!invitation) {
+      return NextResponse.json(
+        { error: 'invitation_not_found_or_already_accepted' },
+        { status: 404, headers: corsHeaders }
+      );
+    }
+
+    const invitedEmail = (invitation.email ?? '').trim().toLowerCase();
+    if (invitedEmail !== authenticatedEmail) {
+      return NextResponse.json(
+        { error: 'invitation_email_mismatch' },
+        { status: 403, headers: corsHeaders }
+      );
+    }
+
+    if (invitation.user_id && invitation.user_id !== authenticatedUserId) {
+      return NextResponse.json(
+        { error: 'invitation_user_mismatch' },
+        { status: 403, headers: corsHeaders }
+      );
+    }
+
+    const { data: updatedInvitation, error: updateError } = await sb
+      .from('workspace_members')
+      .update({
+        user_id: authenticatedUserId,
+        status: 'active',
+        accepted_at: new Date().toISOString(),
+      })
+      .eq('id', invitation.id)
+      .eq('status', 'invited')
+      .select('id, workspace_id, name, role')
+      .single();
+
+    if (updateError || !updatedInvitation) {
+      throw updateError ?? new Error('Invitation activation failed');
+    }
+
+    const { data: admins, error: adminsError } = await sb
+      .from('workspace_members')
+      .select('user_id')
+      .eq('workspace_id', updatedInvitation.workspace_id)
+      .in('role', ['owner', 'admin'])
+      .eq('status', 'active')
+      .not('user_id', 'is', null);
+
+    if (adminsError) throw adminsError;
+
+    const notifInserts = (admins ?? [])
+      .filter((admin) => admin.user_id && admin.user_id !== authenticatedUserId)
+      .map((admin) => ({
+        user_id: admin.user_id,
+        agency_id: updatedInvitation.workspace_id,
+        title: 'Team Member Joined',
+        description: updatedInvitation.name + ' has accepted the invitation and is now active.',
+        type: 'team',
+        record_type: 'member',
+        record_id: updatedInvitation.id,
+        read: false,
+      }));
+
+    if (notifInserts.length > 0) {
+      const { error: notificationError } = await sb
+        .from('notifications')
+        .insert(notifInserts);
+
+      if (notificationError) throw notificationError;
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        invitation_id: updatedInvitation.id,
+        workspace_id: updatedInvitation.workspace_id,
+        role: updatedInvitation.role,
+      },
+      { headers: corsHeaders }
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Internal error';
     return NextResponse.json({ error: message }, { status: 500, headers: corsHeaders });
