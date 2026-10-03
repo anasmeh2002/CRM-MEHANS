@@ -757,7 +757,7 @@ export default function WhatsAppPage() {
                       {/* Reply suggestions */}
                       {replyLoading && (
                         <div className="mb-3 flex items-center gap-2 text-xs text-text-muted">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating reply suggestions...
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('whatsapp.generatingReplies')}
                         </div>
                       )}
                       {!replyLoading && replySuggestions.length > 0 && (
@@ -779,7 +779,7 @@ export default function WhatsAppPage() {
                       {/* Quick actions - contextual */}
                       {aiHistory.length === 0 && !aiSuggestion && !aiLoading && (
                         <div className="space-y-2">
-                          <p className="text-xs text-text-muted">{t('whatsapp.quickActions')}:
+                          <p className="text-xs text-text-muted">{t('whatsapp.quickActions')}:</p>
                           {aiQuickActions.map((action) => (
                             <button key={action} onClick={() => aiSend(action)} disabled={aiLoading} className="block w-full rounded-lg border border-border bg-bg-secondary px-3 py-2 text-left text-xs text-text-secondary transition-colors hover:border-gold-border hover:text-gold disabled:opacity-50">
                               {action}
