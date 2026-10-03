@@ -1408,7 +1408,21 @@ export default function LeadsPage() {
           delay={0.1}
           className="overflow-hidden"
         >
-          <div className="overflow-x-auto scrollbar-thin">
+          <div className="space-y-2 p-3 sm:hidden">
+            {paged.map((lead) => (
+              <button key={lead.id} onClick={() => setDetailLead(lead)} className="w-full rounded-xl border border-border bg-bg-elevated p-3 text-start transition-colors hover:border-border-strong">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <Avatar name={lead.name} color={lead.avatarColor} size="sm" />
+                    <div className="min-w-0"><p className="truncate text-[13px] font-medium text-text-primary">{lead.name}</p><p className="truncate text-[11px] text-text-muted">{lead.email}</p></div>
+                  </div>
+                  <Badge variant={safeConfig(statusConfig, lead.status, { label: 'leadStatus.new', variant: 'neutral' }).variant}>{t(safeConfig(statusConfig, lead.status, { label: 'leadStatus.new', variant: 'neutral' }).label)}</Badge>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border pt-3 text-[11px]"><span><span className="block text-text-muted">{t('leads.budget')}</span><span className="font-medium text-text-primary">{formatCurrency(lead.budget, currency)}</span></span><span><span className="block text-text-muted">{t('leads.score')}</span><span className="font-medium text-text-primary">{lead.score}</span></span><span><span className="block text-text-muted">{t('leads.source')}</span><span className="truncate font-medium text-text-primary">{lead.source}</span></span></div>
+              </button>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto scrollbar-thin sm:block">
             <table className="w-full">
               <thead>
                 <tr className="sticky top-0 border-b border-border bg-bg-secondary text-left text-[11px] text-text-muted">

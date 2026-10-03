@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.25 }}
-          className="px-4 py-5 sm:px-5 lg:px-8 lg:py-8"
+          className="min-w-0 overflow-x-hidden px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-5 sm:px-5 lg:px-8 lg:py-8 lg:pb-8"
         >
           {children}
         </motion.main>

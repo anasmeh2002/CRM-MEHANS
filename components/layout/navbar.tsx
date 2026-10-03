@@ -153,10 +153,12 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const orgName = agency?.name ?? t('navbar.enterpriseWorkspace');
 
   return (
-    <div className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-border glass px-4 sm:gap-3 sm:px-5 lg:px-8">
-      <button onClick={onMenuClick} className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-bg-secondary text-text-secondary transition-colors hover:border-border-strong lg:hidden">
+    <div className="sticky top-0 z-20 flex h-16 min-w-0 items-center gap-1.5 border-b border-border glass px-2 sm:gap-3 sm:px-5 lg:px-8">
+      <button onClick={onMenuClick} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-bg-secondary text-text-secondary transition-colors hover:border-border-strong lg:hidden">
         <Menu className="h-5 w-5" strokeWidth={1.5} />
       </button>
+
+      <div className="flex shrink-0 md:hidden"><MehansLogoIcon size={30} /></div>
 
       <div className="relative hidden md:block">
         <button className="flex items-center gap-2.5 rounded-xl border border-border bg-bg-secondary px-3 py-2 text-[13px] transition-colors hover:border-border-strong">
@@ -170,7 +172,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
       <div ref={refs.search} className="relative min-w-0 flex-1 max-w-md">
         <button
           onClick={() => setSearchOpen(true)}
-          className="flex w-full items-center gap-2 rounded-xl border border-border bg-bg-secondary px-3 py-2 text-[13px] text-text-muted transition-colors hover:border-border-strong"
+          className="flex h-10 w-full items-center gap-2 rounded-xl border border-border bg-bg-secondary px-2.5 py-2 text-[13px] text-text-muted transition-colors hover:border-border-strong sm:px-3"
         >
           <Search className="h-4 w-4" strokeWidth={1.5} />
           <span className="hidden sm:block">{t('navbar.search')}</span>
@@ -223,7 +225,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
       </div>
 
       {/* Right */}
-      <div className="ms-auto flex items-center gap-2">
+      <div className="ms-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
         <LanguageSwitcher />
         <ThemeToggle />
 
@@ -233,14 +235,14 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
             const event = new CustomEvent('open-ai-copilot');
             window.dispatchEvent(event);
           }}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-gold-border bg-gold-bg text-gold transition-all hover:scale-105 hover:bg-gold-soft hover:text-[#0D0D0F]"
+          className="hidden h-10 w-10 items-center justify-center rounded-xl border border-gold-border bg-gold-bg text-gold transition-all hover:scale-105 hover:bg-gold-soft hover:text-[#0D0D0F] md:flex"
           title={t('navbar.aiCopilot')}
         >
           <Sparkles className="h-[18px] w-[18px]" strokeWidth={1.5} />
         </button>
 
         {/* Quick Add */}
-        <div ref={refs.quick} className="relative">
+        <div ref={refs.quick} className="relative hidden sm:block">
           <button onClick={() => setQuickOpen(!quickOpen)} className="btn btn-gold btn-md shrink-0">
             <Plus className="h-4 w-4" strokeWidth={2} />
             <span className="hidden sm:block">{t('navbar.quickAdd')}</span>
@@ -323,7 +325,7 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
         </div>
 
         {/* User */}
-        <div ref={refs.user} className="relative">
+        <div ref={refs.user} className="relative hidden md:block">
           <button
             onClick={() => setUserOpen(!userOpen)}
             className="flex items-center gap-2 rounded-xl border border-border bg-bg-secondary py-1.5 ps-1.5 pe-2 transition-colors hover:border-border-strong"

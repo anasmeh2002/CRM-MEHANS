@@ -11,7 +11,7 @@ export function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  if (!mounted) return <div className="h-9 w-9" />;
+  if (!mounted) return <div className="h-10 w-10 shrink-0" />;
 
   const current = (theme ?? 'dark') as typeof themes[number];
   const next = themes[(themes.indexOf(current) + 1) % themes.length];
@@ -21,7 +21,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(next)}
-      className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-bg-secondary transition-all duration-200 hover:border-border-strong"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-bg-secondary transition-all duration-200 hover:border-border-strong active:scale-95"
       title={`Theme: ${label} (click for ${next})`}
     >
       <Icon className="h-[18px] w-[18px] text-text-secondary" strokeWidth={1.5} />

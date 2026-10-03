@@ -278,7 +278,7 @@ export function AICopilot() {
       {/* Floating AI button */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-gold text-[#0D0D0F] shadow-lg shadow-gold/20 transition-all hover:scale-105 hover:bg-gold-soft"
+        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-12 w-12 items-center justify-center sm:bottom-5 sm:right-5 rounded-full bg-gold text-[#0D0D0F] shadow-lg shadow-gold/20 transition-all hover:scale-105 hover:bg-gold-soft"
         title="AI Copilot"
       >
         <Sparkles className="h-5 w-5" strokeWidth={1.5} />
@@ -299,7 +299,7 @@ export function AICopilot() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="fixed bottom-5 right-5 z-50 flex h-[600px] max-h-[80vh] w-[400px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-border bg-bg-elevated shadow-modal"
+              className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-2 z-50 flex h-[min(600px,calc(100dvh-7rem))] max-h-[80vh] w-[calc(100vw-1rem)] max-w-[400px] flex-col sm:bottom-5 sm:right-5 overflow-hidden rounded-2xl border border-border bg-bg-elevated shadow-modal"
             >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-border bg-bg-secondary px-4 py-3">

@@ -36,7 +36,7 @@ export function LanguageSwitcher() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.12 }}
-            className="absolute right-0 top-full z-50 mt-2 w-40 rounded-xl border border-border bg-bg-elevated p-1.5 shadow-modal"
+            className="absolute end-0 top-full z-50 mt-2 w-44 max-w-[calc(100vw-1rem)] rounded-xl border border-border bg-bg-elevated p-1.5 shadow-modal"
           >
             {locales.map((l: Locale) => (
               <button
@@ -46,7 +46,7 @@ export function LanguageSwitcher() {
                   setOpen(false);
                 }}
                 className={cn(
-                  'flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-[13px] transition-colors',
+                  'flex min-h-11 w-full items-center justify-between rounded-lg px-3 py-2.5 text-[13px] transition-colors',
                   locale === l ? 'bg-gold-bg text-gold' : 'text-text-primary hover:bg-bg-hover',
                 )}
               >

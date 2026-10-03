@@ -7,7 +7,7 @@ import { useState } from 'react';
 import {
   LayoutDashboard, Users, Home, KanbanSquare, TrendingUp,
   Calendar, CheckSquare, CalendarClock, MessageCircle, BarChart3,
-  Sparkles, FileText, Settings, ChevronLeft, X,
+  Sparkles, FileText, Settings, ChevronLeft, X, MoreHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MehansLogo, MehansLogoIcon } from '@/components/logo';
@@ -111,55 +111,54 @@ export function Sidebar({ collapsed, onToggleCollapse }: { collapsed: boolean; o
 
 export function MobileNav({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
-  const { t, rtl } = useLanguage();
+  const { t } = useLanguage();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const primaryItems = [navItems[0], navItems[1], navItems[2], navItems[5]];
+  const moreItems = navItems.filter((item) => !primaryItems.includes(item));
 
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden"
-          />
-          <motion.aside
-            initial={{ x: rtl ? 280 : -280 }}
-            animate={{ x: 0 }}
-            exit={{ x: rtl ? 280 : -280 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-            className="fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-border bg-bg-secondary lg:hidden rtl:left-auto rtl:right-0 rtl:border-l rtl:border-r-0"
-          >
-            <div className="flex items-center justify-between px-6 pb-6 pt-8">
-              <MehansLogo height={42} />
-              <button onClick={onClose} className="rounded-lg p-1.5 text-text-muted hover:bg-bg-elevated hover:text-text-primary">
-                <X className="h-5 w-5" strokeWidth={1.5} />
-              </button>
-            </div>
-            <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 py-1">
-              {navItems.map((item) => {
+    <>
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(4.25rem+env(safe-area-inset-bottom))] items-start justify-around border-t border-border bg-bg-secondary/95 px-1 pt-1.5 shadow-modal backdrop-blur-xl lg:hidden">
+        {[...primaryItems, { labelKey: 'nav.more', href: '#more', icon: MoreHorizontal }].map((item) => {
+          const Icon = item.icon;
+          const active = item.href === '#more' ? moreOpen : pathname === item.href;
+          return (
+            <button
+              key={item.href}
+              onClick={() => item.href === '#more' ? setMoreOpen((value) => !value) : undefined}
+              className={cn('flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium transition-colors', active ? 'text-gold' : 'text-text-muted')}
+            >
+              <Icon className="h-5 w-5" strokeWidth={1.6} />
+              <span className="max-w-full truncate">{t(item.labelKey)}</span>
+            </button>
+          );
+        })}
+      </nav>
+      <AnimatePresence>
+        {moreOpen && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMoreOpen(false)} className="fixed inset-0 z-40 bg-black/55 lg:hidden" />
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-50 grid grid-cols-3 gap-1.5 rounded-2xl border border-border bg-bg-elevated p-2 shadow-modal lg:hidden">
+              {moreItems.map((item) => {
                 const Icon = item.icon;
                 const active = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    className={cn(
-                      'mb-0.5 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-all',
-                      active ? 'bg-bg-elevated text-text-primary' : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
-                    )}
-                  >
-                    <Icon className={cn('h-[18px] w-[18px] shrink-0', active && 'text-gold')} strokeWidth={1.5} />
-                    {t(item.labelKey)}
-                  </Link>
-                );
+                return <Link key={item.href} href={item.href} onClick={() => setMoreOpen(false)} className={cn('flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[11px]', active ? 'bg-gold-bg text-gold' : 'text-text-secondary hover:bg-bg-hover')}><Icon className="h-4 w-4" strokeWidth={1.5} />{t(item.labelKey)}</Link>;
               })}
-            </nav>
-          </motion.aside>
-        </>
-      )}
-    </AnimatePresence>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {open && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden" />
+            <motion.aside initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="fixed inset-y-0 start-0 z-[60] flex w-[min(82vw,280px)] flex-col border-e border-border bg-bg-secondary p-4 shadow-modal lg:hidden">
+              <div className="mb-5 flex items-center justify-between"><MehansLogo height={36} /><button onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-text-muted"><X className="h-5 w-5" strokeWidth={1.5} /></button></div>
+              <nav className="overflow-y-auto">{navItems.map((item) => { const Icon = item.icon; const active = pathname === item.href; return <Link key={item.href} href={item.href} onClick={onClose} className={cn('mb-1 flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm', active ? 'bg-bg-elevated text-gold' : 'text-text-secondary')}><Icon className="h-5 w-5" strokeWidth={1.5} />{t(item.labelKey)}</Link>; })}</nav>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

@@ -106,6 +106,7 @@
 
   html {
     color-scheme: dark;
+    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -116,6 +117,8 @@
   }
 
   body {
+    min-width: 320px;
+    overflow-x: hidden;
     background: var(--bg-primary);
     color: var(--text-primary);
     font-feature-settings: 'cv11', 'ss01', 'ss03';
@@ -301,8 +304,8 @@
   .btn-sm  { padding: 7px 14px; font-size: 12.5px; }
   .btn-md  { padding: 10px 18px; }
   .btn-lg  { padding: 13px 24px; font-size: 15px; }
-  .btn-icon { width: 36px; height: 36px; padding: 0; }
-  .btn-icon-sm { width: 32px; height: 32px; padding: 0; }
+  .btn-icon { width: 44px; height: 44px; padding: 0; }
+  .btn-icon-sm { width: 40px; height: 40px; padding: 0; }
 
   .btn-gold {
     background: var(--gold);
@@ -392,3 +395,11 @@
 
 [dir="rtl"] .rounded-r-full { border-radius: 9999px 0 0 9999px; }
 [dir="rtl"] .rounded-l-full { border-radius: 0 9999px 9999px 0; }
+
+@media (max-width: 639px) {
+  .modal-panel { max-height: calc(100dvh - 1rem); }
+  table { min-width: 680px; }
+}
+
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-top { padding-top: env(safe-area-inset-top); }
