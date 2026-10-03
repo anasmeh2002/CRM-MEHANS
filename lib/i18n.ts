@@ -744,6 +744,109 @@ const en: Dict = {
   'tag.hotLead': 'Hot Lead',
   'tag.investor': 'Investor',
   'tag.firstTimeBuyer': 'First-Time Buyer',
+
+  // Toast messages
+  'toast.automationLoadFailed': 'Failed to load automations',
+  'toast.automationToggled': '{name} {state}',
+  'toast.automationPaused': 'paused',
+  'toast.automationActivated': 'activated',
+  'toast.automationUpdateFailed': 'Failed to update automation',
+  'toast.automationDeleted': 'Automation deleted',
+  'toast.automationDeleteFailed': 'Failed to delete automation',
+  'toast.automationNameRequired': 'Please enter a name',
+  'toast.automationCreated': 'Automation created',
+  'toast.automationCreateFailed': 'Failed to create automation',
+  'toast.meetingCompleted': 'Meeting "{title}" marked as completed',
+  'toast.meetingStatusFailed': 'Failed to update meeting status.',
+  'toast.meetingConfirmed': 'Meeting "{title}" confirmed',
+  'toast.meetingConfirmFailed': 'Failed to confirm meeting.',
+  'toast.meetingInvalidDateTime': 'Enter a valid date and time.',
+  'toast.meetingRescheduled': 'Meeting "{title}" rescheduled',
+  'toast.meetingRescheduleFailed': 'Failed to reschedule meeting.',
+  'toast.meetingCancelled': 'Meeting "{title}" cancelled',
+  'toast.meetingCancelFailed': 'Failed to cancel meeting.',
+  'toast.meetingReminderSent': 'Reminder sent for "{title}"',
+  'toast.meetingReminderFailed': 'Failed to send reminder.',
+  'toast.meetingWhatsappSent': 'WhatsApp alert sent for "{title}"',
+  'toast.meetingWhatsappFailed': 'Failed to send WhatsApp alert.',
+  'toast.propertyUpdateFailed': 'Failed to update property. Please try again.',
+  'toast.reportDownloaded': '{type} report downloaded',
+  'toast.aiReportGenerated': 'AI report generated',
+  'toast.aiReportFailed': 'Failed to generate AI report',
+  'toast.reportDataUnavailable': 'Report data not available',
+  'toast.whatsappOlderFailed': 'Unable to load older messages',
+  'toast.fileTooLarge': 'File is too large. Maximum size is 10 MB.',
+  'toast.fileUnsupported': 'Unsupported file type. Please select an image (JPEG, PNG, WebP, GIF) or document (PDF, Word, TXT).',
+  'toast.fileReadFailed': 'Failed to read the selected file',
+  'toast.whatsappSigninRequired': 'You must be signed in to connect WhatsApp',
+  'toast.whatsappNoQr': 'No QR code returned from Evolution API',
+  'toast.whatsappConnected': 'WhatsApp connected successfully',
+  'toast.whatsappDisconnected': 'WhatsApp disconnected',
+  'toast.whatsappMessageSent': 'Message sent',
+  'toast.whatsappAddedToComposer': 'Added to composer',
+  'toast.settingsSaved': 'Settings saved',
+  'toast.leadAnalysisFailed': 'Failed to analyze lead.',
+  'toast.replyCopied': 'Reply copied to clipboard',
+  'toast.generateReport': 'Generate Report',
+  'toast.generating': 'Generating…',
+
+  // WhatsApp AI
+  'whatsappAi.summarizeNeeds': 'Summarize Lead Needs',
+  'whatsappAi.draftReply': 'Draft Follow-up Reply',
+  'whatsappAi.suggestProperty': 'Suggest Property Match',
+  'whatsappAi.writeReply': 'Write a professional reply',
+  'whatsappAi.generateReport': 'Generate a CRM report',
+  'whatsappAi.replyInFrench': 'Reply in French',
+  'whatsappAi.askPlaceholder': 'Ask AI…',
+  'whatsappAi.searchConversations': 'Search conversations',
+  'whatsappAi.connect': 'Connect',
+  'whatsappAi.settings': 'Settings',
+  'whatsappAi.connected': 'Connected',
+  'whatsappAi.notConnected': 'Not connected',
+  'whatsappAi.connectDescription': 'Connect a business number to manage WhatsApp conversations',
+  'whatsappAi.setUp': 'Set up',
+  'whatsappAi.noConversations': 'No WhatsApp conversations yet.',
+  'whatsappAi.noMessages': 'No messages yet',
+  'whatsappAi.creatingInstance': 'Creating instance & generating QR…',
+  'whatsappAi.waitingForScan': 'Waiting for scan…',
+  'whatsappAi.linkingDevice': 'Linking device…',
+  'whatsappAi.deviceLinked': 'Device linked!',
+  'whatsappAi.clickToGenerate': 'Click to generate QR code',
+  'whatsappAi.saveChanges': 'Save changes',
+
+  // Automation labels
+  'automation.trigger.whatsappNewMessage': 'New WhatsApp Message',
+  'automation.trigger.whatsappNewConversation': 'New WhatsApp Conversation',
+  'automation.trigger.leadCreated': 'Lead Created',
+  'automation.trigger.leadInactive': 'Lead Inactive (48h)',
+  'automation.trigger.dealWon': 'Deal Won',
+  'automation.trigger.meetingCreated': 'Appointment Created',
+  'automation.trigger.propertyMatch': 'Property Matches Lead',
+  'automation.action.createLead': 'Create/Update Lead',
+  'automation.action.createTask': 'Create Follow-up Task',
+  'automation.action.sendWhatsapp': 'Send WhatsApp Message',
+  'automation.action.sendNotification': 'Send Notification',
+  'automation.statusSuccess': 'Success',
+  'automation.statusError': 'Error',
+  'automation.statusPending': 'Pending',
+  'automation.statusSkipped': 'Skipped',
+  'automation.namePlaceholder': 'e.g. New Lead WhatsApp Alert',
+
+  // Reports
+  'reports.revenueVsTarget': 'Revenue vs Target',
+  'reports.monthlyComparison': 'Monthly comparison',
+  'reports.funnelPerformance': 'Funnel Performance',
+  'reports.stageByStage': 'Stage-by-stage conversion',
+  'reports.latestAiReport': 'Latest AI Report',
+  'reports.generatedReports': 'Generated Reports',
+  'reports.reportsCount': '{count} reports',
+
+  // Deals
+  'deals.unknown': 'Unknown',
+  'deals.additionalContext': 'Additional context about this deal…',
+
+  // Properties
+  'properties.description': 'Description',
 };
 
 const fr: Dict = {
@@ -1497,6 +1600,109 @@ const fr: Dict = {
   'tag.hotLead': 'Prospect chaud',
   'tag.investor': 'Investisseur',
   'tag.firstTimeBuyer': 'Premier achat',
+
+  // Toast messages
+  'toast.automationLoadFailed': 'Échec du chargement des automatisations',
+  'toast.automationToggled': '{name} {state}',
+  'toast.automationPaused': 'mis en pause',
+  'toast.automationActivated': 'activé',
+  'toast.automationUpdateFailed': 'Échec de la mise à jour de l\'automatisation',
+  'toast.automationDeleted': 'Automatisation supprimée',
+  'toast.automationDeleteFailed': 'Échec de la suppression de l\'automatisation',
+  'toast.automationNameRequired': 'Veuillez saisir un nom',
+  'toast.automationCreated': 'Automatisation créée',
+  'toast.automationCreateFailed': 'Échec de la création de l\'automatisation',
+  'toast.meetingCompleted': 'Réunion « {title} » marquée comme terminée',
+  'toast.meetingStatusFailed': 'Échec de la mise à jour du statut de la réunion.',
+  'toast.meetingConfirmed': 'Réunion « {title} » confirmée',
+  'toast.meetingConfirmFailed': 'Échec de la confirmation de la réunion.',
+  'toast.meetingInvalidDateTime': 'Saisissez une date et une heure valides.',
+  'toast.meetingRescheduled': 'Réunion « {title} » reprogrammée',
+  'toast.meetingRescheduleFailed': 'Échec de la reprogrammation de la réunion.',
+  'toast.meetingCancelled': 'Réunion « {title} » annulée',
+  'toast.meetingCancelFailed': 'Échec de l\'annulation de la réunion.',
+  'toast.meetingReminderSent': 'Rappel envoyé pour « {title} »',
+  'toast.meetingReminderFailed': 'Échec de l\'envoi du rappel.',
+  'toast.meetingWhatsappSent': 'Alerte WhatsApp envoyée pour « {title} »',
+  'toast.meetingWhatsappFailed': 'Échec de l\'envoi de l\'alerte WhatsApp.',
+  'toast.propertyUpdateFailed': 'Échec de la mise à jour du bien. Réessayez.',
+  'toast.reportDownloaded': 'Rapport {type} téléchargé',
+  'toast.aiReportGenerated': 'Rapport IA généré',
+  'toast.aiReportFailed': 'Échec de la génération du rapport IA',
+  'toast.reportDataUnavailable': 'Données du rapport indisponibles',
+  'toast.whatsappOlderFailed': 'Impossible de charger les anciens messages',
+  'toast.fileTooLarge': 'Fichier trop volumineux. Taille maximum : 10 Mo.',
+  'toast.fileUnsupported': 'Type de fichier non supporté. Sélectionnez une image (JPEG, PNG, WebP, GIF) ou un document (PDF, Word, TXT).',
+  'toast.fileReadFailed': 'Échec de la lecture du fichier sélectionné',
+  'toast.whatsappSigninRequired': 'Vous devez être connecté pour utiliser WhatsApp',
+  'toast.whatsappNoQr': 'Aucun QR code renvoyé par l\'API Evolution',
+  'toast.whatsappConnected': 'WhatsApp connecté avec succès',
+  'toast.whatsappDisconnected': 'WhatsApp déconnecté',
+  'toast.whatsappMessageSent': 'Message envoyé',
+  'toast.whatsappAddedToComposer': 'Ajouté au compositeur',
+  'toast.settingsSaved': 'Paramètres enregistrés',
+  'toast.leadAnalysisFailed': 'Échec de l\'analyse du prospect.',
+  'toast.replyCopied': 'Réponse copiée dans le presse-papiers',
+  'toast.generateReport': 'Générer le rapport',
+  'toast.generating': 'Génération…',
+
+  // WhatsApp AI
+  'whatsappAi.summarizeNeeds': 'Résumer les besoins du prospect',
+  'whatsappAi.draftReply': 'Rédiger une relance',
+  'whatsappAi.suggestProperty': 'Suggérer un bien correspondant',
+  'whatsappAi.writeReply': 'Rédiger une réponse professionnelle',
+  'whatsappAi.generateReport': 'Générer un rapport CRM',
+  'whatsappAi.replyInFrench': 'Répondre en français',
+  'whatsappAi.askPlaceholder': 'Demander à l\'IA…',
+  'whatsappAi.searchConversations': 'Rechercher des conversations',
+  'whatsappAi.connect': 'Connecter',
+  'whatsappAi.settings': 'Paramètres',
+  'whatsappAi.connected': 'Connecté',
+  'whatsappAi.notConnected': 'Non connecté',
+  'whatsappAi.connectDescription': 'Connectez un numéro professionnel pour gérer les conversations WhatsApp',
+  'whatsappAi.setUp': 'Configurer',
+  'whatsappAi.noConversations': 'Aucune conversation WhatsApp.',
+  'whatsappAi.noMessages': 'Aucun message',
+  'whatsappAi.creatingInstance': 'Création de l\'instance & génération du QR…',
+  'whatsappAi.waitingForScan': 'En attente du scan…',
+  'whatsappAi.linkingDevice': 'Liaison de l\'appareil…',
+  'whatsappAi.deviceLinked': 'Appareil lié !',
+  'whatsappAi.clickToGenerate': 'Cliquez pour générer le QR code',
+  'whatsappAi.saveChanges': 'Enregistrer les modifications',
+
+  // Automation labels
+  'automation.trigger.whatsappNewMessage': 'Nouveau message WhatsApp',
+  'automation.trigger.whatsappNewConversation': 'Nouvelle conversation WhatsApp',
+  'automation.trigger.leadCreated': 'Prospect créé',
+  'automation.trigger.leadInactive': 'Prospect inactif (48h)',
+  'automation.trigger.dealWon': 'Affaire gagnée',
+  'automation.trigger.meetingCreated': 'Rendez-vous créé',
+  'automation.trigger.propertyMatch': 'Bien correspondant au prospect',
+  'automation.action.createLead': 'Créer/Mettre à jour un prospect',
+  'automation.action.createTask': 'Créer une tâche de relance',
+  'automation.action.sendWhatsapp': 'Envoyer un message WhatsApp',
+  'automation.action.sendNotification': 'Envoyer une notification',
+  'automation.statusSuccess': 'Succès',
+  'automation.statusError': 'Erreur',
+  'automation.statusPending': 'En attente',
+  'automation.statusSkipped': 'Ignoré',
+  'automation.namePlaceholder': 'ex. Alerte WhatsApp Nouveau Prospect',
+
+  // Reports
+  'reports.revenueVsTarget': 'Revenus vs Objectif',
+  'reports.monthlyComparison': 'Comparaison mensuelle',
+  'reports.funnelPerformance': 'Performance de l\'entonnoir',
+  'reports.stageByStage': 'Conversion étape par étape',
+  'reports.latestAiReport': 'Dernier rapport IA',
+  'reports.generatedReports': 'Rapports générés',
+  'reports.reportsCount': '{count} rapports',
+
+  // Deals
+  'deals.unknown': 'Inconnu',
+  'deals.additionalContext': 'Contexte supplémentaire sur cette affaire…',
+
+  // Properties
+  'properties.description': 'Description',
 };
 
 const ar: Dict = {
@@ -1945,6 +2151,28 @@ const ar: Dict = {
 
   // Tags
   'tag.vip': 'VIP', 'tag.cashBuyer': 'مشتري نقدي', 'tag.hotLead': 'عميل ساخن', 'tag.investor': 'مستثمر', 'tag.firstTimeBuyer': 'مشتري لأول مرة',
+
+  // Toast messages
+  'toast.automationLoadFailed': 'فشل تحميل الأتمتة', 'toast.automationToggled': '{name} {state}', 'toast.automationPaused': 'متوقف', 'toast.automationActivated': 'مفعّل', 'toast.automationUpdateFailed': 'فشل تحديث الأتمتة', 'toast.automationDeleted': 'تم حذف الأتمتة', 'toast.automationDeleteFailed': 'فشل حذف الأتمتة', 'toast.automationNameRequired': 'يرجى إدخال اسم', 'toast.automationCreated': 'تم إنشاء الأتمتة', 'toast.automationCreateFailed': 'فشل إنشاء الأتمتة',
+  'toast.meetingCompleted': 'تم وضع علامة «مكتمل» على الاجتماع «{title}»', 'toast.meetingStatusFailed': 'فشل تحديث حالة الاجتماع.', 'toast.meetingConfirmed': 'تم تأكيد الاجتماع «{title}»', 'toast.meetingConfirmFailed': 'فشل تأكيد الاجتماع.', 'toast.meetingInvalidDateTime': 'أدخل تاريخاً ووقتاً صحيحين.', 'toast.meetingRescheduled': 'تمت إعادة جدولة الاجتماع «{title}»', 'toast.meetingRescheduleFailed': 'فشل إعادة جدولة الاجتماع.', 'toast.meetingCancelled': 'تم إلغاء الاجتماع «{title}»', 'toast.meetingCancelFailed': 'فشل إلغاء الاجتماع.', 'toast.meetingReminderSent': 'تم إرسال تذكير للاجتماع «{title}»', 'toast.meetingReminderFailed': 'فشل إرسال التذكير.', 'toast.meetingWhatsappSent': 'تم إرسال تنبيه واتساب للاجتماع «{title}»', 'toast.meetingWhatsappFailed': 'فشل إرسال تنبيه واتساب.',
+  'toast.propertyUpdateFailed': 'فشل تحديث العقار. حاول مرة أخرى.', 'toast.reportDownloaded': 'تم تنزيل تقرير {type}', 'toast.aiReportGenerated': 'تم إنشاء تقرير الذكاء الاصطناعي', 'toast.aiReportFailed': 'فشل إنشاء تقرير الذكاء الاصطناعي', 'toast.reportDataUnavailable': 'بيانات التقرير غير متاحة',
+  'toast.whatsappOlderFailed': 'تعذر تحميل الرسائل الأقدم', 'toast.fileTooLarge': 'الملف كبير جداً. الحد الأقصى 10 ميجابايت.', 'toast.fileUnsupported': 'نوع ملف غير مدعوم. اختر صورة (JPEG, PNG, WebP, GIF) أو مستند (PDF, Word, TXT).', 'toast.fileReadFailed': 'فشل قراءة الملف المحدد', 'toast.whatsappSigninRequired': 'يجب تسجيل الدخول للاتصال بواتساب', 'toast.whatsappNoQr': 'لم يُرجع كود QR من Evolution API', 'toast.whatsappConnected': 'تم الاتصال بواتساب بنجاح', 'toast.whatsappDisconnected': 'تم قطع اتصال واتساب', 'toast.whatsappMessageSent': 'تم إرسال الرسالة', 'toast.whatsappAddedToComposer': 'أُضيف إلى المحرر', 'toast.settingsSaved': 'تم حفظ الإعدادات',
+  'toast.leadAnalysisFailed': 'فشل تحليل العميل.', 'toast.replyCopied': 'تم نسخ الرد إلى الحافظة', 'toast.generateReport': 'إنشاء تقرير', 'toast.generating': 'جاري الإنشاء…',
+
+  // WhatsApp AI
+  'whatsappAi.summarizeNeeds': 'تلخيص احتياجات العميل', 'whatsappAi.draftReply': 'صياغة رد متابعة', 'whatsappAi.suggestProperty': 'اقتراح عقار مطابق', 'whatsappAi.writeReply': 'اكتب رداً احترافياً', 'whatsappAi.generateReport': 'إنشاء تقرير CRM', 'whatsappAi.replyInFrench': 'الرد بالفرنسية', 'whatsappAi.askPlaceholder': 'اسأل الذكاء الاصطناعي…', 'whatsappAi.searchConversations': 'ابحث في المحادثات', 'whatsappAi.connect': 'اتصال', 'whatsappAi.settings': 'إعدادات', 'whatsappAi.connected': 'متصل', 'whatsappAi.notConnected': 'غير متصل', 'whatsappAi.connectDescription': 'اتصل برقم عمل لإدارة محادثات واتساب', 'whatsappAi.setUp': 'إعداد', 'whatsappAi.noConversations': 'لا توجد محادثات واتساب بعد.', 'whatsappAi.noMessages': 'لا توجد رسائل بعد', 'whatsappAi.creatingInstance': 'جاري إنشاء المثيل وتوليد QR…', 'whatsappAi.waitingForScan': 'في انتظار المسح…', 'whatsappAi.linkingDevice': 'جاري ربط الجهاز…', 'whatsappAi.deviceLinked': 'تم ربط الجهاز!', 'whatsappAi.clickToGenerate': 'انقر لتوليد كود QR', 'whatsappAi.saveChanges': 'حفظ التغييرات',
+
+  // Automation labels
+  'automation.trigger.whatsappNewMessage': 'رسالة واتساب جديدة', 'automation.trigger.whatsappNewConversation': 'محادثة واتساب جديدة', 'automation.trigger.leadCreated': 'تم إنشاء عميل', 'automation.trigger.leadInactive': 'عميل غير نشط (48س)', 'automation.trigger.dealWon': 'صفقة رابحة', 'automation.trigger.meetingCreated': 'موعد تم إنشاؤه', 'automation.trigger.propertyMatch': 'عقار يطابق العميل', 'automation.action.createLead': 'إنشاء/تحديث عميل', 'automation.action.createTask': 'إنشاء مهمة متابعة', 'automation.action.sendWhatsapp': 'إرسال رسالة واتساب', 'automation.action.sendNotification': 'إرسال إشعار', 'automation.statusSuccess': 'نجاح', 'automation.statusError': 'خطأ', 'automation.statusPending': 'قيد الانتظار', 'automation.statusSkipped': 'متخطى', 'automation.namePlaceholder': 'مثال: تنبيه واتساب لعميل جديد',
+
+  // Reports
+  'reports.revenueVsTarget': 'الإيرادات مقابل الهدف', 'reports.monthlyComparison': 'مقارنة شهرية', 'reports.funnelPerformance': 'أداء القمع', 'reports.stageByStage': 'تحويل مرحلة بمرحلة', 'reports.latestAiReport': 'أحدث تقرير ذكاء اصطناعي', 'reports.generatedReports': 'التقارير المنشأة', 'reports.reportsCount': '{count} تقارير',
+
+  // Deals
+  'deals.unknown': 'غير معروف', 'deals.additionalContext': 'سياق إضافي حول هذه الصفقة…',
+
+  // Properties
+  'properties.description': 'الوصف',
 };
 
 export const dictionaries: Record<Locale, Dict> = { en, fr, ar };

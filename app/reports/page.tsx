@@ -45,7 +45,7 @@ const reports = [
 ];
 
 export default function ReportsPage() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const { currency } = useAgency();
   const { refreshKey } = useRefresh();
   const { data: dealsData, loading: dealsLoading, error: dealsError } = useSupabaseQuery<Deal[]>(fetchDeals, [], refreshKey);
@@ -132,7 +132,7 @@ export default function ReportsPage() {
         avgDealSize,
         pipeline: deals.filter((d) => d.stage !== 'won' && d.stage !== 'lost').length,
       });
-      const report = await getAIReport(context, 'Business Performance');
+      const report = await getAIReport(context, 'Business Performance', locale);
       setAiReport(report);
       toast.success('AI report generated');
     } catch (err) {

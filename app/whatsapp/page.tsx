@@ -82,7 +82,7 @@ function dedupMessages(msgs: WhatsAppMessage[]): WhatsAppMessage[] {
 
 export default function WhatsAppPage() {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const { currency } = useAgency();
   const userId = user?.id ?? '';
 
@@ -360,7 +360,7 @@ export default function WhatsAppPage() {
     const userMsg = { role: 'user' as const, content: text };
     setAiHistory((prev) => [...prev, userMsg]);
     try {
-      const response = await askAI([...aiHistory, userMsg], buildAISystemPrompt());
+      const response = await askAI([...aiHistory, userMsg], buildAISystemPrompt(), undefined, locale);
       setAiHistory((prev) => [...prev, { role: 'assistant', content: response }]);
       setAiSuggestion(response);
     } catch (error) {
@@ -396,7 +396,7 @@ export default function WhatsAppPage() {
     try {
       const system = `You are the MEHANS CRM WhatsApp assistant for a real estate business. Based on the conversation context and CRM data, generate 3 reply suggestions. Each reply should be a different approach (e.g. formal, casual, or action-oriented). Replies should be in the same language the customer is using. Keep each reply under 80 words. Return ONLY a JSON array of 3 strings, no preamble.`;
       const contextStr = `Contact: ${crmContext.contactName}\nPhone: ${crmContext.phoneNumber ?? 'Unknown'}\nRecent messages:\n${crmContext.recentMessages.map(m => `${m.from}: ${m.text}`).join('\n')}\n${crmContext.lead ? `Lead: ${crmContext.lead.first_name ?? ''} ${crmContext.lead.last_name ?? ''}, status=${crmContext.lead.status ?? 'new'}, interest=${crmContext.lead.property_type ?? crmContext.lead.interested_in ?? 'unknown'}` : 'No lead found'}`;
-      const raw = await askAI([{ role: 'user', content: contextStr }], system);
+      const raw = await askAI([{ role: 'user', content: contextStr }], system, undefined, locale);
       let suggestions: string[] = [];
       try {
         const parsed = JSON.parse(raw);

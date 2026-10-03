@@ -277,7 +277,7 @@ function mapLeadForDisplay(l: Lead): Lead {
 }
 
 export default function LeadsPage() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const { currency } = useAgency();
   const { openModal } = useGlobalModal();
 
@@ -798,7 +798,8 @@ export default function LeadsPage() {
     try {
       const result =
         await analyzeLead(
-          detailLead.id
+          detailLead.id,
+          locale
         );
 
       setAnalysis(result);

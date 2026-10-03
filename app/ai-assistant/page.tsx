@@ -32,7 +32,7 @@ import { useLanguage } from '@/components/language-provider';
 const suggestionKeys = ['ai.suggestion1', 'ai.suggestion2', 'ai.suggestion3', 'ai.suggestion4'];
 
 export default function AIAssistantPage() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const router = useRouter();
   const welcomeMessage = t('ai.welcomeMessage');
   const { data: leadsData, loading: leadsLoading, error: leadsError } = useSupabaseQuery<Lead[]>(fetchLeads);
@@ -69,7 +69,7 @@ export default function AIAssistantPage() {
     setInput('');
     setGenerating(true);
     try {
-      const response = await askAI([{ role: 'user', content: text }], `You are the MEHANS AI Sales Operating System for real estate. Use only the supplied CRM records. Never invent leads, properties, prices, appointments, messages, or deal facts. Say when information is missing. Qualify leads, match only available properties with reasons, identify the next best action, and draft WhatsApp replies without sending them. Important actions must be proposed for confirmation. Current CRM data: ${crmContext}`);
+      const response = await askAI([{ role: 'user', content: text }], `You are the MEHANS AI Sales Operating System for real estate. Use only the supplied CRM records. Never invent leads, properties, prices, appointments, messages, or deal facts. Say when information is missing. Qualify leads, match only available properties with reasons, identify the next best action, and draft WhatsApp replies without sending them. Important actions must be proposed for confirmation. Current CRM data: ${crmContext}`, undefined, locale);
       setMessages((prev) => [...prev, { role: 'ai', content: response }]);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('ai.unableReachAI'));
@@ -79,7 +79,7 @@ export default function AIAssistantPage() {
   const loadInsights = async () => {
     setGenerating(true);
     try {
-      const nextInsights = await getAIInsights(crmContext);
+      const nextInsights = await getAIInsights(crmContext, locale);
       setInsights(nextInsights.map((insight, i) => ({ ...insight, id: `ai-${i}` })));
     } catch (error) { toast.error(error instanceof Error ? error.message : t('ai.unableLoadInsights')); }
     finally { setGenerating(false); }
@@ -88,7 +88,7 @@ export default function AIAssistantPage() {
   const generateContent = async (instruction: string) => {
     setGenerating(true);
     try {
-      const content = await askAI([{ role: 'user', content: instruction }], `You are a real-estate sales assistant. Use only this real CRM data. Never invent missing values. Draft content for human review and never claim to have sent anything. CRM data: ${crmContext}`);
+      const content = await askAI([{ role: 'user', content: instruction }], `You are a real-estate sales assistant. Use only this real CRM data. Never invent missing values. Draft content for human review and never claim to have sent anything. CRM data: ${crmContext}`, undefined, locale);
       setGeneratedText(content);
       toast.success(t('ai.contentGenerated'));
     } catch (error) { toast.error(error instanceof Error ? error.message : t('ai.unableGenerate')); }
