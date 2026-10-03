@@ -34,6 +34,17 @@ async function getUserAgencyId(userId: string): Promise<string | null> {
   return data?.workspace_id ?? null;
 }
 
+async function getUserRole(userId: string): Promise<string | null> {
+  const sb = serverSupabase();
+  const { data } = await sb
+    .from('workspace_members')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .maybeSingle();
+  return data?.role ?? null;
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -67,6 +78,16 @@ export async function POST(request: NextRequest) {
     const agencyId = await getUserAgencyId(currentUser.id);
     if (!agencyId) {
       return NextResponse.json({ error: 'No active workspace found' }, { status: 403, headers: corsHeaders });
+    }
+
+    const callerRole = await getUserRole(currentUser.id);
+    if (!callerRole || !['owner', 'admin'].includes(callerRole)) {
+      return NextResponse.json({ error: 'permission_denied' }, { status: 403, headers: corsHeaders });
+    }
+
+    // Only owners can invite other owners
+    if (role === 'owner' && callerRole !== 'owner') {
+      return NextResponse.json({ error: 'permission_denied' }, { status: 403, headers: corsHeaders });
     }
 
     const sb = serverSupabase();

@@ -980,6 +980,28 @@ export async function createNotification(input: {
   record_id?: string;
   user_id?: string;
 }): Promise<NotificationRow | null> {
+  // When user_id is provided and differs from the current user, RLS blocks
+  // client-side inserts. Route through the server-side API instead.
+  if (input.user_id) {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const res = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.session?.access_token ? { Authorization: `Bearer ${session.session.access_token}` } : {}),
+        },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data?.id ? { ...input, id: data.id, read: false, created_at: new Date().toISOString(), agency_id: null } as NotificationRow : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // Workspace-wide notification (user_id = null) — safe to insert client-side
   const { data, error } = await supabase
     .from('notifications')
     .insert({
@@ -988,7 +1010,7 @@ export async function createNotification(input: {
       type: input.type ?? 'info',
       record_type: input.record_type ?? null,
       record_id: input.record_id ?? null,
-      user_id: input.user_id ?? null,
+      user_id: null,
     })
     .select('*')
     .maybeSingle();

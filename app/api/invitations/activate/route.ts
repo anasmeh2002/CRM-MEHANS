@@ -28,21 +28,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    const body = await request.json();
-    const { user_id, email } = body;
-
-    if (!user_id || typeof user_id !== 'string') {
-      return NextResponse.json({ error: 'user_id required' }, { status: 400, headers: corsHeaders });
+    const token = authHeader.replace('Bearer ', '');
+    const authClient = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: authData, error: authError } = await authClient.auth.getUser();
+    if (authError || !authData.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    const sb = serverSupabase();
-    const normalizedEmail = (email ?? '').trim().toLowerCase();
+    const authenticatedUserId = authData.user.id;
+    const authenticatedEmail = (authData.user.email ?? '').trim().toLowerCase();
 
-    // Find any invited workspace_members matching this user's email
+    const sb = serverSupabase();
+
+    // Find any invited workspace_members matching this authenticated user's email
     const { data: invitedMembers } = await sb
       .from('workspace_members')
       .select('*')
-      .eq('email', normalizedEmail)
+      .eq('email', authenticatedEmail)
       .eq('status', 'invited');
 
     if (invitedMembers && invitedMembers.length > 0) {
@@ -50,38 +54,35 @@ export async function POST(request: NextRequest) {
         await sb
           .from('workspace_members')
           .update({
-            user_id,
+            user_id: authenticatedUserId,
             status: 'active',
             accepted_at: new Date().toISOString(),
           })
           .eq('id', member.id);
       }
 
-      // Notify workspace owners/admins
-      if (invitedMembers.length > 0) {
-        const workspaceId = invitedMembers[0].workspace_id;
-        const { data: admins } = await sb
-          .from('workspace_members')
-          .select('user_id')
-          .eq('workspace_id', workspaceId)
-          .in('role', ['owner', 'admin'])
-          .eq('status', 'active')
-          .not('user_id', 'is', null);
+      const workspaceId = invitedMembers[0].workspace_id;
+      const { data: admins } = await sb
+        .from('workspace_members')
+        .select('user_id')
+        .eq('workspace_id', workspaceId)
+        .in('role', ['owner', 'admin'])
+        .eq('status', 'active')
+        .not('user_id', 'is', null);
 
-        if (admins) {
-          const notifInserts = admins
-            .filter((a) => a.user_id)
-            .map((a) => ({
-              user_id: a.user_id,
-              agency_id: workspaceId,
-              title: 'Team Member Joined',
-              description: `${invitedMembers[0].name} has accepted the invitation and is now active.`,
-              type: 'team',
-              read: false,
-            }));
-          if (notifInserts.length > 0) {
-            await sb.from('notifications').insert(notifInserts);
-          }
+      if (admins) {
+        const notifInserts = admins
+          .filter((a) => a.user_id)
+          .map((a) => ({
+            user_id: a.user_id,
+            agency_id: workspaceId,
+            title: 'Team Member Joined',
+            description: `${invitedMembers[0].name} has accepted the invitation and is now active.`,
+            type: 'team',
+            read: false,
+          }));
+        if (notifInserts.length > 0) {
+          await sb.from('notifications').insert(notifInserts);
         }
       }
     } else {
@@ -89,27 +90,13 @@ export async function POST(request: NextRequest) {
       const { data: activeMember } = await sb
         .from('workspace_members')
         .select('id, workspace_id')
-        .eq('user_id', user_id)
+        .eq('user_id', authenticatedUserId)
         .eq('status', 'active')
         .maybeSingle();
 
       if (!activeMember) {
-        // New user with no invitation — create a default membership
-        // Get the first agency (or the one in their user_metadata)
-        const { data: authUser } = await sb.auth.admin.getUserById(user_id);
-        const workspaceId = authUser?.user?.user_metadata?.workspace_id;
-
-        if (workspaceId) {
-          await sb.from('workspace_members').upsert({
-            workspace_id: workspaceId,
-            user_id,
-            name: authUser?.user?.user_metadata?.full_name ?? normalizedEmail,
-            email: normalizedEmail,
-            role: authUser?.user?.user_metadata?.role ?? 'agent',
-            status: 'active',
-            accepted_at: new Date().toISOString(),
-          }, { onConflict: 'workspace_id,email' });
-        }
+        // No invitation and no existing membership — do NOT auto-create one.
+        // User must be invited by a workspace owner/admin first.
       }
     }
 

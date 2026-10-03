@@ -242,7 +242,7 @@ export default function WhatsAppPage() {
         }
       } catch (error) {
         if (active && !cached && messages.length === 0) {
-          setMessagesError(error instanceof Error ? error.message : 'Unable to load messages');
+          setMessagesError(error instanceof Error ? error.message : t('toast.unableToLoadMessages'));
         }
       }
     };
@@ -373,7 +373,7 @@ export default function WhatsAppPage() {
       setAiHistory((prev) => [...prev, { role: 'assistant', content: response }]);
       setAiSuggestion(response);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to reach the AI service');
+      toast.error(error instanceof Error ? error.message : t('toast.unableToReachAI'));
     } finally { setAiLoading(false); }
   }, [aiLoading, aiHistory, buildAISystemPrompt]);
 
@@ -454,7 +454,7 @@ export default function WhatsAppPage() {
           current.map((c) => c.remote_jid === selected.remote_jid ? { ...c, last_message: attachment.mediatype === 'image' ? t('whatsapp.photo') : attachment.file.name, last_message_timestamp: new Date().toISOString() } : c)
         );
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Unable to send media');
+        toast.error(error instanceof Error ? error.message : t('toast.unableToSendMedia'));
       } finally { setSending(false); }
       return;
     }
@@ -468,7 +468,7 @@ export default function WhatsAppPage() {
         current.map((c) => c.remote_jid === selected.remote_jid ? { ...c, last_message: message.trim(), last_message_timestamp: new Date().toISOString() } : c)
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to send message');
+      toast.error(error instanceof Error ? error.message : t('toast.unableToSendMessage'));
     } finally { setSending(false); }
   };
 
@@ -826,7 +826,7 @@ export default function WhatsAppPage() {
                                 setAiSuggestion(null);
                                 toast.success(t('toast.whatsappMessageSent'));
                               } catch (error) {
-                                toast.error(error instanceof Error ? error.message : 'Unable to send message');
+                                toast.error(error instanceof Error ? error.message : t('toast.unableToSendMessage'));
                               } finally { setSending(false); }
                             }} disabled={sending} className="rounded-lg bg-gold px-3 py-1.5 text-xs font-medium text-[#0D0D0F] hover:bg-gold-soft disabled:opacity-60">
                               {t('whatsapp.send')}
